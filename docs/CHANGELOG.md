@@ -3,6 +3,99 @@
 
 ---
 
+## [3.3] — Filament Dipakai — 19 September 2026
+
+### ⚠️ Keputusan yang Menyimpang dari SRS
+
+| Aspek | SRS (`docs/Architecture.md`) | Implementasi |
+|---|---|---|
+| Frontend admin | **Blade Template** | **Filament 5.8.2** |
+
+**Alasan penyimpangan** (keputusan user):
+1. Proyek memiliki 5 modul CRUD — Blade memakan **3–4 minggu**, Filament **1–2 minggu**.
+2. Filament menyediakan tabel (search/filter/sort/paginate), form, validasi, dan upload file
+   secara bawaan — menghemat banyak waktu pada target 4 bulan.
+3. Model, migration, dan Enum yang sudah dibangun **tetap terpakai** — Filament bekerja di
+   atas Eloquent yang sama, jadi tidak ada pekerjaan yang terbuang.
+
+**Yang perlu diperbarui di SRS:** bagian `Architecture.md` §2 baris *Frontend* dan
+`Design.md` §3 (struktur navigasi sidebar).
+
+> 📌 **Catatan:** halaman **login** dan **dashboard Blade** yang dibuat di v3.2 tetap ada,
+> tetapi panel admin sekarang diakses lewat `/admin` (Filament).
+
+### Yang Sudah Jadi
+
+| Komponen | Isi |
+|---|---|
+| **Panel Filament** | `/admin`, warna primary biru, brand SIAKAD SPK |
+| **Resource SPK** | ⭐ Lengkap: form, tabel, filter, tab, pencarian, soft delete |
+| **Hak akses** | Admin = CRUD penuh; **Direktur = hanya lihat** |
+| **Resource lain** | Mitra, UangMasuk, UangKeluar, Pengguna — baru ter-generate, isi menyusul |
+
+### Detail Resource SPK
+
+**Form:** nomor SPK (unik), tanggal SPK, tanggal akhir, nama pekerjaan, lokasi, mitra,
+nilai SPK (format rupiah otomatis), persen retensi, nilai retensi (read-only),
+status SPK (dropdown Enum), status tagihan (dropdown Enum), jenis sumber, sheet lama.
+
+**Tabel:** nomor SPK (bisa di-copy), pekerjaan + lokasi, mitra, tanggal, nilai SPK,
+retensi, penerimaan, biaya, **laba/rugi** (hijau/merah otomatis), status SPK (badge),
+status tagihan (badge).
+
+**Filter:** status SPK, status tagihan, mitra, jenis sumber, data terhapus.
+
+**Tab:** Semua · Berjalan · Belum Lunas · Tanpa SPK (masing-masing dengan badge jumlah).
+
+### 🔒 Pembuktian Hak Akses (Rules.md §4)
+
+| Uji | Hasil |
+|---|---|
+| Direktur buka `/admin/spks` (daftar) | ✅ Boleh (200) |
+| Direktur buka `/admin/spks/create` | ✅ **DITOLAK 403** |
+| Tombol "Tambah SPK" untuk Direktur | ✅ Tidak tampil |
+| Admin buka `/admin/spks/create` | ✅ Boleh (200) |
+
+> Ini membuktikan pembatasan dilakukan di **level otorisasi**, bukan sekadar
+> menyembunyikan menu — sesuai tuntutan Rules.md §4.
+
+### 2 Bug Ditemukan & Diperbaiki
+
+| # | Bug | Penyebab | Perbaikan |
+|---|---|---|---|
+| 1 | Dashboard Filament **error 500** | Filament mencari atribut `name`, sedangkan tabel `pengguna` memakai kolom `nama` → `getUserName()` mengembalikan null | Implementasikan kontrak `HasName` + `getFilamentName()` |
+| 2 | Data provider test gagal | PHPUnit 12 memakai atribut `#[DataProvider]`, anotasi `@dataProvider` sudah tidak didukung | Ganti ke atribut |
+
+> ⚠️ **Bug #1 akan muncul di produksi** saat Direktur/Admin membuka dashboard.
+> Ketangkap karena diuji dengan render halaman sungguhan, bukan hanya unit test.
+
+### Git
+
+```
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+### Testing
+
+**78 test, 193 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+### Yang Belum Dikerjakan
+
+| # | Item |
+|---|---|
+| 1 | Isi Resource **Mitra** (form + tabel) |
+| 2 | Isi Resource **Uang Masuk** — form **2 mode** (berdasarkan SPK / manual) |
+| 3 | Isi Resource **Uang Keluar** + upload bukti (jumlah file bebas) |
+| 4 | Isi Resource **Pengguna** |
+| 5 | Dashboard widget Filament (kartu ringkasan + grafik) |
+| 6 | Laporan + export PDF/Excel |
+| 7 | Perbarui `Architecture.md` & `Design.md` agar konsisten dengan Filament |
+
+---
+
 ## [3.2] — Implementasi Dimulai — 19 September 2026
 
 Kode Laravel mulai dibangun. Dokumentasi di folder `docs/` tidak diubah pada tahap ini.
