@@ -3,6 +3,108 @@
 
 ---
 
+## [3.2] — Implementasi Dimulai — 19 September 2026
+
+Kode Laravel mulai dibangun. Dokumentasi di folder `docs/` tidak diubah pada tahap ini.
+
+### Keputusan Teknis
+
+| Aspek | Keputusan |
+|---|---|
+| Database | **MySQL** — database `bks` |
+| Framework | **Full Laravel** (Laravel 13.32.0) |
+| Frontend | **Blade + Tailwind CSS v4** (sesuai SRS) — **belum** Filament |
+| Jumlah tabel | **5** sesuai `db.txt` |
+| Status & kategori | **PHP Enum + dropdown** (bukan tabel master) |
+| Audit log | ❌ Tidak dipakai (keputusan user) |
+
+> 📌 **Filament belum dipasang.** SRS menetapkan Blade Template. Jika nanti ingin
+> pindah ke Filament, model/migration/Enum yang sudah ada **tetap terpakai** —
+> Filament bekerja di atas Eloquent yang sama.
+
+### Yang Sudah Jadi
+
+| Komponen | Isi |
+|---|---|
+| **Migration** | 5 tabel: `pengguna`, `mitra`, `spk`, `uang_masuk`, `uang_keluar` |
+| **PHP Enum** | `Peran`, `StatusSpk`, `StatusTagihan`, `KategoriPengeluaran`, `KategoriMitra` |
+| **Model** | 5 model + relasi + soft delete + cast Enum |
+| **Kolom turunan** | `totalPenerimaan()`, `totalBiaya()`, `labaRugi()`, `piutang()`, `nilaiBersih()` |
+| **Auto-retensi 5%** | Dihitung otomatis di hook `saving` model `Spk` |
+| **Seeder** | 2 akun, 4 mitra, 4 SPK, 3 uang masuk, 3 uang keluar |
+| **Autentikasi** | Login/logout + rate limiting 5x/menit |
+| **Middleware peran** | `peran:admin` — request tanpa hak ditolak **403** |
+| **Dashboard** | Kartu ringkasan, grafik arus kas 6 bulan, SPK per status, laba-rugi per SPK |
+| **Tampilan** | Layout Blade + sidebar (menu menyesuaikan peran) + halaman login |
+| **Testing** | **53 test, 133 assertion** — semua lulus |
+| **Formatter** | Pint (PSR-12) lolos |
+
+### 2 Bug yang Ditemukan & Diperbaiki Saat Pengujian
+
+| # | Bug | Penyebab | Perbaikan |
+|---|---|---|---|
+| 1 | `nilai_retensi` salah (22.692.087,90 padahal seharusnya 5.000.000) | Factory menghitung dari nilai random, lalu seeder menimpa `nilai_spk` tanpa menimpa retensi | Retensi dihitung otomatis di hook `saving` model `Spk` |
+| 2 | `UangMasuk::dariSpk()` error "Non-static method cannot be called statically" | Nama scope `scopeDariSpk` bertabrakan dengan method instance `dariSpk()` | Method instance dinamai `isDariSpk()` |
+
+### 🔒 Perbaikan Keamanan
+
+**Password MySQL sempat tertulis di `phpunit.xml`**, dan file itu **tidak di-gitignore** —
+artinya akan ter-push ke GitHub publik.
+
+Perbaikan:
+- Kredensial test dipindah ke **`.env.testing`** (masuk `.gitignore`)
+- `phpunit.xml` dibuat bersih, hanya berisi konfigurasi non-sensitif
+- Ditambahkan `.env.testing.example` sebagai template
+
+> ⚠️ **Jika repo sudah pernah ter-push dengan password di dalamnya**, ganti password
+> MySQL dan bersihkan riwayat Git (`git filter-repo`).
+
+### Hasil Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| Migrasi + seeder ke MySQL | ✅ 5 tabel, data contoh masuk |
+| `php artisan test` | ✅ 53 lulus, 133 assertion |
+| `pint --test` | ✅ lolos |
+| `npm run build` | ✅ Tailwind 60 KB ter-build |
+| Login Admin via HTTP | ✅ HTTP 302 → dashboard |
+| Login Direktur via HTTP | ✅ berhasil |
+| Dashboard tanpa login | ✅ redirect ke `/login` |
+| Password salah | ✅ ditolak, tetap tamu |
+| Logout | ✅ kembali ke login |
+| Angka dashboard | ✅ SPK 677.311.922 · masuk 170 jt · keluar 68 jt · saldo 102 jt · piutang 512.311.922 |
+
+### Akun Seeder
+
+| Email | Password | Peran |
+|---|---|---|
+| `admin@bks.test` | `password` | Admin |
+| `direktur@bks.test` | `password` | Direktur |
+
+> ⚠️ **Ganti password ini sebelum dipakai di kantor.**
+
+### Git
+
+Repository sudah diinisialisasi dengan 2 commit:
+
+```
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+### Yang Belum Dikerjakan
+
+| # | Item |
+|---|---|
+| 1 | CRUD SPK (form + tabel + filter + board status) |
+| 2 | Form uang masuk **2 mode** (berdasarkan SPK / manual) |
+| 3 | Form uang keluar + upload bukti (jumlah file bebas) |
+| 4 | CRUD mitra |
+| 5 | Laporan (SPK, cashflow, piutang, laba-rugi per SPK) |
+| 6 | Export PDF & Excel |
+
+---
+
 ## [3.1] — 19 September 2026
 
 **4 keputusan tambahan dari user.**
