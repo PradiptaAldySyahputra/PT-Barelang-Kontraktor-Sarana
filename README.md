@@ -4,7 +4,7 @@
 Sistem web internal untuk mengelola **SPK**, **uang masuk**, dan **uang keluar**,
 serta memantau laba-rugi per SPK.
 
-> **Stack:** Laravel 13 · PHP 8.3+ · MySQL/MariaDB · Blade · Tailwind CSS
+> **Stack:** Laravel 13 · PHP 8.3+ · MySQL/MariaDB · **Filament 5** (panel admin)
 > **Dokumentasi lengkap:** folder [`docs/`](docs/)
 
 ---
@@ -91,7 +91,17 @@ Plus 4 mitra, 4 SPK, 3 uang masuk, dan 3 uang keluar sebagai contoh.
 php artisan serve
 ```
 
-Buka <http://localhost:8000>.
+Buka **<http://localhost:8000/admin>** — seluruh antarmuka ada di panel Filament ini.
+
+Login:
+
+| Email | Password | Peran |
+|---|---|---|
+| `admin@bks.test` | `password` | Admin |
+| `direktur@bks.test` | `password` | Direktur |
+
+Rute `/` otomatis mengarah ke `/admin`. Tidak ada halaman Blade terpisah —
+Filament adalah satu-satunya antarmuka.
 
 > Untuk pemakaian harian di PC kantor, **jangan** pakai `php artisan serve`.
 > Gunakan Apache/Nginx (Laragon/XAMPP). Lihat `docs/Architecture.md` §7.

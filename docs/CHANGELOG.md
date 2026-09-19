@@ -3,6 +3,87 @@
 
 ---
 
+## [3.5] — Antarmuka Tunggal Filament — 19 September 2026
+
+### 🐞 Masalah yang Dilaporkan User
+
+> *"kenapa tampilan masih yang sebelumnya belum filament?"*
+
+**Penyebab:** rute `/` mengarah ke `/dashboard` (halaman **Blade lama**), bukan ke `/admin`
+(panel Filament). Jadi meskipun Filament sudah terpasang, pengguna tetap disajikan
+tampilan Blade buatan v3.2.
+
+### Perbaikan
+
+| Sebelum | Sesudah |
+|---|---|
+| `/` → `/dashboard` (Blade) | `/` → **`/admin`** (Filament) |
+| Login Blade di `/login` | Login **Filament** di `/admin/login` |
+| Dashboard Blade di `/dashboard` | Dashboard **Filament** di `/admin` |
+
+**File yang DIHAPUS** (halaman Blade lama):
+
+- `resources/views/dashboard.blade.php`
+- `resources/views/auth/login.blade.php`
+- `resources/views/layouts/app.blade.php`
+- `app/Http/Controllers/DashboardController.php`
+- `app/Http/Controllers/Auth/LoginController.php`
+
+`routes/web.php` kini hanya berisi satu rute: `/` → `/admin`.
+
+> Middleware `peran` tetap tersedia untuk halaman Filament kustom di masa depan,
+> tetapi CRUD standar sudah dibatasi lewat `canCreate/canEdit/canDelete`
+> + trait `BolehUbahData` (lihat v3.4).
+
+### Dashboard Widget Baru
+
+| Widget | Isi |
+|---|---|
+| **RingkasanKeuangan** | 6 kartu stat: nilai SPK · uang masuk · uang keluar · saldo bersih · piutang SPK · uang masuk luar SPK |
+| **GrafikArusKas** | Grafik batang arus kas 6 bulan terakhir (masuk vs keluar) |
+| **SpkBerjalan** | Tabel SPK berjalan + penerimaan, biaya, **laba/rugi**, piutang per SPK |
+
+> 📌 **Catatan teknis:** widget Filament dirender **lazy** via Livewire, jadi isinya
+> **tidak ada** di HTML awal `/admin`. Karena itu pengujian dilakukan dengan
+> `Livewire::test()` — bukan memeriksa HTML halaman. Ini sempat membuat saya salah
+> menduga widget tidak tampil saat verifikasi pertama.
+
+### Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| `/` | ✅ HTTP 302 → `/admin` |
+| `/admin` tanpa login | ✅ HTTP 302 → `/admin/login` |
+| `/admin/login` | ✅ HTTP 200, memakai kelas Filament (`fi-`, `wire:submit="authenticate"`) |
+| Kartu ringkasan | ✅ Semua 6 stat tampil, angka benar |
+| Grafik arus kas | ✅ Tampil dengan canvas |
+| Tabel SPK berjalan | ✅ Data & kolom laba/rugi tampil |
+| Angka dashboard | ✅ SPK 677.311.922 · masuk 170 jt · keluar 68 jt · saldo 102 jt · piutang 512.311.922 |
+
+**124 test, 347 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+### Git
+
+```
+715c46e feat: dashboard Filament + hapus halaman Blade lama
+aa69e59 docs: catat 4 resource selesai + bug tombol Direktur (v3.4)
+89e7e2c feat: lengkapi Resource Mitra, Uang Masuk, Uang Keluar, Pengguna
+53d4ed2 docs: catat keputusan Filament + 2 bug yang diperbaiki (v3.3)
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+### Yang Belum Dikerjakan
+
+| # | Item |
+|---|---|
+| 1 | Laporan (SPK, cashflow, piutang, laba-rugi per SPK) + export PDF/Excel |
+| 2 | Perbarui `Architecture.md` & `Design.md` agar konsisten dengan Filament |
+
+---
+
 ## [3.4] — Semua Resource Selesai — 19 September 2026
 
 ### Yang Sudah Jadi
