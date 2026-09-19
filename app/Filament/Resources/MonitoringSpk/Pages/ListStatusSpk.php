@@ -8,10 +8,10 @@ use App\Filament\Resources\MonitoringSpk\StatusSpkResource;
 use Filament\Resources\Pages\ListRecords;
 
 /**
- * Daftar Status SPK — monitoring (baca saja).
+ * Daftar Status SPK — monitoring.
  *
- * Halaman ini sengaja TIDAK punya tombol "Tambah" karena hanya untuk
- * memantau. Perubahan data lewat "List SPK".
+ * Status BISA diubah langsung dari tabel (klik kolom Status) atau lewat
+ * tombol "Ubah Status". Data lain tetap harus lewat menu List SPK.
  */
 class ListStatusSpk extends ListRecords
 {
@@ -24,6 +24,6 @@ class ListStatusSpk extends ListRecords
 
     public function getSubheading(): ?string
     {
-        return 'Pantau status pekerjaan & tenggat. Untuk mengubah data, buka menu List SPK.';
+        return 'Klik kolom Status untuk mengubahnya langsung. Data lain diubah lewat menu List SPK.';
     }
 }

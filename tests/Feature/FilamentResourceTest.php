@@ -138,6 +138,11 @@ class FilamentResourceTest extends TestCase
         $mitra = Mitra::factory()->pln()->create();
         $spk = Spk::factory()->create([
             'nomor_spk' => 'MODE-SPK-001',
+            // Nilai ditentukan agar nominal uji (Rp 50 jt) pasti di bawah
+            // piutang. Tanpa ini, nilai acak factory bisa lebih kecil dan
+            // validasi batas uang masuk menolaknya (test jadi flaky).
+            'nilai_spk' => 200_000_000,
+            'persen_retensi' => null,
             'mitra_id' => $mitra->id,
             'dibuat_oleh' => $this->admin->id,
         ]);
@@ -247,11 +252,15 @@ class FilamentResourceTest extends TestCase
 
         Livewire::test(CreateUangKeluar::class)
             ->fillForm([
-                'tanggal' => '2026-08-10',
-                'jumlah' => 40000000,
-                'kategori' => KategoriPengeluaran::Material->value,
-                'penerima' => 'Toko Bangunan Jaya',
-                'spk_id' => $spk->id,
+                'pengeluaran' => [
+                    [
+                        'tanggal' => '2026-08-10',
+                        'jumlah' => 40000000,
+                        'kategori' => KategoriPengeluaran::Material->value,
+                        'penerima' => 'Toko Bangunan Jaya',
+                        'spk_id' => $spk->id,
+                    ],
+                ],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
@@ -269,10 +278,14 @@ class FilamentResourceTest extends TestCase
 
         Livewire::test(CreateUangKeluar::class)
             ->fillForm([
-                'tanggal' => '2026-08-11',
-                'jumlah' => 3000000,
-                'kategori' => KategoriPengeluaran::Operasional->value,
-                'penerima' => 'Kantor',
+                'pengeluaran' => [
+                    [
+                        'tanggal' => '2026-08-11',
+                        'jumlah' => 3000000,
+                        'kategori' => KategoriPengeluaran::Operasional->value,
+                        'penerima' => 'Kantor',
+                    ],
+                ],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
@@ -291,25 +304,39 @@ class FilamentResourceTest extends TestCase
         // Inilah yang mencegah laporan terpecah
         Livewire::test(CreateUangKeluar::class)
             ->fillForm([
-                'tanggal' => '2026-08-12',
-                'jumlah' => 1000000,
-                'kategori' => 'Material Bangunan',   // typo — tidak ada di enum
+                'pengeluaran' => [
+                    [
+                        'tanggal' => '2026-08-12',
+                        'jumlah' => 1000000,
+                        'kategori' => 'Material Bangunan',   // typo — tidak ada di enum
+                    ],
+                ],
             ])
             ->call('create')
-            ->assertHasFormErrors(['kategori']);
+            ->assertHasFormErrors(['pengeluaran.0.kategori']);
     }
 
     public function test_semua_kategori_enum_diterima_form(): void
     {
         $this->actingAs($this->admin);
 
-        foreach (KategoriPengeluaran::cases() as $i => $kategori) {
-            Livewire::test(CreateUangKeluar::class)
-                ->fillForm([
+        // Sekarang form bisa mengisi 4 baris sekaligus; uji semua kategori
+        // dalam satu kali simpan (4 baris pertama, lalu sisanya).
+        $semua = KategoriPengeluaran::cases();
+
+        foreach (array_chunk($semua, 4) as $chunk) {
+            $baris = [];
+
+            foreach ($chunk as $i => $kategori) {
+                $baris[] = [
                     'tanggal' => '2026-08-13',
-                    'jumlah' => 1000000 + $i,
+                    'jumlah' => 1_000_000 + $i,
                     'kategori' => $kategori->value,
-                ])
+                ];
+            }
+
+            Livewire::test(CreateUangKeluar::class)
+                ->fillForm(['pengeluaran' => $baris])
                 ->call('create')
                 ->assertHasNoFormErrors();
         }
@@ -422,10 +449,14 @@ class FilamentResourceTest extends TestCase
         // Uang keluar terkait SPK
         Livewire::test(CreateUangKeluar::class)
             ->fillForm([
-                'tanggal' => '2026-08-05',
-                'jumlah' => 65000000,
-                'kategori' => KategoriPengeluaran::Material->value,
-                'spk_id' => $spk->id,
+                'pengeluaran' => [
+                    [
+                        'tanggal' => '2026-08-05',
+                        'jumlah' => 65000000,
+                        'kategori' => KategoriPengeluaran::Material->value,
+                        'spk_id' => $spk->id,
+                    ],
+                ],
             ])
             ->call('create')
             ->assertHasNoFormErrors();

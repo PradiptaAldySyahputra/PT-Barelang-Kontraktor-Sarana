@@ -36,7 +36,7 @@ class SpkResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Transaksi';
+    protected static string|\UnitEnum|null $navigationGroup = 'SPK';
 
     protected static ?string $modelLabel = 'SPK';
 
@@ -46,7 +46,7 @@ class SpkResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'nomor_spk';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 1; // paling atas di grup SPK
 
     public static function form(Schema $schema): Schema
     {

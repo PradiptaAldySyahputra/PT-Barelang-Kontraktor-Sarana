@@ -31,7 +31,7 @@ class TagihanSpkResource extends MonitoringSpkResource
 
     protected static ?string $pluralModelLabel = 'Tagihan SPK';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     /**
      * Hanya SPK yang BELUM lunas.

@@ -32,7 +32,7 @@ class PenggunaResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserCircle;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Pengaturan';
+    protected static string|\UnitEnum|null $navigationGroup = 'Master Data';
 
     protected static ?string $modelLabel = 'Pengguna';
 

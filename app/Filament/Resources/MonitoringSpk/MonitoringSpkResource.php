@@ -29,7 +29,7 @@ abstract class MonitoringSpkResource extends Resource
 
     protected static ?string $model = Spk::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Monitoring SPK';
+    protected static string|\UnitEnum|null $navigationGroup = 'SPK';
 
     protected static ?string $recordTitleAttribute = 'nomor_spk';
 

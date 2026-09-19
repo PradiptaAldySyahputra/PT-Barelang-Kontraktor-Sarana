@@ -13,10 +13,6 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -67,6 +63,9 @@ class SpksTable
                     ->label('Tanggal SPK')
                     ->date('d/m/Y')
                     ->placeholder('TANPA SPK')
+                    ->description(fn (Spk $record): ?string => $record->tanggal_spk === null
+                        ? 'Tidak ada tanggal resmi'
+                        : null)
                     ->sortable(),
 
                 TextColumn::make('tanggal_akhir')
@@ -202,17 +201,16 @@ class SpksTable
 
                 TrashedFilter::make()->label('Data Terhapus'),
             ])
+            // HANYA Edit dan Delete (permintaan user).
+            // Restore dan Force Delete dihapus dari baris. Data yang sudah
+            // dihapus tetap bisa dilihat lewat filter "Data Terhapus".
             ->recordActions([
                 EditAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
                 DeleteAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
-                RestoreAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
-                ForceDeleteAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
                 ])->visible(fn (): bool => SpkResource::bolehUbahData()),
             ]);
     }

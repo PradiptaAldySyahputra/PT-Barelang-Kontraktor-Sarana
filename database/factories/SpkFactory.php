@@ -78,6 +78,9 @@ class SpkFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'jenis_sumber' => 'subkon',
             'persen_retensi' => 5.00,
+            // Status tagihan HARUS belum Dibayar — kalau Dibayar, retensi
+            // dianggap sudah dilepas sehingga retensiDitahan() = 0.
+            'status_tagihan' => StatusTagihan::BelumDitagihkan,
         ]);
     }
 

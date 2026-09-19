@@ -35,13 +35,13 @@ class UangKeluarResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowTrendingDown;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Transaksi';
+    protected static string|\UnitEnum|null $navigationGroup = 'Keuangan';
 
     protected static ?string $modelLabel = 'Uang Keluar';
 
     protected static ?string $pluralModelLabel = 'Uang Keluar';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {

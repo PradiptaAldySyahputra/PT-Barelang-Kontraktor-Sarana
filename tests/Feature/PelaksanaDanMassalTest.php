@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\DikerjakanOleh;
-use App\Filament\Pages\InputUangKeluarMassal;
 use App\Filament\Resources\UangKeluars\Pages\CreateUangKeluar;
 use App\Models\Mitra;
 use App\Models\Pengguna;
@@ -148,31 +147,42 @@ class PelaksanaDanMassalTest extends TestCase
     }
 
     // =========================================================
-    // 2. INPUT UANG KELUAR 4 SEKALIGUS
+    // 2. INPUT UANG KELUAR 4 SEKALIGUS (di halaman Tambah Uang Keluar)
     // =========================================================
 
-    public function test_halaman_input_massal_bisa_dibuka(): void
+    public function test_halaman_tambah_uang_keluar_bisa_dibuka(): void
     {
         $this->actingAs($this->admin)
-            ->get('/admin/input-uang-keluar-massal')
+            ->get('/admin/uang-keluars/create')
             ->assertOk();
     }
 
-    public function test_halaman_massal_menyiapkan_4_baris(): void
+    public function test_halaman_tambah_menyiapkan_4_baris(): void
     {
         $this->actingAs($this->admin);
 
-        Livewire::test(InputUangKeluarMassal::class)
+        Livewire::test(CreateUangKeluar::class)
             ->assertSet('data.pengeluaran', function ($value): bool {
                 return is_array($value) && count($value) === 4;
             });
+    }
+
+    public function test_halaman_tambah_punya_unggah_sekaligus(): void
+    {
+        $html = $this->actingAs($this->admin)
+            ->get('/admin/uang-keluars/create')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('nota_sekaligus', $html);
+        $this->assertStringContainsString('Unggah Nota Sekaligus', $html);
     }
 
     public function test_simpan_4_pengeluaran_sekaligus(): void
     {
         $this->actingAs($this->admin);
 
-        Livewire::test(InputUangKeluarMassal::class)
+        Livewire::test(CreateUangKeluar::class)
             ->fillForm([
                 'pengeluaran' => [
                     ['tanggal' => '2026-09-01', 'jumlah' => 5_000_000, 'kategori' => 'material', 'penerima' => 'Toko A'],
@@ -181,7 +191,7 @@ class PelaksanaDanMassalTest extends TestCase
                     ['tanggal' => '2026-09-04', 'jumlah' => 750_000, 'kategori' => 'operasional', 'penerima' => 'Kantor'],
                 ],
             ])
-            ->call('simpan')
+            ->call('create')
             ->assertHasNoFormErrors();
 
         $this->assertSame(4, UangKeluar::count());
@@ -192,7 +202,7 @@ class PelaksanaDanMassalTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        Livewire::test(InputUangKeluarMassal::class)
+        Livewire::test(CreateUangKeluar::class)
             ->fillForm([
                 'pengeluaran' => [
                     ['tanggal' => '2026-09-01', 'jumlah' => 2_000_000, 'kategori' => 'material'],
@@ -201,45 +211,54 @@ class PelaksanaDanMassalTest extends TestCase
                     ['tanggal' => null, 'jumlah' => null, 'kategori' => null],
                 ],
             ])
-            ->call('simpan')
+            ->call('create')
             ->assertHasNoFormErrors();
 
         $this->assertSame(1, UangKeluar::count(), 'Hanya baris terisi yang disimpan');
+    }
+
+    public function test_baris_terisi_sebagian_ditolak(): void
+    {
+        $this->actingAs($this->admin);
+
+        Livewire::test(CreateUangKeluar::class)
+            ->fillForm([
+                'pengeluaran' => [
+                    ['tanggal' => '2026-09-01', 'jumlah' => 1_000_000, 'kategori' => 'material'],
+                    ['tanggal' => '2026-09-02', 'jumlah' => null, 'kategori' => 'upah'], // jumlah kosong
+                ],
+            ])
+            ->call('create');
+
+        // Baris tidak lengkap ditolak — TIDAK ADA yang tersimpan
+        // (semua atau tidak sama sekali, supaya tidak ada data setengah jadi).
+        $this->assertSame(0, UangKeluar::count(), 'Baris tidak lengkap membatalkan seluruh penyimpanan');
     }
 
     public function test_kalau_semua_kosong_tidak_menyimpan_apa_pun(): void
     {
         $this->actingAs($this->admin);
 
-        Livewire::test(InputUangKeluarMassal::class)
+        Livewire::test(CreateUangKeluar::class)
             ->fillForm([
                 'pengeluaran' => array_fill(0, 4, ['tanggal' => null, 'jumlah' => null, 'kategori' => null]),
             ])
-            ->call('simpan');
+            ->call('create');
 
         $this->assertSame(0, UangKeluar::count());
     }
 
-    public function test_setelah_simpan_form_kembali_ke_4_baris_kosong(): void
+    public function test_tidak_ada_lagi_menu_input_massal_terpisah(): void
     {
-        $this->actingAs($this->admin);
-
-        $test = Livewire::test(InputUangKeluarMassal::class)
-            ->fillForm([
-                'pengeluaran' => [
-                    ['tanggal' => '2026-09-01', 'jumlah' => 1_000_000, 'kategori' => 'material'],
-                ],
-            ])
-            ->call('simpan');
-
-        $test->assertSet('data.pengeluaran', function ($value): bool {
-            return is_array($value) && count($value) === 4;
-        });
+        // Menu terpisah sudah dihapus; semuanya lewat Tambah Uang Keluar.
+        $this->actingAs($this->admin)
+            ->get('/admin/input-uang-keluar-massal')
+            ->assertNotFound();
     }
 
-    public function test_massal_tidak_bisa_diakses_tamu(): void
+    public function test_uang_keluar_tidak_bisa_diakses_tamu(): void
     {
-        $this->get('/admin/input-uang-keluar-massal')->assertRedirect('/admin/login');
+        $this->get('/admin/uang-keluars/create')->assertRedirect('/admin/login');
     }
 
     // =========================================================
@@ -250,14 +269,19 @@ class PelaksanaDanMassalTest extends TestCase
     {
         $this->actingAs($this->admin);
 
+        // Rp 250 miliar — "upah tukang". Melebihi batas Rp 10 miliar.
         Livewire::test(CreateUangKeluar::class)
             ->fillForm([
-                'tanggal' => now()->toDateString(),
-                'jumlah' => 250_000_000_000, // Rp 250 miliar — "upah tukang"
-                'kategori' => 'upah',
+                'pengeluaran' => [
+                    [
+                        'tanggal' => now()->toDateString(),
+                        'jumlah' => 250_000_000_000,
+                        'kategori' => 'upah',
+                    ],
+                ],
             ])
             ->call('create')
-            ->assertHasFormErrors(['jumlah']);
+            ->assertHasFormErrors(['pengeluaran.0.jumlah']);
 
         $this->assertSame(0, UangKeluar::count());
     }
@@ -268,10 +292,14 @@ class PelaksanaDanMassalTest extends TestCase
 
         Livewire::test(CreateUangKeluar::class)
             ->fillForm([
-                'tanggal' => now()->toDateString(),
-                'jumlah' => 25_000_000,
-                'kategori' => 'upah',
-                'penerima' => 'Mandor',
+                'pengeluaran' => [
+                    [
+                        'tanggal' => now()->toDateString(),
+                        'jumlah' => 25_000_000,
+                        'kategori' => 'upah',
+                        'penerima' => 'Mandor',
+                    ],
+                ],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
