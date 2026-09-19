@@ -31,9 +31,12 @@ serta memantau laba-rugi per SPK.
 | **⭐ Status tagihan otomatis** | ✅ Disinkronkan dari pembayaran nyata |
 | **⭐ Backup otomatis** | ✅ `php artisan bks:backup` + jadwal harian 23:00 |
 | **Tema UI** | ✅ Clean Minimalist Enterprise (Vercel/Linear) |
-| **Test** | ✅ **213 test, 600 assertion** — semua lulus |
-| Impor data lama dari Excel | ⏳ Belum |
-| Setup deployment 2 PC | ⏳ Belum |
+| **⭐ Data asli terimpor** | ✅ **90 SPK** dari `file-Excel-perusahaan.xlsx` (Rp 11,6 M) |
+| **⭐ Setup server lokal** | ✅ Panduan `docs/SETUP-SERVER.md` (1 PC server + akses LAN) |
+| **⭐ Audit keamanan** | ✅ 3 celah diperbaiki + 22 test keamanan |
+| **Test** | ✅ **294 test, 850 assertion** — semua lulus |
+| Uang masuk/keluar | ⏳ Masih kosong (Excel hanya berisi daftar SPK) |
+| Retensi per SPK | ⏳ Belum diisi (Excel tidak menyebutkan) |
 
 ---
 
@@ -264,11 +267,14 @@ Langkah penting:
 
 | # | Item | Catatan |
 |---|---|---|
-| 1 | **Impor data lama 2024–2026** dari Excel | `docs/file-Excel-perusahaan.xlsx` (11 sheet) |
-| 2 | **Setup deployment 2 PC** | Static IP, auto-start, cron backup, UPS |
-| 3 | **Salin backup ke media eksternal** | Manual — backup di PC yang sama tidak melindungi dari kerusakan disk |
-| 4 | Dokumen SPK (scan SPK, BAST, kuitansi) | Masih ditunda (lihat `Schema.md` §9) |
-| 5 | Pajak (PPN/PPh) | Belum diputuskan |
+| 1 | **Periksa 2 anomali Excel** | Nilai Rp 460 M (ARIF) & nomor SPK duplikat (0015) — lihat `CHANGELOG.md` v4.2 |
+| 2 | **Tinjau pemetaan status** | `tanggal_akhir` = tanggal + 90 hari (asumsi), status dari tahun |
+| 3 | **Set IP static + cron backup** | Ikuti `docs/SETUP-SERVER.md` |
+| 4 | **Ganti password default** | `admin@bks.test` / `password` — WAJIB sebelum dipakai kerja |
+| 5 | **Isi uang masuk & keluar** | Excel hanya berisi daftar SPK (90 SPK, belum ada transaksi) |
+| 6 | **Retensi per SPK** | Belum diisi (Excel tidak menyebutkan) |
+| 7 | Dokumen SPK (BAST, kuitansi) | Masih ditunda |
+| 8 | Pajak (PPN/PPh) | Belum diputuskan |
 
 ### Keputusan yang Masih Menggantung
 
@@ -276,7 +282,6 @@ Langkah penting:
 |---|---|
 | **Dokumen SPK** (scan SPK, BAST, kuitansi, foto) | (a) tambah kolom `dokumen` JSON di `spk` · (b) simpan di luar sistem |
 | **Rekening koran** | Format file & perannya |
-| **Data lama 2024–2026** | Import dari Excel atau mulai dari nol |
 | **Pajak (PPN/PPh)** | Perlu dihitung atau tidak |
 | **To-Do List** | Masuk MVP atau tidak |
 
