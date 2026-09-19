@@ -16,13 +16,13 @@ class GrafikArusKas extends ChartWidget
 {
     protected static ?int $sort = 2;
 
-    protected ?string $heading = 'Arus Kas 6 Bulan Terakhir';
+    protected ?string $heading = 'Arus Kas';
 
-    protected ?string $description = 'Perbandingan uang masuk dan uang keluar per bulan';
+    protected ?string $description = 'Uang masuk dan keluar, 6 bulan terakhir';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
 
-    protected ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '260px';
 
     protected function getData(): array
     {
@@ -44,16 +44,18 @@ class GrafikArusKas extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Uang Masuk',
+                    'label' => 'Masuk',
                     'data' => $bulan->map(fn (Carbon $b): float => (float) ($masuk[$b->format('Y-m')] ?? 0))->all(),
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.7)',
-                    'borderColor' => 'rgb(16, 185, 129)',
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.85)',
+                    'borderRadius' => 6,
+                    'borderSkipped' => false,
                 ],
                 [
-                    'label' => 'Uang Keluar',
+                    'label' => 'Keluar',
                     'data' => $bulan->map(fn (Carbon $b): float => (float) ($keluar[$b->format('Y-m')] ?? 0))->all(),
-                    'backgroundColor' => 'rgba(244, 63, 94, 0.7)',
-                    'borderColor' => 'rgb(244, 63, 94)',
+                    'backgroundColor' => 'rgba(244, 63, 94, 0.85)',
+                    'borderRadius' => 6,
+                    'borderSkipped' => false,
                 ],
             ],
             'labels' => $bulan->map(fn (Carbon $b): string => $b->translatedFormat('M Y'))->all(),
@@ -71,17 +73,19 @@ class GrafikArusKas extends ChartWidget
             'scales' => [
                 'y' => [
                     'beginAtZero' => true,
-                    'ticks' => [
-                        'callback' => null,
-                    ],
+                    'ticks' => ['precision' => 0],
+                    'grid' => ['drawBorder' => false],
                 ],
+                'x' => ['grid' => ['display' => false]],
             ],
             'plugins' => [
                 'legend' => [
                     'display' => true,
                     'position' => 'bottom',
+                    'labels' => ['usePointStyle' => true, 'boxWidth' => 8],
                 ],
             ],
+            'maintainAspectRatio' => false,
         ];
     }
 }

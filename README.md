@@ -1,4 +1,4 @@
-# SIAKAD SPK — Sistem Informasi SPK & Kontrol Keuangan
+# Sistem Informasi SPK & Kontrol Keuangan
 ## PT Barelang Kontraktor Sarana
 
 Sistem web internal untuk mengelola **SPK**, **uang masuk**, dan **uang keluar**,

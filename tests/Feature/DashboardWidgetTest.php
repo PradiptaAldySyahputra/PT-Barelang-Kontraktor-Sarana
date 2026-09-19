@@ -48,7 +48,7 @@ class DashboardWidgetTest extends TestCase
         $html = Livewire::test(RingkasanKeuangan::class)->html();
 
         foreach ([
-            'Total Nilai SPK',
+            'Nilai SPK',
             'Uang Masuk',
             'Uang Keluar',
             'Saldo Bersih',

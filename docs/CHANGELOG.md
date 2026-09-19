@@ -323,7 +323,7 @@ bb0a500 feat: autentikasi, middleware peran, dan dashboard
 
 | Komponen | Isi |
 |---|---|
-| **Panel Filament** | `/admin`, warna primary biru, brand SIAKAD SPK |
+| **Panel Filament** | `/admin`, warna primary biru, brand PT Barelang Kontraktor Sarana |
 | **Resource SPK** | ⭐ Lengkap: form, tabel, filter, tab, pencarian, soft delete |
 | **Hak akses** | Admin = CRUD penuh; **Direktur = hanya lihat** |
 | **Resource lain** | Mitra, UangMasuk, UangKeluar, Pengguna — baru ter-generate, isi menyusul |

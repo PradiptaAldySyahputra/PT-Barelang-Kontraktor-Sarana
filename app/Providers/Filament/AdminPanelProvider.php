@@ -5,14 +5,11 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Enums\Peran;
-use App\Filament\Widgets\GrafikArusKas;
-use App\Filament\Widgets\RingkasanKeuangan;
-use App\Filament\Widgets\SpkBerjalan;
+use App\Filament\Pages\Dashboard;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -25,14 +22,12 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
- * Panel Admin/Operator.
+ * Panel utama aplikasi.
  *
- * Panel ini dipakai oleh Admin DAN Direktur.
+ * Dipakai oleh Admin (input data) dan Direktur (monitoring).
  * Pembatasan hak akses dilakukan lewat:
- *   1. canAccessPanel() di model Pengguna  -> siapa yang boleh masuk panel
- *   2. canViewAny() / canCreate() di Resource -> siapa yang boleh CRUD
- *
- * Sesuai Rules.md §4: Direktur hanya boleh MELIHAT, tidak boleh input.
+ *   1. canAccessPanel() di model Pengguna
+ *   2. canCreate()/canEdit()/canDelete() + trait BolehUbahData di Resource
  */
 class AdminPanelProvider extends PanelProvider
 {
@@ -43,10 +38,29 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName('SIAKAD SPK — PT Barelang Kontraktor Sarana')
+            ->brandName('PT Barelang Kontraktor Sarana')
+            ->brandLogo(fn () => view('filament.brand-logo'))
+            ->brandLogoHeight('2.25rem')
+            ->favicon(fn () => asset('favicon.svg'))
             ->colors([
                 'primary' => Color::Blue,
+                'gray' => Color::Slate,
+                'success' => Color::Emerald,
+                'warning' => Color::Amber,
+                'danger' => Color::Rose,
             ])
+            // ---------------------------------------------------------
+            // Navigasi
+            // ---------------------------------------------------------
+            // sidebarFullyCollapsibleOnDesktop = sidebar bisa DITUTUP TOTAL
+            // (hilang dari layar) atau dibuka kembali, bukan sekadar
+            // menyusut jadi ikon. Tombol toggle ada di header.
+            ->sidebarFullyCollapsibleOnDesktop()
+            ->collapsibleNavigationGroups(true)  // grup menu bisa dilipat
+            ->sidebarWidth('16rem')
+            ->collapsedSidebarWidth('4.5rem')
+            ->spa()                              // navigasi tanpa reload penuh
+
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
@@ -55,9 +69,6 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 AccountWidget::class,
-                RingkasanKeuangan::class,
-                GrafikArusKas::class,
-                SpkBerjalan::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -76,10 +87,9 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * Hanya Admin & Direktur yang boleh masuk panel.
+     * Peran yang boleh masuk panel.
      *
-     * Catatan: Filament memakai guard `web`, jadi model Pengguna harus
-     * mengimplementasikan FilamentUser agar method ini dipanggil.
+     * @return list<string>
      */
     public static function peranYangBolehMasuk(): array
     {
