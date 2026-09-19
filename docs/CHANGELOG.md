@@ -3,6 +3,162 @@
 
 ---
 
+## [3.9] — Perbaikan Navbar & Tata Letak Laporan — 19 September 2026
+
+### 🐞 Masalah yang Dilaporkan User
+
+> *"masih kurang, ui/ux berantakan apa lagi pada bagian laporan, itu navbar diatas
+> kenapa cuman bks dan tidak rapi, panel berantakan dan tidak responsif"*
+
+Tiga keluhan: **navbar cuma "BKS"**, **panel berantakan**, **laporan tidak responsif**.
+
+---
+
+### 1. Navbar "cuma BKS" — akar masalah ditemukan
+
+**Penyebab:** saya memakai `brandLogo()` berisi **view HTML**. Di Filament 5, jika
+`brandLogo` diisi, komponen logo **HANYA merender gambar itu** dan
+**nama brand disembunyikan**:
+
+```blade
+{{-- vendor/filament/.../logo.blade.php --}}
+@if ($logo instanceof Htmlable)
+    <div>{{ $logo }}</div>          {{-- nama brand TIDAK dirender --}}
+@elseif (filled($logo))
+    <img src="{{ $logo }}" />       {{-- nama brand TIDAK dirender --}}
+@else
+    <div>{{ $brandName }}</div>     {{-- hanya di sini nama brand muncul --}}
+@endif
+```
+
+Ditambah `brandLogoHeight('2.25rem')` yang **memotong kotak logo** → navbar tampak
+rusak: hanya kotak "BKS" tanpa keterangan.
+
+**Perbaikan:** hapus `brandLogo()`, `brandLogoHeight()`, dan view `brand-logo.blade.php`.
+Cukup `brandName('Barelang Kontraktor Sarana')` → nama brand tampil rapi dan responsif.
+
+> 💡 Kalau nanti ada file logo asli (PNG/SVG), **boleh** pakai
+> `->brandLogo(asset('images/logo.svg'))` — tapi sadari nama brand akan hilang.
+
+---
+
+### 2. Bug: Dashboard & Laporan ERROR 500
+
+**Penyebab:** saya menambahkan `databaseNotifications()` yang membutuhkan tabel
+`notifications` yang **belum ada**:
+
+```
+SQLSTATE[42S02]: Base table or view not found: 1146 Table 'bks.notifications' doesn't exist
+```
+
+Fitur ini **tidak diminta** — saya menambahkannya sendiri. Sudah dihapus.
+
+> ⚠️ Bug ini membuat **seluruh panel error 500**. Ketangkap karena verifikasi
+> memeriksa **HTTP status halaman**, bukan hanya menguji widget satu per satu.
+
+---
+
+### 3. Halaman Laporan Ditata Ulang
+
+| Sebelum | Sesudah |
+|---|---|
+| Toolbar tidak responsif | Menumpuk di HP, sejajar di layar lebar (`sm:flex-row`) |
+| Kartu ringkasan kaku | **1 kolom (HP) → 2 (tablet) → 4 (desktop)** |
+| Tabel meluber di HP | Setiap tabel punya **versi kartu** untuk layar kecil (`md:hidden` + `md:block`) |
+| Angka tidak sejajar | Rata kanan + `tabular-nums` |
+| Selisih/laba tanpa tanda | Tanda **+ / −** |
+| Jumlah transaksi teks polos | **Badge** berwarna |
+| Section tanpa ikon | Setiap section **berikon** |
+| Tabel kosong bila tanpa data | **Empty state** yang rapi |
+| 4 section terbuka semua | Bisa dilipat; 2 tertutup default |
+
+---
+
+### 4. Ekspor Dipindah ke Route Biasa
+
+**Alasan:** halaman `Page` kustom **tidak punya** `getHeaderActions()`, dan route
+biasa lebih andal untuk mengunduh file.
+
+| Sebelum | Sesudah |
+|---|---|
+| `wire:click="ekspor('spk')"` (aksi Livewire) | `GET /admin/laporan/ekspor/{jenis}` |
+
+Pengamanan:
+- Jenis tidak dikenal → **404**
+- Belum login → redirect **`/admin/login`**
+
+### 5. Tamu Diarahkan Langsung ke Login Filament
+
+| Sebelum | Sesudah |
+|---|---|
+| `/admin/laporan/ekspor/spk` → `/login` → `/admin/login` (**2 hop**) | → `/admin/login` (**1 hop**) |
+
+### 6. Panel Memakai Lebar Penuh
+
+Ditambahkan `maxContentWidth('full')`.
+
+---
+
+### Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| `/admin` | ✅ HTTP 200 (sebelumnya 500) |
+| `/admin/laporan` | ✅ HTTP 200 (sebelumnya 500) |
+| Brand di `.fi-logo` | ✅ "Barelang Kontraktor Sarana" tampil |
+| Logo gambar custom | ✅ Tidak dipakai (nama brand tidak hilang) |
+| Tombol toggle sidebar | ✅ Ada |
+| Kelas responsif | ✅ `grid-cols-1`, `sm:grid-cols-2`, `xl:grid-cols-4`, `sm:flex-row`, `md:block`, `md:hidden` |
+| Ikon di 4 section | ✅ Semua ada |
+| Ekspor 5 jenis via route | ✅ HTTP 200, `text/csv` |
+| Jenis ekspor ngawur | ✅ 404 |
+| Ekspor tanpa login | ✅ redirect `/admin/login` |
+
+**173 test, 484 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+> Test regresi: `tests/Feature/TampilanPanelTest.php` (22 test).
+
+---
+
+### 🔴 PELAJARAN PENTING
+
+1. **Jangan pakai `brandLogo()` kalau nama brand mau tetap tampil** — Filament akan
+   menyembunyikannya dan navbar terlihat rusak.
+2. **Selalu periksa HTTP status halaman utuh.** Menguji widget satu per satu dengan
+   `Livewire::test()` semuanya lulus, tetapi halaman tetap error 500 karena
+   konfigurasi panel (mis. `databaseNotifications()` tanpa tabel).
+3. **Jangan menambah fitur yang tidak diminta** (`databaseNotifications()`) —
+   fitur itu membutuhkan migration yang belum ada dan menjatuhkan seluruh panel.
+4. **`Livewire::test()->html()` tidak memuat seluruh markup halaman.** Untuk menguji
+   kelas responsif, pakai HTTP penuh (`$this->get(...)`).
+5. **Test dengan database kosong tidak merender tabel** — yang muncul `empty-state`.
+   Perlu data untuk menguji markup tabel.
+
+---
+
+### Git
+
+```
+cea5f04 fix: rapikan navbar, panel, dan halaman laporan agar responsif
+6b042b4 docs: catat v3.8 (hapus SIAKAD, sidebar collapsible, UI diperbaiki)
+077122f feat: hapus nama SIAKAD, sidebar bisa ditutup, perbaiki UI dashboard & laporan
+2b003d8 docs: catat v3.7 (perbaikan /login 404 + pelajaran rute)
+6980e16 fix: /login 404 - tambah pengalihan rute lama ke Filament
+4162348 docs: catat v3.6 (halaman laporan + ekspor CSV)
+9e5b59b feat: halaman Laporan + ekspor CSV
+3b438c3 docs: catat v3.5 (antarmuka tunggal Filament) + perbarui README
+715c46e feat: dashboard Filament + hapus halaman Blade lama
+aa69e59 docs: catat 4 resource selesai + bug tombol Direktur (v3.4)
+89e7e2c feat: lengkapi Resource Mitra, Uang Masuk, Uang Keluar, Pengguna
+53d4ed2 docs: catat keputusan Filament + 2 bug yang diperbaiki (v3.3)
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+---
+
 ## [3.8] — Perbaikan Tampilan & Nama Aplikasi — 19 September 2026
 
 ### 1. Nama "SIAKAD" Dihapus
