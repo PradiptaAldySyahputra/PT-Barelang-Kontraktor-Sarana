@@ -349,7 +349,7 @@ class Spk extends Model
     /**
      * Mendekati tenggat (≤ 14 hari lagi, belum lewat).
      */
-    public function mendekatiTenggat(int $hari = 14): bool
+    public function isMendekatiTenggat(int $hari = 14): bool
     {
         $sisa = $this->sisaTenggatHari();
 
@@ -424,8 +424,16 @@ class Spk extends Model
      */
     public function scopeLewatTenggat(Builder $query): void
     {
+        // ⚠️ Hanya SPK yang MASIH BERJALAN. Tanpa syarat ini, SPK lama yang
+        // sudah selesai ikut terhitung "lewat tenggat" dan memunculkan alarm
+        // palsu (pernah terjadi: 67 dari 90 SPK asli dianggap lewat tenggat).
         $query->whereNotNull('tanggal_akhir')
-            ->whereDate('tanggal_akhir', '<', now()->toDateString());
+            ->whereDate('tanggal_akhir', '<', now()->toDateString())
+            ->whereNotIn('status_spk', [
+                StatusSpk::Selesai->value,
+                StatusSpk::SudahDitagihkan->value,
+                StatusSpk::Dibatalkan->value,
+            ]);
     }
 
     /**
@@ -437,7 +445,24 @@ class Spk extends Model
     {
         $query->whereNotNull('tanggal_akhir')
             ->whereDate('tanggal_akhir', '>=', now()->toDateString())
-            ->whereDate('tanggal_akhir', '<=', now()->addDays($hari)->toDateString());
+            ->whereDate('tanggal_akhir', '<=', now()->addDays($hari)->toDateString())
+            ->whereNotIn('status_spk', [
+                StatusSpk::Selesai->value,
+                StatusSpk::SudahDitagihkan->value,
+                StatusSpk::Dibatalkan->value,
+            ]);
+    }
+
+    /**
+     * Apakah SPK ini sudah selesai / tidak perlu dipantau lagi?
+     */
+    public function sudahSelesai(): bool
+    {
+        return in_array($this->status_spk, [
+            StatusSpk::Selesai,
+            StatusSpk::SudahDitagihkan,
+            StatusSpk::Dibatalkan,
+        ], true);
     }
 
     /**

@@ -81,7 +81,7 @@ class StatusSpkResource extends MonitoringSpkResource
                     ->badge()
                     ->color(fn (Spk $r): string => match (true) {
                         $r->sudahLewatTenggat() => 'danger',
-                        $r->mendekatiTenggat() => 'warning',
+                        $r->isMendekatiTenggat() => 'warning',
                         default => 'gray',
                     })
                     ->placeholder('—'),

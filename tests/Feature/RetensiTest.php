@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use App\Models\Mitra;
 use App\Models\Pengguna;
@@ -168,7 +169,7 @@ class RetensiTest extends TestCase
         $spk = $this->buatSpk(['tanggal_akhir' => now()->subDays(5)]);
 
         $this->assertTrue($spk->sudahLewatTenggat());
-        $this->assertFalse($spk->mendekatiTenggat());
+        $this->assertFalse($spk->isMendekatiTenggat());
         $this->assertSame('Lewat 5 hari', $spk->labelTenggat());
     }
 
@@ -177,7 +178,7 @@ class RetensiTest extends TestCase
         $spk = $this->buatSpk(['tanggal_akhir' => now()->addDays(7)]);
 
         $this->assertFalse($spk->sudahLewatTenggat());
-        $this->assertTrue($spk->mendekatiTenggat());
+        $this->assertTrue($spk->isMendekatiTenggat());
         $this->assertSame('7 hari lagi', $spk->labelTenggat());
     }
 
@@ -186,7 +187,7 @@ class RetensiTest extends TestCase
         $spk = $this->buatSpk(['tanggal_akhir' => now()->addDays(60)]);
 
         $this->assertFalse($spk->sudahLewatTenggat());
-        $this->assertFalse($spk->mendekatiTenggat());
+        $this->assertFalse($spk->isMendekatiTenggat());
     }
 
     public function test_tenggat_hari_ini(): void
@@ -194,18 +195,36 @@ class RetensiTest extends TestCase
         $spk = $this->buatSpk(['tanggal_akhir' => now()]);
 
         $this->assertSame('Hari ini', $spk->labelTenggat());
-        $this->assertTrue($spk->mendekatiTenggat());
+        $this->assertTrue($spk->isMendekatiTenggat());
     }
 
     public function test_scope_lewat_tenggat(): void
     {
-        $this->buatSpk(['nomor_spk' => 'L-1', 'tanggal_akhir' => now()->subDays(3)]);
-        $this->buatSpk(['nomor_spk' => 'L-2', 'tanggal_akhir' => now()->addDays(30)]);
+        // ⚠️ Scope lewatTenggat() hanya berlaku untuk SPK yang MASIH BERJALAN.
+        // SPK yang sudah selesai TIDAK dihitung — supaya tidak muncul alarm
+        // palsu (pernah terjadi: 67 dari 90 SPK asli dianggap lewat tenggat).
+        $this->buatSpk([
+            'nomor_spk' => 'L-1',
+            'tanggal_akhir' => now()->subDays(3),
+            'status_spk' => StatusSpk::Berjalan,
+        ]);
+        $this->buatSpk([
+            'nomor_spk' => 'L-2',
+            'tanggal_akhir' => now()->addDays(30),
+            'status_spk' => StatusSpk::Berjalan,
+        ]);
+        // Lewat tenggat TAPI sudah selesai -> tidak boleh muncul.
+        $this->buatSpk([
+            'nomor_spk' => 'L-3',
+            'tanggal_akhir' => now()->subDays(30),
+            'status_spk' => StatusSpk::Selesai,
+        ]);
 
         $hasil = Spk::lewatTenggat()->pluck('nomor_spk');
 
         $this->assertContains('L-1', $hasil);
         $this->assertNotContains('L-2', $hasil);
+        $this->assertNotContains('L-3', $hasil, 'SPK selesai tidak boleh dianggap lewat tenggat');
     }
 
     public function test_scope_piutang_menua(): void

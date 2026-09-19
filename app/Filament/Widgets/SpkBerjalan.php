@@ -96,7 +96,7 @@ class SpkBerjalan extends TableWidget
                     ->badge()
                     ->color(fn (Spk $record): string => match (true) {
                         $record->sudahLewatTenggat() => 'danger',
-                        $record->mendekatiTenggat() => 'warning',
+                        $record->isMendekatiTenggat() => 'warning',
                         default => 'gray',
                     })
                     ->placeholder('—'),
