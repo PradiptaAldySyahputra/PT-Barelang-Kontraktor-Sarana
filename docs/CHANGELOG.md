@@ -3,6 +3,83 @@
 
 ---
 
+## [3.4] — Semua Resource Selesai — 19 September 2026
+
+### Yang Sudah Jadi
+
+| Resource | Form | Tabel | Tab | Catatan |
+|---|---|---|---|---|
+| **SPK** | ✅ | ✅ | ✅ | Entitas inti |
+| **Mitra** | ✅ | ✅ | ✅ | PLN, pelanggan, subkon, vendor |
+| **Uang Masuk** | ✅ **2 mode** | ✅ | ✅ | Dari SPK / Luar SPK |
+| **Uang Keluar** | ✅ | ✅ | ✅ | Terkait SPK / Umum |
+| **Pengguna** | ✅ | ✅ | — | Hanya Admin |
+
+### Form Uang Masuk — 2 Mode (permintaan user)
+
+| Mode | Cara Kerja | `spk_id` |
+|---|---|---|
+| **Berdasarkan SPK** | Pilih SPK → nomor SPK & nama pekerjaan **terisi otomatis** | Terisi |
+| **Manual / Luar SPK** | Isi nomor referensi & keterangan manual | **NULL** |
+
+> Sumber uang masuk **tidak disimpan sebagai kolom** — disimpulkan dari `spk_id`.
+> Ini sesuai `Schema.md` dan mencegah data tidak sinkron.
+
+### Upload Bukti
+
+Semua transaksi mendukung **jumlah file bebas** (JSON array):
+bukti transfer + nota + screenshot sekaligus. Format JPG/PNG/WEBP/PDF, maks 10 MB/file.
+
+### 🔴 BUG PENTING YANG DITEMUKAN
+
+**Direktur tetap melihat tombol Tambah / Edit / Hapus.**
+
+**Penyebab:** Filament **hanya** memakai `Resource::canCreate()` / `canEdit()` / `canDelete()`
+untuk menolak akses halaman (`abort 403`). Filament **tidak** otomatis menyembunyikan tombolnya.
+
+**Dampak:** Aman dari kebocoran data (klik tombol → 403), tetapi:
+- Menyesatkan Direktur — tombol terlihat padahal tidak bisa dipakai
+- Tidak sesuai semangat `Rules.md` §4
+
+**Perbaikan:** Trait `App\Filament\Concerns\BolehUbahData` + `->visible()` pada
+**semua** `CreateAction`, `EditAction`, `DeleteAction`, dan `BulkActionGroup` di 5 resource.
+
+**Verifikasi (render HTML sungguhan):**
+
+| | Link `create` | Link `edit` | Halaman create |
+|---|---|---|---|
+| **Direktur** | **0** ✅ | **0** ✅ | 403 ✅ |
+| **Admin** | 1 | 12–44 | 200 ✅ |
+
+> Dua lapis sekarang bekerja: tombol disembunyikan (UI) **dan** akses ditolak (otorisasi).
+> Test regresi: `tests/Feature/TombolAksiTest.php` (23 test).
+
+### Testing
+
+**121 test, 349 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+### Git
+
+```
+89e7e2c feat: lengkapi Resource Mitra, Uang Masuk, Uang Keluar, Pengguna
+53d4ed2 docs: catat keputusan Filament + 2 bug yang diperbaiki (v3.3)
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+### Yang Belum Dikerjakan
+
+| # | Item |
+|---|---|
+| 1 | Dashboard widget Filament (kartu ringkasan + grafik arus kas) |
+| 2 | Laporan (SPK, cashflow, piutang, laba-rugi per SPK) + export PDF/Excel |
+| 3 | Perbarui `Architecture.md` & `Design.md` agar konsisten dengan Filament |
+| 4 | Hapus halaman Blade lama (`/dashboard`) atau arahkan ke Filament |
+
+---
+
 ## [3.3] — Filament Dipakai — 19 September 2026
 
 ### ⚠️ Keputusan yang Menyimpang dari SRS
