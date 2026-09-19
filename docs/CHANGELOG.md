@@ -3,6 +3,113 @@
 
 ---
 
+## [3.8] — Perbaikan Tampilan & Nama Aplikasi — 19 September 2026
+
+### 1. Nama "SIAKAD" Dihapus
+
+**Masalah yang dilaporkan user:** *"kenapa ada siakad?"*
+
+**Penyebab:** "SIAKAD" adalah **sisa dari proyek sebelumnya** (SIAKAD SDN 004 Teluk
+Dalam) yang terbawa saat saya menamai aplikasi ini. Tidak relevan untuk
+PT Barelang Kontraktor Sarana — **kelalaian saya**.
+
+Dihapus dari:
+
+| File | Sebelum | Sesudah |
+|---|---|---|
+| `AdminPanelProvider.php` | brandName `SIAKAD SPK — ...` | `PT Barelang Kontraktor Sarana` |
+| `.env` | `APP_NAME="SIAKAD SPK"` | `APP_NAME="SPK & Kontrol Keuangan"` |
+| `.env.testing`, `.env.testing.example` | idem | idem |
+| `README.md` | judul `SIAKAD SPK — ...` | `Sistem Informasi SPK & Kontrol Keuangan` |
+
+Ditambahkan **logo inisial "BKS"** di panel.
+
+### 2. Sidebar Bisa Ditutup / Dibuka
+
+Sebelumnya sidebar hanya menyusut jadi ikon. Sekarang:
+
+| Pengaturan | Efek |
+|---|---|
+| `sidebarFullyCollapsibleOnDesktop()` | Sidebar bisa **ditutup total** lalu dibuka kembali |
+| `collapsibleNavigationGroups(true)` | Grup menu bisa dilipat satu per satu |
+| `sidebarWidth('16rem')` | Lebar normal |
+| `collapsedSidebarWidth('4.5rem')` | Lebar saat menyusut |
+
+### 3. Dashboard Diperbaiki
+
+| Sebelum | Sesudah |
+|---|---|
+| Dashboard bawaan Filament (polos) | **Dashboard kustom** dengan alur informasi |
+| Kartu hanya menampilkan angka | Kartu memberi **konteks**: perbandingan bulan lalu + sparkline tren 6 bulan |
+| Tidak ada grafik status | **Donut** SPK per status |
+| Tidak ada grafik kategori | **Bar horizontal** pengeluaran per kategori |
+| Urutan widget acak | Kartu → grafik → tabel (mengalir) |
+
+### 4. Laporan Diperbaiki
+
+| Sebelum | Sesudah |
+|---|---|
+| **5 tombol ekspor berjajar** (berantakan) | **1 dropdown** "Ekspor CSV" |
+| Filter periode tombol polos | **Segmented control** |
+| Semua bagian terbuka (panjang) | Bagian bisa **dilipat**; 2 bagian tertutup default |
+| Angka tidak sejajar | Rata kanan + `tabular-nums` (mudah dibandingkan) |
+| Selisih/laba tanpa tanda | Diberi tanda **+ / −** |
+| Jumlah transaksi teks polos | **Badge** berwarna |
+
+### 5. 🔴 Bug Ditemukan & Diperbaiki
+
+**Dashboard error 500** — *"Undefined variable $attributes"*.
+
+**Penyebab:** `resources/views/filament/brand-logo.blade.php` saya tulis seperti
+**Blade component** (memakai `$attributes`), padahal dipanggil lewat `view()`
+sebagai **view biasa**. Variabel `$attributes` hanya ada di dalam component.
+
+**Perbaikan:** hapus penggunaan `$attributes`.
+
+> ⚠️ **Bug ini ketangkap karena verifikasi memeriksa HTTP status halaman
+> sungguhan.** Saat saya menguji widget satu per satu dengan `Livewire::test()`,
+> semuanya **lulus** — bug baru muncul di halaman utuh. Pelajaran: selalu uji
+> halaman lengkap, bukan hanya komponennya.
+
+### Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| `/admin` | ✅ HTTP 200 (sebelumnya 500) |
+| `/admin/laporan` | ✅ HTTP 200 |
+| "SIAKAD" di HTML | ✅ Tidak ada |
+| Brand perusahaan | ✅ Tampil |
+| Logo "BKS" | ✅ Tampil |
+| Tombol toggle sidebar | ✅ Ada (`fi-topbar-collapse-sidebar-btn-ctn`) |
+| Grup navigasi bisa dilipat | ✅ Ada (`fi-sidebar-group-collapse-btn`) |
+| Dropdown ekspor | ✅ Ada (`fi-dropdown`) |
+| Section collapsible | ✅ Ada (`fi-collapsible`) |
+
+**164 test, 448 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+> Test regresi: `tests/Feature/TampilanPanelTest.php` (13 test).
+
+### Git
+
+```
+077122f feat: hapus nama SIAKAD, sidebar bisa ditutup, perbaiki UI dashboard & laporan
+2b003d8 docs: catat v3.7 (perbaikan /login 404 + pelajaran rute)
+6980e16 fix: /login 404 - tambah pengalihan rute lama ke Filament
+4162348 docs: catat v3.6 (halaman laporan + ekspor CSV)
+9e5b59b feat: halaman Laporan + ekspor CSV
+3b438c3 docs: catat v3.5 (antarmuka tunggal Filament) + perbarui README
+715c46e feat: dashboard Filament + hapus halaman Blade lama
+aa69e59 docs: catat 4 resource selesai + bug tombol Direktur (v3.4)
+89e7e2c feat: lengkapi Resource Mitra, Uang Masuk, Uang Keluar, Pengguna
+53d4ed2 docs: catat keputusan Filament + 2 bug yang diperbaiki (v3.3)
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+---
+
 ## [3.7] — Perbaikan: /login 404 — 19 September 2026
 
 ### 🐞 Masalah yang Dilaporkan User
