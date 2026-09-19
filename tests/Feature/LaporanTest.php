@@ -109,13 +109,14 @@ class LaporanTest extends TestCase
 
         $html = Livewire::test(Laporan::class)->html();
 
+        // ⚠️ KEPUTUSAN USER: laba/rugi, piutang, aging, retensi DIHAPUS.
         foreach ([
-            'Laporan Keuangan',
-            'Arus Kas per Bulan',
+            'Ringkasan',
+            'Arus Uang per Bulan',
             'Pengeluaran per Kategori',
-            'Laba-Rugi per SPK',
-            'Piutang SPK',
-            'Periode',
+            'Daftar SPK',
+            'Tenggat SPK',
+            'Bulan Ini',
         ] as $bagian) {
             $this->assertStringContainsString($bagian, $html, "Bagian '$bagian' tidak tampil");
         }
@@ -134,33 +135,7 @@ class LaporanTest extends TestCase
         $this->assertStringContainsString('80.000.000', $html, 'Piutang salah');
     }
 
-    public function test_laporan_menampilkan_laba_rugi_per_spk(): void
-    {
-        $this->actingAs($this->admin);
-
-        $html = Livewire::test(Laporan::class)->html();
-
-        $this->assertStringContainsString('LAPORAN-001', $html);
-        // Laba = 120jt penerimaan - 65jt biaya = 55jt
-        $this->assertStringContainsString('55.000.000', $html, 'Laba per SPK salah');
-    }
-
-    public function test_laporan_menampilkan_data_piutang(): void
-    {
-        $this->actingAs($this->admin);
-
-        $html = Livewire::test(Laporan::class)->html();
-
-        $this->assertStringContainsString('LAPORAN-001', $html);
-
-        // Status berubah OTOMATIS lewat SinkronStatusTagihanObserver:
-        // SPK ini sudah menerima pembayaran (120jt dari 200jt), jadi
-        // statusnya menjadi "Menunggu Pembayaran" — bukan lagi
-        // "Belum Ditagihkan" yang diisi manual.
-        $this->assertStringContainsString('Menunggu Pembayaran', $html);
-    }
-
-    public function test_piutang_laporan_mengurangi_retensi_yang_ditahan(): void
+    public function test_piutang_laporan_sederhana(): void
     {
         $this->actingAs($this->admin);
 
@@ -227,58 +202,56 @@ class LaporanTest extends TestCase
         $res->sendContent();
         $csv = ob_get_clean();
 
-        $this->assertStringContainsString('Laporan SPK', $csv);
+        $this->assertStringContainsString('Laporan Daftar SPK', $csv);
         $this->assertStringContainsString('LAPORAN-001', $csv);
         $this->assertStringContainsString('Nomor SPK', $csv);
     }
 
-    public function test_ekspor_laba_rugi_menghasilkan_csv(): void
+    public function test_ekspor_masuk_menghasilkan_csv(): void
     {
         $this->actingAs($this->admin);
 
         ob_start();
-        (new Laporan)->ekspor('laba_rugi')->sendContent();
+        (new Laporan)->ekspor('masuk')->sendContent();
         $csv = ob_get_clean();
 
-        $this->assertStringContainsString('Laporan Laba-Rugi per SPK', $csv);
-        $this->assertStringContainsString('55000000', $csv, 'Laba 55jt tidak ada di CSV');
+        $this->assertStringContainsString('Laporan Uang Masuk per Bulan', $csv);
+        $this->assertStringContainsString('Total Masuk', $csv);
     }
 
-    public function test_ekspor_piutang_menghasilkan_csv(): void
+    public function test_ekspor_keluar_menghasilkan_csv(): void
     {
         $this->actingAs($this->admin);
 
         ob_start();
-        (new Laporan)->ekspor('piutang')->sendContent();
+        (new Laporan)->ekspor('keluar')->sendContent();
         $csv = ob_get_clean();
 
-        $this->assertStringContainsString('Laporan Piutang SPK', $csv);
-        $this->assertStringContainsString('80000000', $csv, 'Sisa piutang 80jt tidak ada di CSV');
-    }
-
-    public function test_ekspor_cashflow_menghasilkan_csv(): void
-    {
-        $this->actingAs($this->admin);
-
-        ob_start();
-        (new Laporan)->ekspor('cashflow')->sendContent();
-        $csv = ob_get_clean();
-
-        $this->assertStringContainsString('Laporan Arus Kas', $csv);
-    }
-
-    public function test_ekspor_kategori_menghasilkan_csv(): void
-    {
-        $this->actingAs($this->admin);
-
-        ob_start();
-        (new Laporan)->ekspor('kategori')->sendContent();
-        $csv = ob_get_clean();
-
-        $this->assertStringContainsString('Laporan Pengeluaran per Kategori', $csv);
-        // CSV memakai LABEL enum (bukan nilai mentah) agar mudah dibaca di Excel
+        $this->assertStringContainsString('Laporan Uang Keluar per Kategori', $csv);
         $this->assertStringContainsString('Material', $csv);
-        $this->assertStringContainsString('Upah', $csv);
+    }
+
+    public function test_ekspor_spk_menghasilkan_csv2(): void
+    {
+        $this->actingAs($this->admin);
+
+        ob_start();
+        (new Laporan)->ekspor('spk')->sendContent();
+        $csv = ob_get_clean();
+
+        $this->assertStringContainsString('Laporan Daftar SPK', $csv);
+    }
+
+    public function test_ekspor_tenggat_menghasilkan_csv(): void
+    {
+        $this->actingAs($this->admin);
+
+        ob_start();
+        (new Laporan)->ekspor('tenggat')->sendContent();
+        $csv = ob_get_clean();
+
+        $this->assertStringContainsString('Laporan Tenggat SPK', $csv);
+        $this->assertStringContainsString('Sisa Hari', $csv);
     }
 
     public function test_direktur_bisa_ekspor_laporan(): void

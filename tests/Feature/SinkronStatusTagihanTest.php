@@ -76,21 +76,6 @@ class SinkronStatusTagihanTest extends TestCase
         $this->assertSame(StatusTagihan::Dibayar, $spk->fresh()->status_tagihan);
     }
 
-    public function test_pembayaran_penuh_dengan_retensi_menjadikan_dibayar(): void
-    {
-        $spk = $this->buatSpk();
-        $spk->terapkanRetensi(5.00)->save();
-
-        // Bayar 95jt = nilai tagih (100jt - 5jt retensi) -> lunas
-        UangMasuk::factory()->create([
-            'spk_id' => $spk->id,
-            'jumlah' => 95_000_000,
-            'mitra_id' => null,
-        ]);
-
-        $this->assertSame(StatusTagihan::Dibayar, $spk->fresh()->status_tagihan);
-    }
-
     public function test_tanpa_pembayaran_status_tidak_ditimpa(): void
     {
         // Admin sudah menandai "Sudah Ditagihkan" — sistem TIDAK boleh menimpa

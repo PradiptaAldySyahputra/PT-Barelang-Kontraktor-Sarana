@@ -11,18 +11,22 @@ use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Tabel SPK berjalan + laba/rugi per SPK.
+ * Daftar SPK yang perlu perhatian: berjalan + mendekati/lewat tenggat.
  *
- * Laba/rugi dihitung on-the-fly dari transaksi terkait (withSum),
- * bukan kolom tersimpan.
+ * ⚠️ REVISI USER: kolom Laba/Rugi dan Piutang DIHAPUS (sistem tidak
+ * menghitung laba/rugi). Yang ditampilkan: identitas pekerjaan + status
+ * + tenggat + berapa yang sudah diterima.
+ *
+ * Diurutkan: yang PALING LEWAT TENGGAT di atas, supaya langsung terlihat
+ * pekerjaan mana yang perlu ditindaklanjuti.
  */
 class SpkBerjalan extends TableWidget
 {
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 5;
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $heading = 'SPK Berjalan — Laba/Rugi';
+    protected static ?string $heading = 'Perlu Perhatian — SPK Berjalan';
 
     public function table(Table $table): Table
     {
@@ -30,10 +34,9 @@ class SpkBerjalan extends TableWidget
             ->query(
                 fn (): Builder => Spk::query()
                     ->berjalan()
-                    ->with('mitra')
+                    ->with(['mitra', 'subkon'])
                     ->withSum('uangMasuk as total_masuk', 'jumlah')
-                    ->withSum('uangKeluar as total_keluar', 'jumlah')
-                    ->orderByDesc('nilai_spk')
+                    ->orderByRaw('tanggal_akhir IS NULL, tanggal_akhir ASC')
                     ->limit(10)
             )
             ->columns([
@@ -46,12 +49,20 @@ class SpkBerjalan extends TableWidget
                 TextColumn::make('nama_pekerjaan')
                     ->label('Pekerjaan')
                     ->wrap()
-                    ->description(fn (Spk $record): ?string => $record->lokasi),
+                    ->lineClamp(3)
+                    ->description(fn (Spk $record): ?string => $record->mitra?->nama),
 
-                TextColumn::make('mitra.nama')
-                    ->label('Mitra')
-                    ->placeholder('—')
-                    ->toggleable(),
+                TextColumn::make('tenggat')
+                    ->label('Tenggat')
+                    ->state(fn (Spk $record): ?string => $record->labelTenggat())
+                    ->description(fn (Spk $record): ?string => $record->tanggal_akhir?->format('d/m/Y'))
+                    ->badge()
+                    ->color(fn (Spk $record): string => match (true) {
+                        $record->sudahLewatTenggat() => 'danger',
+                        $record->isMendekatiTenggat() => 'warning',
+                        default => 'gray',
+                    })
+                    ->placeholder('Tanpa tenggat'),
 
                 TextColumn::make('nilai_spk')
                     ->label('Nilai SPK')
@@ -59,47 +70,19 @@ class SpkBerjalan extends TableWidget
                     ->alignEnd(),
 
                 TextColumn::make('total_masuk')
-                    ->label('Penerimaan')
+                    ->label('Sudah Diterima')
                     ->state(fn (Spk $record): float => (float) ($record->total_masuk ?? 0))
                     ->money('IDR', locale: 'id')
                     ->color('success')
                     ->alignEnd(),
 
-                TextColumn::make('total_keluar')
-                    ->label('Biaya')
-                    ->state(fn (Spk $record): float => (float) ($record->total_keluar ?? 0))
-                    ->money('IDR', locale: 'id')
-                    ->color('danger')
-                    ->alignEnd(),
-
-                TextColumn::make('laba_rugi')
-                    ->label('Laba/Rugi')
-                    ->state(fn (Spk $record): float => (float) ($record->total_masuk ?? 0) - (float) ($record->total_keluar ?? 0))
+                TextColumn::make('sisa')
+                    ->label('Belum Diterima')
+                    ->state(fn (Spk $record): float => max(0, $record->piutangDari((float) ($record->total_masuk ?? 0))))
                     ->money('IDR', locale: 'id')
                     ->weight('bold')
-                    ->color(fn ($state): string => (float) $state >= 0 ? 'success' : 'danger')
-                    ->alignEnd(),
-
-                TextColumn::make('piutang')
-                    ->label('Piutang')
-                    ->state(fn (Spk $record): float => $record->piutangDari((float) ($record->total_masuk ?? 0)))
-                    ->money('IDR', locale: 'id')
                     ->color('warning')
-                    ->alignEnd()
-                    ->description(fn (Spk $record): ?string => $record->retensiDitahan() > 0
-                        ? 'retensi '.number_format($record->retensiDitahan(), 0, ',', '.')
-                        : null),
-
-                TextColumn::make('tenggat')
-                    ->label('Tenggat')
-                    ->state(fn (Spk $record): ?string => $record->labelTenggat())
-                    ->badge()
-                    ->color(fn (Spk $record): string => match (true) {
-                        $record->sudahLewatTenggat() => 'danger',
-                        $record->isMendekatiTenggat() => 'warning',
-                        default => 'gray',
-                    })
-                    ->placeholder('—'),
+                    ->alignEnd(),
             ])
             ->paginated([5, 10, 25]);
     }

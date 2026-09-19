@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Penggunas;
 
+use App\Enums\Peran;
 use App\Filament\Concerns\BolehUbahData;
 use App\Filament\Resources\Penggunas\Pages\CreatePengguna;
 use App\Filament\Resources\Penggunas\Pages\EditPengguna;
@@ -20,13 +21,21 @@ use Filament\Tables\Table;
 /**
  * Resource Pengguna — manajemen akun.
  *
- * HANYA Admin yang boleh mengelola pengguna (Direktur tidak boleh).
+ * ⚠️ PERMINTAAN USER (19 Sep 2026):
+ * "bagian pengguna hanya direktur yang bisa lihat."
  *
- * ⚠️ PENGAMAN SISTEM TERKUNCI (temuan audit keamanan):
- * Admin TIDAK boleh menghapus atau menonaktifkan akunnya SENDIRI.
- * Tanpa pengaman ini, seorang Admin bisa mengunci dirinya keluar dari
- * sistem — dan kalau dia satu-satunya Admin, tidak ada yang bisa
- * mengembalikan akses.
+ * Jadi:
+ *   - HANYA Direktur yang bisa MELIHAT menu Pengguna
+ *   - Direktur juga yang boleh menambah/mengubah akun
+ *   - Admin (operator) tidak melihat menu ini sama sekali
+ *
+ * Alasan: pengelolaan akun menyangkut hak akses sistem. Ditaruh di tangan
+ * Direktur (pemilik keputusan), bukan operator harian.
+ *
+ * ⚠️ PENGAMAN SISTEM TERKUNCI:
+ * Siapa pun (termasuk Direktur) TIDAK boleh menghapus atau menonaktifkan
+ * akunnya SENDIRI — kalau tidak, dia bisa mengunci dirinya dari sistem dan
+ * tidak ada yang bisa mengembalikan akses.
  */
 class PenggunaResource extends Resource
 {
@@ -66,40 +75,47 @@ class PenggunaResource extends Resource
     }
 
     // ---------------------------------------------------------
-    // Hak akses — HANYA Admin
+    // Hak akses — HANYA Direktur
     // ---------------------------------------------------------
+
+    /**
+     * Apakah pengguna yang login adalah Direktur?
+     */
+    protected static function isDirektur(): bool
+    {
+        return auth()->user()?->peran === Peran::Direktur;
+    }
+
+    /**
+     * Sembunyikan menu dari Admin — hanya Direktur yang melihat.
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::isDirektur();
+    }
+
+    public static function canViewAny(): bool
+    {
+        return static::isDirektur();
+    }
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->bolehInput() ?? false;
+        return static::isDirektur();
     }
 
-    /**
-     * Ubah data pengguna.
-     *
-     * Admin boleh mengubah pengguna LAIN, tetapi tidak boleh mengubah
-     * dirinya sendiri lewat halaman ini (mencegah menonaktifkan diri
-     * sendiri lalu terkunci). Untuk ganti nama/password sendiri, tidak
-     * disediakan di MVP — minta Admin lain.
-     */
     public static function canEdit($record): bool
     {
-        if (! (auth()->user()?->bolehInput() ?? false)) {
+        if (! static::isDirektur()) {
             return false;
         }
 
         return ! static::adalahDiriSendiri($record);
     }
 
-    /**
-     * Hapus pengguna.
-     *
-     * Admin TIDAK boleh menghapus akunnya sendiri — sistem bisa terkunci
-     * kalau dia satu-satunya Admin.
-     */
     public static function canDelete($record): bool
     {
-        if (! (auth()->user()?->bolehInput() ?? false)) {
+        if (! static::isDirektur()) {
             return false;
         }
 
@@ -107,7 +123,7 @@ class PenggunaResource extends Resource
     }
 
     /**
-     * Apakah record ini adalah akun yang sedang login?
+     * Apakah record ini akun yang sedang login?
      */
     protected static function adalahDiriSendiri(mixed $record): bool
     {

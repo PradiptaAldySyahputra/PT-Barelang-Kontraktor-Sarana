@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\GrafikArusKas;
-use App\Filament\Widgets\PengeluaranPerKategori;
 use App\Filament\Widgets\RingkasanKeuangan;
 use App\Filament\Widgets\SpkBerjalan;
 use App\Filament\Widgets\SpkPerStatus;
+use App\Filament\Widgets\StatusTagihanChart;
 use BackedEnum;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
@@ -16,10 +16,28 @@ use Filament\Support\Icons\Heroicon;
 /**
  * Dashboard utama.
  *
- * Mengatur urutan & tata letak widget supaya informasinya mengalir:
- *   1. Kartu ringkasan (angka terpenting lebih dulu)
- *   2. Grafik arus kas + status SPK (berdampingan)
- *   3. Tabel SPK berjalan (laba/rugi)
+ * ⚠️ REVISI USER: "dashboard masih kurang untuk tata letak dan informasi
+ * yang disampaikan yang jelas menampilkan ringkasan atau bagian penting
+ * dari menu atau fitur."
+ *
+ * SUSUNAN BARU (2 kolom):
+ *
+ *   ┌───────────────────────────────────────────────────────┐
+ *   │  KARTU RINGKASAN (lebar penuh, 4 baris logis)          │
+ *   │  Uang · Pekerjaan · Tagihan · Master                   │
+ *   ├───────────────────────────┬───────────────────────────┤
+ *   │  Arus Kas (6 bulan)       │  Status Tagihan (donut)   │
+ *   ├───────────────────────────┼───────────────────────────┤
+ *   │  SPK per Status (donut)   │  ...                      │
+ *   ├───────────────────────────┴───────────────────────────┤
+ *   │  Perlu Perhatian — SPK Berjalan (tabel, lebar penuh)   │
+ *   └───────────────────────────────────────────────────────┘
+ *
+ * Perubahan dari versi lama:
+ *   - Widget "Pengeluaran per Kategori" DIHAPUS — grafiknya pendek
+ *     sehingga menyisakan banyak ruang kosong di sebelahnya.
+ *   - Ditambah "Status Tagihan" (donut) — pasangan seimbang dengan
+ *     "SPK per Status", keduanya pendek sehingga berdampingan rapi.
  */
 class Dashboard extends BaseDashboard
 {
@@ -41,8 +59,8 @@ class Dashboard extends BaseDashboard
         return [
             RingkasanKeuangan::class,
             GrafikArusKas::class,
+            StatusTagihanChart::class,
             SpkPerStatus::class,
-            PengeluaranPerKategori::class,
             SpkBerjalan::class,
         ];
     }
@@ -57,11 +75,11 @@ class Dashboard extends BaseDashboard
 
     public function getSubheading(): ?string
     {
-        return 'Ringkasan SPK, arus kas, dan laba-rugi per SPK';
+        return 'Ringkasan pekerjaan, tagihan, dan arus kas perusahaan';
     }
 
     /**
-     * Widget bawaan Filament yang tidak dipakai (profil akun sudah ada di menu atas).
+     * Widget bawaan Filament yang tidak dipakai.
      *
      * @return array<class-string>
      */

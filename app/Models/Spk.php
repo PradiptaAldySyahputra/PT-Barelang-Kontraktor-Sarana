@@ -29,8 +29,6 @@ use Illuminate\Support\Carbon;
  * @property string $nama_pekerjaan
  * @property string|null $lokasi
  * @property string $nilai_spk
- * @property string|null $persen_retensi
- * @property string|null $nilai_retensi
  * @property string|null $jenis_sumber
  * @property string|null $sheet_lama
  * @property int|null $mitra_id
@@ -59,8 +57,6 @@ class Spk extends Model
         'nama_pekerjaan',
         'lokasi',
         'nilai_spk',
-        'persen_retensi',
-        'nilai_retensi',
         'jenis_sumber',
         'sheet_lama',
         'mitra_id',
@@ -80,54 +76,10 @@ class Spk extends Model
             'tanggal_spk' => 'date',
             'tanggal_akhir' => 'date',
             'nilai_spk' => 'decimal:2',
-            'persen_retensi' => 'decimal:2',
-            'nilai_retensi' => 'decimal:2',
             'status_spk' => StatusSpk::class,
             'status_tagihan' => StatusTagihan::class,
             'dikerjakan_oleh' => DikerjakanOleh::class,
         ];
-    }
-
-    /**
-     * Hitung ulang `nilai_retensi` SETIAP kali SPK disimpan.
-     *
-     * Ini menjamin `nilai_retensi = nilai_spk × persen_retensi / 100` selalu
-     * konsisten, tidak peduli bagaimana record dibuat (form, seeder, factory).
-     * Sesuai Rules.md §2 butir 2.
-     */
-    protected static function booted(): void
-    {
-        static::saving(function (Spk $spk): void {
-            $spk->hitungRetensi();
-        });
-    }
-
-    /**
-     * Hitung nilai retensi dari nilai SPK & persen retensi.
-     */
-    public function hitungRetensi(): void
-    {
-        if ($this->persen_retensi === null || $this->nilai_spk === null) {
-            $this->nilai_retensi = null;
-
-            return;
-        }
-
-        $this->nilai_retensi = round(
-            (float) $this->nilai_spk * (float) $this->persen_retensi / 100,
-            2
-        );
-    }
-
-    /**
-     * Terapkan retensi (default 5%) untuk SPK subkon/vendor.
-     */
-    public function terapkanRetensi(float $persen = 5.00): static
-    {
-        $this->persen_retensi = $persen;
-        $this->hitungRetensi();
-
-        return $this;
     }
 
     // ---------------------------------------------------------
@@ -219,105 +171,53 @@ class Spk extends Model
     }
 
     // ---------------------------------------------------------
-    // RETENSI & PIUTANG
+    // SISA & PIUTANG (SEDERHANA)
     // ---------------------------------------------------------
     //
-    // KONSEP (penting — lihat Rules.md §2 dan docs/RETENSI.md):
+    // ⚠️ KEPUTUSAN USER (19 Sep 2026):
+    // Retensi, laba/rugi, dan aging piutang DIHAPUS. Sistem murni mencatat
+    // data yang diinput — tanpa perhitungan pajak/biaya/laba yang tidak
+    // dipakai perusahaan.
     //
-    // Retensi adalah bagian nilai SPK yang DITAHAN pemberi kerja sampai
-    // masa pemeliharaan selesai. Karena itu retensi:
-    //   - BUKAN piutang lancar (belum boleh ditagih)
-    //   - ditampilkan TERPISAH agar tetap terlihat, bukan disembunyikan
-    //
-    //   nilai_tagih (boleh ditagih sekarang) = nilai_spk − retensi_ditahan
-    //   piutang lancar                        = nilai_tagih − sudah_diterima
-    //
-    // Retensi dianggap DILEPAS ketika SPK berstatus tagihan `Dibayar`
-    // (artinya pekerjaan selesai & masa pemeliharaan berjalan/selesai).
-    // Setelah dilepas, nilai penuh kembali boleh ditagih.
+    // Yang tersisa hanya dua angka yang benar-benar dipakai monitoring:
+    //   piutang = nilai_spk − sudah_diterima
+    //   sisa    = sama, tapi tidak pernah negatif (untuk tampilan)
 
     /**
-     * Retensi yang masih ditahan.
+     * Piutang: sisa nilai SPK yang belum diterima.
      *
-     * Mengembalikan 0 jika SPK sudah berstatus `Dibayar` (retensi dilepas).
-     */
-    public function retensiDitahan(): float
-    {
-        if ($this->status_tagihan === StatusTagihan::Dibayar) {
-            return 0.0;
-        }
-
-        return (float) ($this->nilai_retensi ?? 0);
-    }
-
-    /**
-     * Nilai SPK yang boleh ditagih sekarang (setelah dikurangi retensi ditahan).
-     */
-    public function nilaiTagih(): float
-    {
-        return (float) $this->nilai_spk - $this->retensiDitahan();
-    }
-
-    /**
-     * Piutang lancar — versi yang menjalankan query sendiri.
+     * Bisa negatif kalau penerimaan melebihi nilai SPK — itu tanda ada
+     * kelebihan input yang perlu diperiksa.
      */
     public function piutang(): float
     {
-        return $this->piutangDari($this->totalPenerimaan());
+        return (float) $this->nilai_spk - $this->totalPenerimaan();
     }
 
     /**
-     * Piutang lancar dari angka penerimaan yang SUDAH diketahui.
+     * Piutang dari angka penerimaan yang SUDAH diketahui.
      *
      * Dipakai di laporan/widget yang memakai `withSum` agar tidak N+1.
      */
     public function piutangDari(float $penerimaan): float
     {
-        return max(0.0, $this->nilaiTagih() - $penerimaan);
+        return (float) $this->nilai_spk - $penerimaan;
     }
 
     /**
-     * Sisa hak penuh = nilai SPK − sudah diterima (termasuk retensi ditahan).
-     *
-     * Ini angka "kalau semua termasuk retensi akhirnya dibayar".
+     * Sisa yang belum diterima, tidak pernah negatif (untuk tampilan).
      */
-    public function sisaHakPenuhDari(float $penerimaan): float
+    public function sisaTagih(): float
     {
-        return max(0.0, (float) $this->nilai_spk - $penerimaan);
-    }
-
-    // ---------------------------------------------------------
-    // UMUR PIUTANG (AGING)
-    // ---------------------------------------------------------
-
-    /**
-     * Umur piutang dalam hari, dihitung dari tanggal SPK.
-     */
-    public function umurHari(): ?int
-    {
-        if ($this->tanggal_spk === null) {
-            return null;
-        }
-
-        return (int) $this->tanggal_spk->diffInDays(now(), absolute: true);
+        return max(0.0, $this->piutang());
     }
 
     /**
-     * Kelompok umur piutang (aging bucket).
-     *
-     * @return '0-30'|'31-60'|'61-90'|'>90'|'tanpa-tanggal'
+     * Apakah SPK ini sudah lunas (tidak ada sisa)?
      */
-    public function kategoriUmur(): string
+    public function sudahLunas(): bool
     {
-        $umur = $this->umurHari();
-
-        return match (true) {
-            $umur === null => 'tanpa-tanggal',
-            $umur <= 30 => '0-30',
-            $umur <= 60 => '31-60',
-            $umur <= 90 => '61-90',
-            default => '>90',
-        };
+        return $this->piutang() <= 0;
     }
 
     // ---------------------------------------------------------
@@ -376,14 +276,6 @@ class Spk extends Model
         }
 
         return $sisa.' hari lagi';
-    }
-
-    /**
-     * Nilai bersih setelah retensi (alias nilaiTagih untuk kompatibilitas).
-     */
-    public function nilaiBersih(): float
-    {
-        return $this->nilaiTagih();
     }
 
     // ---------------------------------------------------------
@@ -483,17 +375,5 @@ class Spk extends Model
     public function scopeDikerjakanSendiri(Builder $query): void
     {
         $query->where('dikerjakan_oleh', DikerjakanOleh::Sendiri->value);
-    }
-
-    /**
-     * Piutang yang sudah menua lebih dari $hari hari (belum lunas).
-     *
-     * @param  Builder<Spk>  $query
-     */
-    public function scopePiutangMenua(Builder $query, int $hari = 90): void
-    {
-        $query->belumLunas()
-            ->whereNotNull('tanggal_spk')
-            ->whereDate('tanggal_spk', '<=', now()->subDays($hari)->toDateString());
     }
 }

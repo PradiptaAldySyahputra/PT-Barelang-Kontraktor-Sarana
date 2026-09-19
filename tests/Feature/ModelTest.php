@@ -96,49 +96,6 @@ class ModelTest extends TestCase
     // Retensi — auto-hitung saat simpan
     // ---------------------------------------------------------
 
-    public function test_retensi_dihitung_otomatis_saat_simpan(): void
-    {
-        $spk = Spk::factory()->subkon()->create([
-            'nomor_spk' => 'SUBKON-UJI-001',
-            'nilai_spk' => 100_000_000,
-            'nama_pekerjaan' => 'Uji retensi',
-            'mitra_id' => Mitra::factory(),
-            'dibuat_oleh' => $this->admin->id,
-        ]);
-
-        $this->assertEquals(5_000_000, (float) $spk->fresh()->nilai_retensi);
-        $this->assertEquals(95_000_000, $spk->fresh()->nilaiBersih());
-    }
-
-    public function test_retensi_ikut_berubah_saat_nilai_spk_diubah(): void
-    {
-        $spk = Spk::factory()->subkon()->create([
-            'nomor_spk' => 'SUBKON-UJI-002',
-            'nilai_spk' => 100_000_000,
-            'nama_pekerjaan' => 'Uji retensi berubah',
-            'mitra_id' => Mitra::factory(),
-            'dibuat_oleh' => $this->admin->id,
-        ]);
-
-        $this->assertEquals(5_000_000, (float) $spk->fresh()->nilai_retensi);
-
-        $spk->nilai_spk = 200_000_000;
-        $spk->save();
-
-        $this->assertEquals(10_000_000, (float) $spk->fresh()->nilai_retensi);
-    }
-
-    public function test_spk_tanpa_retensi_tidak_punya_nilai_retensi(): void
-    {
-        $spk = Spk::factory()->pln()->create([
-            'persen_retensi' => null,
-            'mitra_id' => Mitra::factory(),
-            'dibuat_oleh' => $this->admin->id,
-        ]);
-
-        $this->assertNull($spk->fresh()->nilai_retensi);
-    }
-
     // ---------------------------------------------------------
     // Relasi
     // ---------------------------------------------------------

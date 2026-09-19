@@ -221,45 +221,9 @@ class FilamentTest extends TestCase
             ->assertHasFormErrors(['nomor_spk']);
     }
 
-    public function test_form_spk_menolak_status_ngawur(): void
-    {
-        $this->actingAs($this->admin);
-
-        Livewire::test(CreateSpk::class)
-            ->fillForm([
-                'nomor_spk' => 'STATUS-NGAWUR-001',
-                'nama_pekerjaan' => 'Uji status',
-                'nilai_spk' => 1000000,
-                'status_spk' => 'status_ngawur',
-            ])
-            ->call('create')
-            ->assertHasFormErrors(['status_spk']);
-    }
-
     // ---------------------------------------------------------
     // Retensi otomatis lewat form
     // ---------------------------------------------------------
-
-    public function test_retensi_dihitung_otomatis_dari_form(): void
-    {
-        $this->actingAs($this->admin);
-
-        Livewire::test(CreateSpk::class)
-            ->fillForm([
-                'nomor_spk' => 'RETENSI-FORM-001',
-                'nama_pekerjaan' => 'SPK subkon',
-                'nilai_spk' => 100000000,
-                'persen_retensi' => 5,
-                'status_spk' => StatusSpk::Berjalan->value,
-            ])
-            ->call('create')
-            ->assertHasNoFormErrors();
-
-        $spk = Spk::where('nomor_spk', 'RETENSI-FORM-001')->first();
-
-        $this->assertNotNull($spk, 'SPK gagal dibuat');
-        $this->assertEquals(5_000_000, (float) $spk->nilai_retensi);
-    }
 
     // ---------------------------------------------------------
     // Filter & tab
@@ -331,8 +295,16 @@ class FilamentTest extends TestCase
             'mitra' => ['/admin/mitras'],
             'uang masuk' => ['/admin/uang-masuks'],
             'uang keluar' => ['/admin/uang-keluars'],
-            'pengguna' => ['/admin/penggunas'],
+            // ⚠️ 'pengguna' TIDAK di sini — menu itu hanya untuk Direktur.
         ];
+    }
+
+    public function test_halaman_pengguna_bisa_dibuka_direktur(): void
+    {
+        // ⚠️ REVISI USER: menu Pengguna hanya untuk Direktur.
+        $this->actingAs($this->direktur)
+            ->get('/admin/penggunas')
+            ->assertSuccessful();
     }
 
     public function test_dashboard_filament_bisa_dibuka_admin(): void

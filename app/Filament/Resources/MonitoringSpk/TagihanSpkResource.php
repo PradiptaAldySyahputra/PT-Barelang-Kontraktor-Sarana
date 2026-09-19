@@ -6,10 +6,11 @@ namespace App\Filament\Resources\MonitoringSpk;
 
 use App\Enums\StatusTagihan;
 use App\Filament\Resources\MonitoringSpk\Pages\ListTagihanSpk;
+use App\Filament\Resources\Spks\Pages\UbahStatusTagihan;
 use App\Models\Spk;
+use Filament\Actions\Action;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,10 +19,15 @@ use Illuminate\Database\Eloquent\Builder;
  * MONITORING TAGIHAN SPK — tagihan yang BELUM selesai.
  *
  * Isi: SPK yang status tagihannya belum `Dibayar`.
- * Fokus: berapa yang masih harus ditagih & sudah berapa lama (umur piutang).
- * Kolom status tagihan diletakkan DI DEPAN agar langsung terlihat.
+ * Fokus: mana yang belum ditagih, sedang ditagih, dan berapa yang belum diterima.
  *
- * Baca saja.
+ * ⚠️ KEPUTUSAN USER:
+ *   - Status tagihan READ-ONLY di sini; diubah lewat tombol "Ubah Status
+ *     Tagihan" → form TERPISAH (jelas bedanya dengan status pekerjaan).
+ *   - Kolom Retensi & Umur Piutang (aging) DIHAPUS — sistem tidak memakai
+ *     retensi, dan umur piutang tidak dipakai perusahaan.
+ *   - Saat status diubah jadi "Dibayar", SPK otomatis pindah ke menu
+ *     "Tagihan Selesai SPK".
  */
 class TagihanSpkResource extends MonitoringSpkResource
 {
@@ -52,7 +58,6 @@ class TagihanSpkResource extends MonitoringSpkResource
         return $table
             ->defaultSort('tanggal_spk')
             ->columns([
-                // ---- STATUS TAGIHAN DI DEPAN (permintaan user) ----
                 TextColumn::make('status_tagihan')
                     ->label('Status Tagihan')
                     ->badge()
@@ -65,18 +70,6 @@ class TagihanSpkResource extends MonitoringSpkResource
                         default => 'gray',
                     }),
 
-                TextColumn::make('umur')
-                    ->label('Umur Piutang')
-                    ->state(fn (Spk $r): ?string => $r->umurHari() !== null ? $r->umurHari().' hari' : null)
-                    ->badge()
-                    ->color(fn (Spk $r): string => match ($r->kategoriUmur()) {
-                        '>90' => 'danger',
-                        '61-90' => 'warning',
-                        '31-60' => 'info',
-                        default => 'gray',
-                    })
-                    ->placeholder('—'),
-
                 TextColumn::make('nomor_spk')
                     ->label('Nomor SPK')
                     ->searchable()
@@ -88,7 +81,14 @@ class TagihanSpkResource extends MonitoringSpkResource
                     ->label('Pekerjaan')
                     ->searchable()
                     ->wrap()
+                    ->lineClamp(3)
                     ->description(fn (Spk $r): ?string => $r->mitra?->nama),
+
+                TextColumn::make('tanggal_spk')
+                    ->label('Tanggal SPK')
+                    ->date('d/m/Y')
+                    ->placeholder('TANPA SPK')
+                    ->sortable(),
 
                 TextColumn::make('nilai_spk')
                     ->label('Nilai SPK')
@@ -96,25 +96,16 @@ class TagihanSpkResource extends MonitoringSpkResource
                     ->sortable()
                     ->alignEnd(),
 
-                TextColumn::make('retensi')
-                    ->label('Retensi Ditahan')
-                    ->state(fn (Spk $r): float => $r->retensiDitahan())
-                    ->money('IDR', locale: 'id')
-                    ->placeholder('—')
-                    ->color('gray')
-                    ->toggleable()
-                    ->alignEnd(),
-
                 TextColumn::make('diterima')
                     ->label('Sudah Diterima')
-                    ->state(fn (Spk $r): float => (float) ($r->total_masuk ?? 0))
+                    ->state(fn (Spk $r): float => $r->totalPenerimaan())
                     ->money('IDR', locale: 'id')
                     ->color('success')
                     ->alignEnd(),
 
-                TextColumn::make('piutang')
-                    ->label('Piutang Lancar')
-                    ->state(fn (Spk $r): float => $r->piutangDari((float) ($r->total_masuk ?? 0)))
+                TextColumn::make('sisa')
+                    ->label('Belum Diterima')
+                    ->state(fn (Spk $r): float => $r->sisaTagih())
                     ->money('IDR', locale: 'id')
                     ->weight('bold')
                     ->color('warning')
@@ -130,18 +121,19 @@ class TagihanSpkResource extends MonitoringSpkResource
                     ->relationship('mitra', 'nama')
                     ->searchable()
                     ->preload(),
-
-                Filter::make('piutang_menua')
-                    ->label('Piutang lebih dari 90 hari')
-                    ->query(fn (Builder $q): Builder => $q->piutangMenua(90))
-                    ->toggle(),
-
-                Filter::make('ada_retensi')
-                    ->label('Ada Retensi')
-                    ->query(fn (Builder $q): Builder => $q->whereNotNull('persen_retensi')->where('persen_retensi', '>', 0))
-                    ->toggle(),
             ])
-            ->recordActions([]);
+            ->recordActions([
+                // Form TERPISAH, hanya status tagihan.
+                Action::make('ubahStatusTagihan')
+                    ->label('Ubah Status')
+                    ->icon('heroicon-m-pencil-square')
+                    ->color('primary')
+                    ->visible(fn (): bool => static::bolehUbahData())
+                    ->url(fn (Spk $r): string => UbahStatusTagihan::getUrl([
+                        'record' => $r,
+                        'asal' => 'tagihan-spk',
+                    ])),
+            ]);
     }
 
     public static function getPages(): array

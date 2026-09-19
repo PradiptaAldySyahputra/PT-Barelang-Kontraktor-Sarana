@@ -19,17 +19,22 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Uji REGRESI: tombol aksi harus HILANG untuk Direktur.
+ * Uji REGRESI: tombol aksi harus HILANG untuk yang tidak berhak.
  *
  * ⚠️ BUG YANG DICEGAH:
  * Filament HANYA memakai Resource::canCreate()/canEdit()/canDelete() untuk
  * menolak akses halaman (abort 403). Filament TIDAK otomatis menyembunyikan
- * tombolnya. Jadi tanpa `->visible()`, Direktur tetap melihat tombol
+ * tombolnya. Jadi tanpa `->visible()`, pengguna tetap melihat tombol
  * "Tambah / Edit / Hapus" — aman dari kebocoran data, tapi menyesatkan.
  *
- * Test ini memastikan DUA LAPIS bekerja:
- *   1. Tombol TIDAK tampil di HTML (UI)
- *   2. Akses halaman create tetap DITOLAK 403 (otorisasi)
+ * ⚠️ REVISI USER (19 Sep 2026):
+ * Menu **Pengguna** sekarang HANYA untuk **Direktur** — kebalikan dari
+ * resource lain. Jadi ada DUA kelompok hak akses:
+ *
+ *   A. Data operasional (SPK, Mitra, Uang Masuk/Keluar):
+ *      Admin boleh ubah · Direktur hanya lihat
+ *   B. Akun Pengguna:
+ *      Direktur boleh ubah · Admin tidak melihat menu sama sekali
  */
 class TombolAksiTest extends TestCase
 {
@@ -63,24 +68,25 @@ class TombolAksiTest extends TestCase
     }
 
     /**
+     * Data operasional — Admin boleh, Direktur hanya lihat.
+     *
      * @return array<string, array{string}>
      */
-    public static function halamanDaftarProvider(): array
+    public static function halamanOperasionalProvider(): array
     {
         return [
             'spk' => ['/admin/spks'],
             'mitra' => ['/admin/mitras'],
             'uang masuk' => ['/admin/uang-masuks'],
             'uang keluar' => ['/admin/uang-keluars'],
-            'pengguna' => ['/admin/penggunas'],
         ];
     }
 
     // =========================================================
-    // Tombol TIDAK tampil untuk Direktur
+    // A. DATA OPERASIONAL — Direktur TIDAK boleh ubah
     // =========================================================
 
-    #[DataProvider('halamanDaftarProvider')]
+    #[DataProvider('halamanOperasionalProvider')]
     public function test_tombol_tambah_tidak_tampil_untuk_direktur(string $url): void
     {
         $html = $this->actingAs($this->direktur)->get($url)->assertOk()->getContent();
@@ -92,7 +98,7 @@ class TombolAksiTest extends TestCase
         );
     }
 
-    #[DataProvider('halamanDaftarProvider')]
+    #[DataProvider('halamanOperasionalProvider')]
     public function test_tombol_edit_tidak_tampil_untuk_direktur(string $url): void
     {
         $html = $this->actingAs($this->direktur)->get($url)->assertOk()->getContent();
@@ -104,11 +110,7 @@ class TombolAksiTest extends TestCase
         );
     }
 
-    // =========================================================
-    // Tombol TETAP tampil untuk Admin
-    // =========================================================
-
-    #[DataProvider('halamanDaftarProvider')]
+    #[DataProvider('halamanOperasionalProvider')]
     public function test_tombol_tambah_tetap_tampil_untuk_admin(string $url): void
     {
         $html = $this->actingAs($this->admin)->get($url)->assertOk()->getContent();
@@ -120,11 +122,7 @@ class TombolAksiTest extends TestCase
         );
     }
 
-    // =========================================================
-    // Lapis kedua: akses halaman create tetap DITOLAK
-    // =========================================================
-
-    #[DataProvider('halamanDaftarProvider')]
+    #[DataProvider('halamanOperasionalProvider')]
     public function test_direktur_tetap_ditolak_403_saat_paksa_buka_form_create(string $url): void
     {
         $this->actingAs($this->direktur)
@@ -133,7 +131,42 @@ class TombolAksiTest extends TestCase
     }
 
     // =========================================================
-    // Helper bolehUbahData()
+    // B. MENU PENGGUNA — hanya Direktur
+    // =========================================================
+
+    public function test_admin_tidak_melihat_menu_pengguna(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->assertFalse(PenggunaResource::canViewAny());
+        $this->assertFalse(PenggunaResource::shouldRegisterNavigation());
+        $this->get('/admin/penggunas')->assertForbidden();
+        $this->get('/admin/penggunas/create')->assertForbidden();
+    }
+
+    public function test_direktur_bisa_buka_menu_pengguna(): void
+    {
+        $this->actingAs($this->direktur);
+
+        $this->assertTrue(PenggunaResource::canViewAny());
+        $this->assertTrue(PenggunaResource::shouldRegisterNavigation());
+        $this->get('/admin/penggunas')->assertOk();
+        $this->get('/admin/penggunas/create')->assertOk();
+    }
+
+    public function test_direktur_tidak_bisa_hapus_akun_sendiri(): void
+    {
+        $this->actingAs($this->direktur);
+
+        $this->assertFalse(
+            PenggunaResource::canDelete($this->direktur),
+            'CELAH: Direktur bisa menghapus akunnya sendiri'
+        );
+        $this->assertFalse(PenggunaResource::canEdit($this->direktur));
+    }
+
+    // =========================================================
+    // Helper bolehUbahData() — untuk resource operasional
     // =========================================================
 
     public function test_helper_boleh_ubah_data_benar(): void
@@ -143,14 +176,12 @@ class TombolAksiTest extends TestCase
         $this->assertTrue(MitraResource::bolehUbahData());
         $this->assertTrue(UangMasukResource::bolehUbahData());
         $this->assertTrue(UangKeluarResource::bolehUbahData());
-        $this->assertTrue(PenggunaResource::bolehUbahData());
 
         $this->actingAs($this->direktur);
         $this->assertFalse(SpkResource::bolehUbahData());
         $this->assertFalse(MitraResource::bolehUbahData());
         $this->assertFalse(UangMasukResource::bolehUbahData());
         $this->assertFalse(UangKeluarResource::bolehUbahData());
-        $this->assertFalse(PenggunaResource::bolehUbahData());
     }
 
     public function test_tanpa_login_boleh_ubah_data_false(): void
@@ -159,7 +190,7 @@ class TombolAksiTest extends TestCase
     }
 
     // =========================================================
-    // Direktur tetap bisa MELIHAT data
+    // Direktur tetap bisa MELIHAT data operasional
     // =========================================================
 
     public function test_direktur_tetap_bisa_melihat_data_spk(): void

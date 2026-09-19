@@ -8,6 +8,8 @@ use App\Filament\Concerns\BolehUbahData;
 use App\Filament\Resources\Spks\Pages\CreateSpk;
 use App\Filament\Resources\Spks\Pages\EditSpk;
 use App\Filament\Resources\Spks\Pages\ListSpks;
+use App\Filament\Resources\Spks\Pages\UbahStatusSpk;
+use App\Filament\Resources\Spks\Pages\UbahStatusTagihan;
 use App\Filament\Resources\Spks\Schemas\SpkForm;
 use App\Filament\Resources\Spks\Tables\SpksTable;
 use App\Models\Spk;
@@ -72,6 +74,12 @@ class SpkResource extends Resource
             'index' => ListSpks::route('/'),
             'create' => CreateSpk::route('/create'),
             'edit' => EditSpk::route('/{record}/edit'),
+
+            // Form TERPISAH untuk status (permintaan user):
+            //   - /admin/spks/{record}/status-pekerjaan
+            //   - /admin/spks/{record}/status-tagihan
+            'status-pekerjaan' => UbahStatusSpk::route('/{record}/status-pekerjaan'),
+            'status-tagihan' => UbahStatusTagihan::route('/{record}/status-tagihan'),
         ];
     }
 

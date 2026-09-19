@@ -74,7 +74,6 @@ class PengalihanRuteTest extends TestCase
             '/admin/mitras',
             '/admin/uang-masuks',
             '/admin/uang-keluars',
-            '/admin/penggunas',
             '/admin/laporan',
         ] as $url) {
             $this->actingAs($admin)->get($url)->assertOk();

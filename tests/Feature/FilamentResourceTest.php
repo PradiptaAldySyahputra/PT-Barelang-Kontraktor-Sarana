@@ -142,7 +142,6 @@ class FilamentResourceTest extends TestCase
             // piutang. Tanpa ini, nilai acak factory bisa lebih kecil dan
             // validasi batas uang masuk menolaknya (test jadi flaky).
             'nilai_spk' => 200_000_000,
-            'persen_retensi' => null,
             'mitra_id' => $mitra->id,
             'dibuat_oleh' => $this->admin->id,
         ]);
@@ -374,9 +373,10 @@ class FilamentResourceTest extends TestCase
     // PENGGAJIAN & PENGGUNA
     // =========================================================
 
-    public function test_admin_bisa_membuat_pengguna_baru(): void
+    public function test_direktur_bisa_membuat_pengguna_baru(): void
     {
-        $this->actingAs($this->admin);
+        // ⚠️ REVISI USER: menu Pengguna hanya untuk Direktur.
+        $this->actingAs($this->direktur);
 
         Livewire::test(CreatePengguna::class)
             ->fillForm([
@@ -397,7 +397,8 @@ class FilamentResourceTest extends TestCase
 
     public function test_form_pengguna_menolak_email_duplikat(): void
     {
-        $this->actingAs($this->admin);
+        // ⚠️ REVISI USER: menu Pengguna hanya untuk Direktur.
+        $this->actingAs($this->direktur);
 
         Livewire::test(CreatePengguna::class)
             ->fillForm([
@@ -410,13 +411,26 @@ class FilamentResourceTest extends TestCase
             ->assertHasFormErrors(['email']);
     }
 
-    public function test_direktur_tidak_boleh_kelola_pengguna(): void
+    public function test_admin_tidak_boleh_kelola_pengguna(): void
     {
-        $this->actingAs($this->direktur);
+        // ⚠️ REVISI USER: menu Pengguna HANYA untuk Direktur.
+        // Jadi ADMIN yang tidak boleh — kebalikan dari resource lain.
+        $this->actingAs($this->admin);
 
         $this->assertFalse(
             PenggunaResource::canCreate(),
-            'Direktur TIDAK boleh menambah pengguna'
+            'Admin TIDAK boleh menambah pengguna'
+        );
+        $this->assertFalse(PenggunaResource::canViewAny());
+    }
+
+    public function test_direktur_boleh_kelola_pengguna(): void
+    {
+        $this->actingAs($this->direktur);
+
+        $this->assertTrue(
+            PenggunaResource::canCreate(),
+            'Direktur HARUS bisa menambah pengguna'
         );
     }
 

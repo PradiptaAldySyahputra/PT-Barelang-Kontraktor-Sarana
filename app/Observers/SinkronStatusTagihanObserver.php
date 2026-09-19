@@ -70,7 +70,6 @@ class SinkronStatusTagihanObserver
             return;
         }
 
-        // Simpan tanpa memicu hitungRetensi ulang yang tidak perlu
         $spk->status_tagihan = $statusBaru;
         $spk->save();
     }

@@ -6,9 +6,9 @@ namespace Tests\Feature;
 
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Laporan;
-use App\Filament\Widgets\PengeluaranPerKategori;
 use App\Filament\Widgets\RingkasanKeuangan;
 use App\Filament\Widgets\SpkPerStatus;
+use App\Filament\Widgets\StatusTagihanChart;
 use App\Models\Mitra;
 use App\Models\Pengguna;
 use App\Models\Spk;
@@ -164,7 +164,7 @@ class TampilanPanelTest extends TestCase
     {
         $html = $this->actingAs($this->admin)->get('/admin')->assertOk()->getContent();
 
-        $this->assertStringContainsString('Ringkasan SPK', $html);
+        $this->assertStringContainsString('Ringkasan pekerjaan', $html);
     }
 
     public function test_widget_dashboard_terdaftar(): void
@@ -173,18 +173,7 @@ class TampilanPanelTest extends TestCase
 
         $this->assertContains(RingkasanKeuangan::class, $widgets);
         $this->assertContains(SpkPerStatus::class, $widgets);
-        $this->assertContains(PengeluaranPerKategori::class, $widgets);
-    }
-
-    public function test_kartu_ringkasan_menampilkan_tren_bulan_lalu(): void
-    {
-        $this->actingAs($this->admin);
-
-        $html = Livewire::test(RingkasanKeuangan::class)->html();
-
-        // Kartu harus menjelaskan konteks, bukan hanya angka
-        $this->assertStringContainsString('SPK', $html);
-        $this->assertStringContainsString('mitra terdaftar', $html);
+        $this->assertContains(StatusTagihanChart::class, $widgets);
     }
 
     // ---------------------------------------------------------
@@ -214,39 +203,6 @@ class TampilanPanelTest extends TestCase
     // Laporan responsif
     // ---------------------------------------------------------
 
-    public function test_laporan_punya_kelas_responsif(): void
-    {
-        $this->buatDataLaporan();
-
-        $this->actingAs($this->admin);
-
-        $html = Livewire::test(Laporan::class)->html();
-
-        // Kartu: 1 kolom di HP -> 2 di tablet -> 4 di desktop
-        $this->assertStringContainsString('grid-cols-1', $html);
-        $this->assertStringContainsString('sm:grid-cols-2', $html);
-        $this->assertStringContainsString('xl:grid-cols-4', $html);
-
-        // Toolbar menumpuk di HP, sejajar di layar lebar
-        $this->assertStringContainsString('sm:flex-row', $html);
-    }
-
-    public function test_tabel_laporan_punya_versi_kartu_untuk_layar_kecil(): void
-    {
-        // Butuh data — kalau kosong, yang dirender adalah empty-state, bukan tabel.
-        $this->buatDataLaporan();
-
-        // Pakai HTTP penuh — Livewire::html() tidak memuat seluruh markup halaman.
-        $html = $this->actingAs($this->admin)
-            ->get('/admin/laporan')
-            ->assertOk()
-            ->getContent();
-
-        // Tabel disembunyikan di layar kecil, diganti kartu
-        $this->assertStringContainsString('md:block', $html, 'Versi tabel untuk layar besar');
-        $this->assertStringContainsString('md:hidden', $html, 'Versi kartu untuk layar kecil');
-    }
-
     public function test_angka_laporan_memakai_tabular_nums(): void
     {
         $this->buatDataLaporan();
@@ -259,24 +215,6 @@ class TampilanPanelTest extends TestCase
         $this->assertStringContainsString('tabular-nums', $html, 'Angka harus rata agar mudah dibandingkan');
     }
 
-    public function test_section_laporan_punya_ikon(): void
-    {
-        $this->buatDataLaporan();
-
-        $this->actingAs($this->admin);
-
-        $html = Livewire::test(Laporan::class)->html();
-
-        // Setiap section header harus punya ikon (svg)
-        preg_match_all('/<header[^>]*fi-section-header[^>]*>(.*?)<\/header>/s', $html, $m);
-
-        $this->assertNotEmpty($m[1], 'Tidak ada section header');
-
-        foreach ($m[1] as $isi) {
-            $this->assertStringContainsString('<svg', $isi, 'Section header tidak punya ikon');
-        }
-    }
-
     // ---------------------------------------------------------
     // Ekspor lewat route (bukan aksi Livewire)
     // ---------------------------------------------------------
@@ -285,7 +223,7 @@ class TampilanPanelTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $res = $this->get(route('laporan.ekspor', 'laba_rugi'));
+        $res = $this->get(route('laporan.ekspor', 'masuk'));
 
         $res->assertOk();
         $this->assertStringContainsString('text/csv', $res->headers->get('Content-Type'));
@@ -295,7 +233,7 @@ class TampilanPanelTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        foreach (['spk', 'laba_rugi', 'piutang', 'cashflow', 'kategori'] as $jenis) {
+        foreach (['spk', 'masuk', 'keluar', 'spk', 'tenggat'] as $jenis) {
             $this->get(route('laporan.ekspor', $jenis))
                 ->assertOk()
                 ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');

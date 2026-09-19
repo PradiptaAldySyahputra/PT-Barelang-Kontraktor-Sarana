@@ -115,14 +115,18 @@ class RevisiMenuSpkTest extends TestCase
     // 3. STATUS SPK — bisa diubah + filter status
     // =========================================================
 
-    public function test_status_spk_bisa_diubah_dari_halaman_monitoring(): void
+    public function test_status_spk_diubah_lewat_form_terpisah(): void
     {
-        // Pengecualian dari aturan "monitoring baca saja": user minta
-        // perubahan status dibuat semudah mungkin.
+        // ⚠️ REVISI USER: status TIDAK lagi diubah dari halaman monitoring.
+        // Status hanya menampilkan progres; perubahan lewat form terpisah
+        // (UbahStatusSpk) supaya tidak salah ubah data lain.
         $spk = Spk::factory()->pln()->create(['dibuat_oleh' => $this->admin->id]);
 
         $this->actingAs($this->admin);
-        $this->assertTrue(StatusSpkResource::canEdit($spk));
+
+        // Form terpisah bisa dibuka
+        $this->get('/admin/spks/'.$spk->getRouteKey().'/status-pekerjaan')->assertOk();
+        $this->get('/admin/spks/'.$spk->getRouteKey().'/status-tagihan')->assertOk();
     }
 
     public function test_direktur_tidak_bisa_ubah_status(): void

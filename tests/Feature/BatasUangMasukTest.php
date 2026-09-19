@@ -112,33 +112,6 @@ class BatasUangMasukTest extends TestCase
             ->assertHasNoFormErrors();
     }
 
-    public function test_batas_memperhitungkan_retensi(): void
-    {
-        $this->actingAs($this->admin);
-
-        $this->spk->terapkanRetensi(5.00)->save();
-
-        // Nilai tagih = 95jt. Bayar 96jt harus DITOLAK.
-        Livewire::test(CreateUangMasuk::class)
-            ->fillForm([
-                'spk_id' => $this->spk->id,
-                'tanggal' => now()->toDateString(),
-                'jumlah' => 96_000_000,
-            ])
-            ->call('create')
-            ->assertHasFormErrors(['jumlah']);
-
-        // Bayar 95jt harus DITERIMA (lunas, retensi ditahan)
-        Livewire::test(CreateUangMasuk::class)
-            ->fillForm([
-                'spk_id' => $this->spk->id,
-                'tanggal' => now()->toDateString(),
-                'jumlah' => 95_000_000,
-            ])
-            ->call('create')
-            ->assertHasNoFormErrors();
-    }
-
     public function test_uang_masuk_luar_spk_tidak_dibatasi(): void
     {
         $this->actingAs($this->admin);

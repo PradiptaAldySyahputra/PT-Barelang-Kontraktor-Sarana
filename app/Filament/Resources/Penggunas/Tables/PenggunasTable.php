@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Penggunas\Tables;
 
 use App\Enums\Peran;
 use App\Filament\Resources\Penggunas\PenggunaResource;
+use App\Models\Pengguna;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -18,6 +19,9 @@ use Filament\Tables\Table;
 
 /**
  * Tabel daftar Pengguna.
+ *
+ * ⚠️ Tombol Edit/Hapus DISEMBUNYIKAN untuk akun sendiri — supaya Direktur
+ * tidak bisa mengunci dirinya dari sistem (temuan audit keamanan).
  */
 class PenggunasTable
 {
@@ -73,17 +77,20 @@ class PenggunasTable
                 TernaryFilter::make('is_aktif')
                     ->label('Status Aktif')
                     ->placeholder('Semua')
-                    ->trueLabel('Aktif saja')
-                    ->falseLabel('Nonaktif saja'),
+                    ->trueLabel('Aktif')
+                    ->falseLabel('Nonaktif'),
             ])
             ->recordActions([
-                EditAction::make()->visible(fn (): bool => PenggunaResource::bolehUbahData()),
-                DeleteAction::make()->visible(fn (): bool => PenggunaResource::bolehUbahData()),
+                EditAction::make()
+                    ->visible(fn (Pengguna $record): bool => PenggunaResource::canEdit($record)),
+
+                DeleteAction::make()
+                    ->visible(fn (Pengguna $record): bool => PenggunaResource::canDelete($record)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                ])->visible(fn (): bool => PenggunaResource::bolehUbahData()),
+                ]),
             ]);
     }
 }

@@ -109,16 +109,28 @@ class AuditKeamananTest extends TestCase
         $this->assertSame(0, Mitra::count());
     }
 
-    public function test_direktur_tidak_bisa_buat_pengguna(): void
+    /**
+     * ⚠️ REVISI USER: menu Pengguna sekarang HANYA untuk Direktur.
+     * Jadi ADMIN yang tidak boleh, bukan Direktur.
+     */
+    public function test_admin_tidak_bisa_buat_pengguna(): void
     {
         $sebelum = Pengguna::count();
 
-        $this->actingAs($this->direktur);
+        $this->actingAs($this->admin);
 
         $this->assertFalse(PenggunaResource::canCreate());
         $this->get('/admin/penggunas/create')->assertForbidden();
 
         $this->assertSame($sebelum, Pengguna::count());
+    }
+
+    public function test_direktur_bisa_buat_pengguna(): void
+    {
+        $this->actingAs($this->direktur);
+
+        $this->assertTrue(PenggunaResource::canCreate());
+        $this->get('/admin/penggunas/create')->assertOk();
     }
 
     public function test_direktur_tidak_bisa_ubah_status_spk(): void
@@ -184,11 +196,9 @@ class AuditKeamananTest extends TestCase
                 'nomor_spk' => 'MAS-1',
                 'nama_pekerjaan' => 'Uji mass assignment',
                 'nilai_spk' => 1_000_000,
-                'status_spk' => 'draft',
                 'dikerjakan_oleh' => DikerjakanOleh::Sendiri->value,
                 // kolom sensitif di bawah — tidak boleh terisi dari form
                 'id' => 99999,
-                'nilai_retensi' => 123456,
             ])
             ->call('create')
             ->assertHasNoFormErrors();
@@ -234,20 +244,27 @@ class AuditKeamananTest extends TestCase
         $this->assertSame(0, UangKeluar::count(), 'CELAH: kategori palsu diterima');
     }
 
-    public function test_status_spk_palsu_ditolak(): void
+    public function test_status_spk_diisi_otomatis_saat_dibuat(): void
     {
+        // ⚠️ REVISI USER: status tidak lagi dipilih di form Tambah.
+        // SPK baru otomatis Draft + Belum Ditagihkan.
         $this->actingAs($this->admin);
 
         Livewire::test(CreateSpk::class)
             ->fillForm([
-                'nomor_spk' => 'STATUS-PALSU',
-                'nama_pekerjaan' => 'x',
+                'nomor_spk' => 'OTOMATIS-1',
+                'nama_pekerjaan' => 'Uji status otomatis',
                 'nilai_spk' => 1_000_000,
-                'status_spk' => 'STATUS NGAWUR',
+                'dikerjakan_oleh' => DikerjakanOleh::Sendiri->value,
             ])
-            ->call('create');
+            ->call('create')
+            ->assertHasNoFormErrors();
 
-        $this->assertSame(0, Spk::count(), 'CELAH: status palsu diterima');
+        $spk = Spk::where('nomor_spk', 'OTOMATIS-1')->first();
+
+        $this->assertNotNull($spk, 'SPK baru harus tersimpan');
+        $this->assertSame('draft', $spk->status_spk->value);
+        $this->assertSame('belum_ditagihkan', $spk->status_tagihan->value);
     }
 
     public function test_nilai_negatif_ditolak(): void
@@ -280,33 +297,42 @@ class AuditKeamananTest extends TestCase
         );
     }
 
-    public function test_admin_tidak_bisa_nonaktifkan_akun_sendiri(): void
+    public function test_direktur_tidak_bisa_nonaktifkan_akun_sendiri(): void
     {
-        $this->actingAs($this->admin);
+        $this->actingAs($this->direktur);
 
         // Perlindungan lapis 1: halaman edit diri sendiri DIBLOKIR.
         $this->assertFalse(
-            PenggunaResource::canEdit($this->admin),
-            'CELAH: Admin bisa membuka halaman edit dirinya sendiri'
+            PenggunaResource::canEdit($this->direktur),
+            'CELAH: Direktur bisa membuka halaman edit dirinya sendiri'
         );
 
-        $this->get('/admin/penggunas/'.$this->admin->getRouteKey().'/edit')
+        $this->get('/admin/penggunas/'.$this->direktur->getRouteKey().'/edit')
             ->assertForbidden();
 
-        // Perlindungan lapis 2: walau dipaksa, akun tetap aktif.
-        $this->assertTrue($this->admin->fresh()->is_aktif);
+        // Perlindungan lapis 2: akun tetap aktif.
+        $this->assertTrue($this->direktur->fresh()->is_aktif);
     }
 
-    public function test_admin_masih_bisa_edit_pengguna_lain(): void
+    public function test_direktur_masih_bisa_edit_pengguna_lain(): void
+    {
+        $this->actingAs($this->direktur);
+
+        $this->assertTrue(
+            PenggunaResource::canEdit($this->admin),
+            'Direktur harus tetap bisa mengubah pengguna LAIN'
+        );
+
+        $this->get('/admin/penggunas/'.$this->admin->getRouteKey().'/edit')->assertOk();
+    }
+
+    public function test_admin_tidak_bisa_lihat_menu_pengguna(): void
     {
         $this->actingAs($this->admin);
 
-        $this->assertTrue(
-            PenggunaResource::canEdit($this->direktur),
-            'Admin harus tetap bisa mengubah pengguna LAIN'
-        );
-
-        $this->get('/admin/penggunas/'.$this->direktur->getRouteKey().'/edit')->assertOk();
+        $this->assertFalse(PenggunaResource::canViewAny());
+        $this->assertFalse(PenggunaResource::shouldRegisterNavigation());
+        $this->get('/admin/penggunas')->assertForbidden();
     }
 
     public function test_pengguna_nonaktif_tidak_bisa_login(): void

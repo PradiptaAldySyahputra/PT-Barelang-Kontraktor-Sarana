@@ -1,40 +1,48 @@
-@php
-    use App\Enums\KategoriPengeluaran;
-@endphp
+{{--
+    Halaman Laporan.
 
+    ⚠️ KEPUTUSAN USER: laba/rugi, piutang, aging, dan retensi DIHAPUS.
+    Laporan hanya memuat data yang BENAR-BENAR ADA & DIINPUT.
+
+    SUSUNAN (dari yang paling penting):
+      1. Ringkasan         — 4 angka utama
+      2. Uang Masuk/Keluar — per bulan (satu tabel gabungan)
+      3. Pengeluaran       — per kategori
+      4. Daftar SPK        — nilai & status
+      5. Tenggat SPK       — yang lewat / mendekati
+
+    Setiap bagian punya JUDUL + PENJELASAN singkat supaya jelas apa yang
+    disampaikan (keluhan user: "informasi apa yang ingin di kasih lihat
+    terlihat berantakan").
+--}}
 <x-filament-panels::page>
+    @php
+        $rp = fn (float $n): string => 'Rp '.number_format($n, 0, ',', '.');
+    @endphp
 
-    {{-- =========================================================
-         TOOLBAR: periode + ekspor
-         Dibuat responsif: menumpuk di layar kecil, sejajar di layar lebar
-         ========================================================= --}}
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-        {{-- Filter periode --}}
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Periode</span>
-
-            <div class="inline-flex rounded-lg bg-gray-100 p-0.5 dark:bg-white/5">
-                @foreach ([1 => 'Bulan Ini', 3 => '3 Bulan', 12 => '12 Bulan', 0 => 'Semua'] as $nilai => $label)
-                    <button
-                        type="button"
-                        wire:click="setPeriode({{ $nilai }})"
-                        @class([
-                            'rounded-md px-3 py-1.5 text-sm font-medium transition',
-                            'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white' => $periode === $nilai,
-                            'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' => $periode !== $nilai,
-                        ])
-                    >
-                        {{ $label }}
-                    </button>
-                @endforeach
-            </div>
+    {{-- ============================================================
+         PEMILIH PERIODE + EKSPOR
+         ============================================================ --}}
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="inline-flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-700">
+            @foreach ([1 => 'Bulan Ini', 3 => '3 Bulan', 12 => '12 Bulan', 0 => 'Semua'] as $nilai => $label)
+                <button
+                    type="button"
+                    wire:click="setPeriode({{ $nilai }})"
+                    @class([
+                        'rounded-md px-3 py-1.5 text-xs font-medium transition',
+                        'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' => $periode === $nilai,
+                        'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800' => $periode !== $nilai,
+                    ])
+                >
+                    {{ $label }}
+                </button>
+            @endforeach
         </div>
 
-        {{-- Ekspor --}}
-        <x-filament::dropdown placement="bottom-end" teleport>
+        <x-filament::dropdown>
             <x-slot name="trigger">
-                <x-filament::button size="sm" color="gray" icon="heroicon-m-arrow-down-tray" class="w-full sm:w-auto">
+                <x-filament::button color="gray" size="sm" icon="heroicon-m-arrow-down-tray">
                     Ekspor CSV
                 </x-filament::button>
             </x-slot>
@@ -42,17 +50,13 @@
             <x-filament::dropdown.list>
                 @foreach ([
                     'spk' => 'Daftar SPK',
-                    'laba_rugi' => 'Laba-Rugi per SPK',
-                    'piutang' => 'Piutang SPK',
-                    'aging' => 'Umur Piutang (Aging)',
+                    'masuk' => 'Uang Masuk per Bulan',
+                    'keluar' => 'Pengeluaran per Kategori',
                     'tenggat' => 'Tenggat SPK',
-                    'cashflow' => 'Arus Kas per Bulan',
-                    'kategori' => 'Pengeluaran per Kategori',
                 ] as $jenis => $label)
                     <x-filament::dropdown.list.item
-                        :href="route('laporan.ekspor', $jenis)"
-                        icon="heroicon-m-document-arrow-down"
                         tag="a"
+                        href="{{ route('laporan.ekspor', $jenis) }}"
                     >
                         {{ $label }}
                     </x-filament::dropdown.list.item>
@@ -61,464 +65,126 @@
         </x-filament::dropdown>
     </div>
 
-    {{-- =========================================================
-         KARTU RINGKASAN — 1 kolom (HP) → 2 (tablet) → 4 (desktop)
-         ========================================================= --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {{-- ============================================================
+         1. RINGKASAN
+         ============================================================ --}}
+    <x-filament::section>
+        <x-slot name="heading">Ringkasan</x-slot>
+        <x-slot name="description">
+            Angka utama periode terpilih. "Belum Diterima" = nilai SPK dikurangi uang masuk yang terkait SPK.
+        </x-slot>
 
-        {{-- Uang Masuk --}}
-        <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-            <div class="flex items-center justify-between gap-3">
-                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Uang Masuk
-                </span>
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success-50 dark:bg-success-500/10">
-                    <x-filament::icon icon="heroicon-m-arrow-trending-up" class="h-4 w-4 text-success-600 dark:text-success-400" />
-                </span>
-            </div>
-            <div class="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-                {{ number_format($totalMasuk, 0, ',', '.') }}
-            </div>
-            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Rupiah</div>
-            <div class="mt-3 space-y-1 border-t border-gray-100 pt-3 text-xs dark:border-white/10">
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Dari SPK</span>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ number_format($masukDariSpk, 0, ',', '.') }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Luar SPK</span>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ number_format($masukLuarSpk, 0, ',', '.') }}</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Uang Keluar --}}
-        <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-            <div class="flex items-center justify-between gap-3">
-                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Uang Keluar
-                </span>
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger-50 dark:bg-danger-500/10">
-                    <x-filament::icon icon="heroicon-m-arrow-trending-down" class="h-4 w-4 text-danger-600 dark:text-danger-400" />
-                </span>
-            </div>
-            <div class="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-                {{ number_format($totalKeluar, 0, ',', '.') }}
-            </div>
-            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Rupiah</div>
-            <div class="mt-3 border-t border-gray-100 pt-3 text-xs dark:border-white/10">
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Jumlah kategori</span>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $perKategori->count() }}</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Saldo Bersih --}}
-        <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-            <div class="flex items-center justify-between gap-3">
-                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Saldo Bersih
-                </span>
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/10">
-                    <x-filament::icon icon="heroicon-m-banknotes" class="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                </span>
-            </div>
-            <div @class([
-                'mt-3 text-2xl font-bold tracking-tight',
-                'text-gray-900 dark:text-white' => $saldo >= 0,
-                'text-danger-600 dark:text-danger-400' => $saldo < 0,
-            ])>
-                {{ number_format($saldo, 0, ',', '.') }}
-            </div>
-            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">Rupiah</div>
-            <div class="mt-3 border-t border-gray-100 pt-3 text-xs dark:border-white/10">
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Uang masuk − keluar</span>
-                    <span @class([
-                        'font-semibold',
-                        'text-success-600 dark:text-success-400' => $saldo >= 0,
-                        'text-danger-600 dark:text-danger-400' => $saldo < 0,
-                    ])>{{ $saldo >= 0 ? 'Surplus' : 'Defisit' }}</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Piutang --}}
-        <div class="rounded-xl bg-warning-50 p-5 shadow-sm ring-1 ring-warning-200 dark:bg-warning-500/10 dark:ring-warning-500/30">
-            <div class="flex items-center justify-between gap-3">
-                <span class="text-xs font-semibold uppercase tracking-wide text-warning-700 dark:text-warning-400">
-                    Piutang Lancar
-                </span>
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning-100 dark:bg-warning-500/20">
-                    <x-filament::icon icon="heroicon-m-clock" class="h-4 w-4 text-warning-700 dark:text-warning-400" />
-                </span>
-            </div>
-            <div class="mt-3 text-2xl font-bold tracking-tight text-warning-900 dark:text-warning-300">
-                {{ number_format($totalPiutang, 0, ',', '.') }}
-            </div>
-            <div class="mt-1 text-xs text-warning-700 dark:text-warning-400">Rupiah</div>
-            <div class="mt-3 space-y-1 border-t border-warning-200/60 pt-3 text-xs dark:border-warning-500/20">
-                <div class="flex items-center justify-between">
-                    <span class="text-warning-700 dark:text-warning-400">SPK belum lunas</span>
-                    <span class="font-semibold text-warning-900 dark:text-warning-300">{{ $piutang->count() }}</span>
-                </div>
-                @if ($totalRetensiDitahan > 0)
-                    <div class="flex items-center justify-between">
-                        <span class="text-warning-700 dark:text-warning-400">Retensi ditahan</span>
-                        <span class="font-semibold text-warning-900 dark:text-warning-300">
-                            {{ number_format($totalRetensiDitahan, 0, ',', '.') }}
-                        </span>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    {{-- =========================================================
-         PERINGATAN TENGGAT SPK
-         ========================================================= --}}
-    @if ($spkLewatTenggat->isNotEmpty() || $spkMendekatiTenggat->isNotEmpty())
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            @if ($spkLewatTenggat->isNotEmpty())
-                <div class="rounded-xl border border-danger-200 bg-danger-50 p-4 dark:border-danger-500/30 dark:bg-danger-500/10">
-                    <div class="flex items-start gap-3">
-                        <x-filament::icon icon="heroicon-m-exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-danger-600 dark:text-danger-400" />
-                        <div class="min-w-0 flex-1">
-                            <h3 class="text-sm font-semibold text-danger-900 dark:text-danger-300">
-                                {{ $spkLewatTenggat->count() }} SPK Lewat Tenggat
-                            </h3>
-                            <ul class="mt-2 space-y-1 text-xs text-danger-800 dark:text-danger-400">
-                                @foreach ($spkLewatTenggat->take(5) as $s)
-                                    <li class="flex items-center justify-between gap-2">
-                                        <span class="truncate font-mono">{{ $s->nomor_spk }}</span>
-                                        <span class="shrink-0 font-medium">{{ $s->labelTenggat() }}</span>
-                                    </li>
-                                @endforeach
-                                @if ($spkLewatTenggat->count() > 5)
-                                    <li class="pt-1 font-medium">+{{ $spkLewatTenggat->count() - 5 }} lainnya…</li>
-                                @endif
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            @if ($spkMendekatiTenggat->isNotEmpty())
-                <div class="rounded-xl border border-warning-200 bg-warning-50 p-4 dark:border-warning-500/30 dark:bg-warning-500/10">
-                    <div class="flex items-start gap-3">
-                        <x-filament::icon icon="heroicon-m-clock" class="mt-0.5 h-5 w-5 shrink-0 text-warning-600 dark:text-warning-400" />
-                        <div class="min-w-0 flex-1">
-                            <h3 class="text-sm font-semibold text-warning-900 dark:text-warning-300">
-                                {{ $spkMendekatiTenggat->count() }} SPK Mendekati Tenggat
-                            </h3>
-                            <ul class="mt-2 space-y-1 text-xs text-warning-800 dark:text-warning-400">
-                                @foreach ($spkMendekatiTenggat->take(5) as $s)
-                                    <li class="flex items-center justify-between gap-2">
-                                        <span class="truncate font-mono">{{ $s->nomor_spk }}</span>
-                                        <span class="shrink-0 font-medium">{{ $s->labelTenggat() }}</span>
-                                    </li>
-                                @endforeach
-                                @if ($spkMendekatiTenggat->count() > 5)
-                                    <li class="pt-1 font-medium">+{{ $spkMendekatiTenggat->count() - 5 }} lainnya…</li>
-                                @endif
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            @endif
-        </div>
-    @endif
-
-    {{-- =========================================================
-         UMUR PIUTANG (AGING)
-         ========================================================= --}}
-    <x-filament::section
-        icon="heroicon-o-calendar-days"
-        collapsible
-    >
-        <x-slot name="heading">Umur Piutang (Aging)</x-slot>
-        <x-slot name="description">Berapa lama piutang sudah tertunggak, dihitung dari tanggal SPK</x-slot>
-
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            @foreach ($aging as $a)
-                <div @class([
-                    'rounded-lg border p-3',
-                    'border-danger-300 bg-danger-50 dark:border-danger-500/40 dark:bg-danger-500/10' => $a['bahaya'] && $a['total'] > 0,
-                    'border-warning-300 bg-warning-50 dark:border-warning-500/40 dark:bg-warning-500/10' => $a['peringatan'] && $a['total'] > 0,
-                    'border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5' => ! ($a['total'] > 0) || (! $a['bahaya'] && ! $a['peringatan']),
-                ])>
-                    <div @class([
-                        'text-xs font-semibold uppercase tracking-wide',
-                        'text-danger-700 dark:text-danger-400' => $a['bahaya'] && $a['total'] > 0,
-                        'text-warning-700 dark:text-warning-400' => $a['peringatan'] && $a['total'] > 0,
-                        'text-gray-500 dark:text-gray-400' => ! ($a['total'] > 0) || (! $a['bahaya'] && ! $a['peringatan']),
-                    ])>
-                        {{ $a['label'] }}
-                    </div>
-                    <div @class([
-                        'mt-2 text-lg font-bold tabular-nums tracking-tight',
-                        'text-danger-900 dark:text-danger-300' => $a['bahaya'] && $a['total'] > 0,
-                        'text-warning-900 dark:text-warning-300' => $a['peringatan'] && $a['total'] > 0,
-                        'text-gray-900 dark:text-white' => ! ($a['total'] > 0) || (! $a['bahaya'] && ! $a['peringatan']),
-                    ])>
-                        {{ number_format($a['total'], 0, ',', '.') }}
-                    </div>
-                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {{ $a['jumlah_spk'] }} SPK
-                    </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach ([
+                ['Nilai SPK', $rp($nilaiSpk), $jumlahSpk.' SPK tercatat', 'gray'],
+                ['Uang Masuk', $rp($totalMasuk), $rp($masukDariSpk).' dari SPK · '.$rp($masukLuarSpk).' luar SPK', 'success'],
+                ['Uang Keluar', $rp($totalKeluar), 'Pengeluaran periode ini', 'danger'],
+                ['Belum Diterima', $rp($belumDiterima), 'Nilai SPK − sudah diterima', 'warning'],
+            ] as [$judul, $angka, $ket, $warna])
+                <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $judul }}</p>
+                    <p class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-100">{{ $angka }}</p>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $ket }}</p>
                 </div>
             @endforeach
         </div>
 
-        @if ($totalRetensiDitahan > 0)
-            <p class="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-white/5 dark:text-gray-400">
-                <x-filament::icon icon="heroicon-m-information-circle" class="inline h-3.5 w-3.5" />
-                Total <strong>Rp {{ number_format($totalRetensiDitahan, 0, ',', '.') }}</strong> retensi sedang ditahan pemberi kerja.
-                Jumlah ini <strong>tidak</strong> dihitung sebagai piutang lancar karena belum boleh ditagih sampai masa pemeliharaan selesai.
-            </p>
-        @endif
+        <div class="mt-4 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3 dark:bg-gray-800">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Selisih (Masuk − Keluar)</span>
+            <span @class([
+                'text-base font-semibold tabular-nums',
+                'text-emerald-600 dark:text-emerald-400' => $selisih >= 0,
+                'text-rose-600 dark:text-rose-400' => $selisih < 0,
+            ])>
+                {{ $rp($selisih) }}
+            </span>
+        </div>
     </x-filament::section>
 
-    {{-- =========================================================
-         ARUS KAS PER BULAN
-         ========================================================= --}}
-    <x-filament::section
-        icon="heroicon-o-arrows-right-left"
-        collapsible
-    >
-        <x-slot name="heading">Arus Kas per Bulan</x-slot>
-        <x-slot name="description">Uang masuk, uang keluar, dan selisihnya per bulan</x-slot>
+    {{-- ============================================================
+         2. UANG MASUK & KELUAR PER BULAN
+         ============================================================ --}}
+    <x-filament::section collapsible>
+        <x-slot name="heading">Arus Uang per Bulan</x-slot>
+        <x-slot name="description">
+            Uang masuk dan keluar tiap bulan, beserta selisihnya. Maksimal 12 bulan terakhir.
+        </x-slot>
 
         @if ($perBulan->isEmpty())
-            <x-filament::empty-state
-                icon="heroicon-o-inbox"
-                heading="Belum ada transaksi"
-                description="Tidak ada transaksi pada periode yang dipilih."
-            />
+            <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                Belum ada transaksi uang masuk pada periode ini.
+            </p>
         @else
-            {{-- Tabel untuk layar sedang ke atas --}}
-            <div class="hidden overflow-x-auto md:block">
+            <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-white/10 dark:text-gray-400">
-                            <th class="py-3 pr-4 font-semibold">Bulan</th>
-                            <th class="py-3 pr-4 text-center font-semibold">Transaksi</th>
-                            <th class="py-3 pr-4 text-right font-semibold">Masuk</th>
-                            <th class="py-3 pr-4 text-right font-semibold">Keluar</th>
-                            <th class="py-3 text-right font-semibold">Selisih</th>
+                        <tr class="border-b border-gray-200 text-left dark:border-gray-700">
+                            <th class="py-2 pr-3 font-semibold">Bulan</th>
+                            <th class="py-2 pr-3 text-right font-semibold">Uang Masuk</th>
+                            <th class="py-2 pr-3 text-right font-semibold">Uang Keluar</th>
+                            <th class="py-2 pr-3 text-right font-semibold">Selisih</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-white/5">
-                        @foreach ($perBulan as $b)
-                            <tr class="transition hover:bg-gray-50 dark:hover:bg-white/5">
-                                <td class="py-3 pr-4 font-medium text-gray-900 dark:text-white">
-                                    {{ $b['label'] }}
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach ($perBulan as $r)
+                            <tr>
+                                <td class="py-2 pr-3">
+                                    {{ $r['label'] }}
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                                        {{ $r['jumlah_masuk'] }} masuk · {{ $r['jumlah_keluar'] }} keluar
+                                    </span>
                                 </td>
-                                <td class="py-3 pr-4">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <x-filament::badge color="success" size="sm">{{ $b['jumlah_masuk'] }} masuk</x-filament::badge>
-                                        <x-filament::badge color="danger" size="sm">{{ $b['jumlah_keluar'] }} keluar</x-filament::badge>
-                                    </div>
+                                <td class="py-2 pr-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                                    {{ $rp($r['masuk']) }}
                                 </td>
-                                <td class="py-3 pr-4 text-right font-medium tabular-nums text-success-600 dark:text-success-400">
-                                    {{ number_format($b['masuk'], 0, ',', '.') }}
-                                </td>
-                                <td class="py-3 pr-4 text-right font-medium tabular-nums text-danger-600 dark:text-danger-400">
-                                    {{ number_format($b['keluar'], 0, ',', '.') }}
+                                <td class="py-2 pr-3 text-right tabular-nums text-rose-600 dark:text-rose-400">
+                                    {{ $rp($r['keluar']) }}
                                 </td>
                                 <td @class([
-                                    'py-3 text-right font-semibold tabular-nums',
-                                    'text-success-700 dark:text-success-400' => $b['selisih'] >= 0,
-                                    'text-danger-700 dark:text-danger-400' => $b['selisih'] < 0,
+                                    'py-2 pr-3 text-right font-medium tabular-nums',
+                                    'text-emerald-600 dark:text-emerald-400' => $r['selisih'] >= 0,
+                                    'text-rose-600 dark:text-rose-400' => $r['selisih'] < 0,
                                 ])>
-                                    {{ $b['selisih'] >= 0 ? '+' : '−' }}{{ number_format(abs($b['selisih']), 0, ',', '.') }}
+                                    {{ $rp($r['selisih']) }}
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
-
-            {{-- Kartu untuk layar kecil --}}
-            <div class="space-y-3 md:hidden">
-                @foreach ($perBulan as $b)
-                    <div class="rounded-lg border border-gray-200 p-3 dark:border-white/10">
-                        <div class="mb-2 flex items-center justify-between">
-                            <span class="font-semibold text-gray-900 dark:text-white">{{ $b['label'] }}</span>
-                            <span @class([
-                                'text-sm font-semibold tabular-nums',
-                                'text-success-600 dark:text-success-400' => $b['selisih'] >= 0,
-                                'text-danger-600 dark:text-danger-400' => $b['selisih'] < 0,
-                            ])>
-                                {{ $b['selisih'] >= 0 ? '+' : '−' }}{{ number_format(abs($b['selisih']), 0, ',', '.') }}
-                            </span>
-                        </div>
-                        <dl class="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">Masuk</dt>
-                                <dd class="font-medium tabular-nums text-success-600 dark:text-success-400">
-                                    {{ number_format($b['masuk'], 0, ',', '.') }}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">Keluar</dt>
-                                <dd class="font-medium tabular-nums text-danger-600 dark:text-danger-400">
-                                    {{ number_format($b['keluar'], 0, ',', '.') }}
-                                </dd>
-                            </div>
-                        </dl>
-                    </div>
-                @endforeach
-            </div>
         @endif
     </x-filament::section>
 
-    {{-- =========================================================
-         LABA-RUGI PER SPK
-         ========================================================= --}}
-    <x-filament::section
-        icon="heroicon-o-chart-bar-square"
-        collapsible
-    >
-        <x-slot name="heading">Laba-Rugi per SPK</x-slot>
-        <x-slot name="description">Penerimaan dikurangi biaya tiap SPK</x-slot>
-
-        @if ($labaRugiSpk->isEmpty())
-            <x-filament::empty-state
-                icon="heroicon-o-document-text"
-                heading="Belum ada SPK"
-                description="Tambahkan SPK terlebih dahulu untuk melihat laba-rugi."
-            />
-        @else
-            <div class="hidden overflow-x-auto lg:block">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-white/10 dark:text-gray-400">
-                            <th class="py-3 pr-3 font-semibold">SPK</th>
-                            <th class="py-3 pr-3 text-right font-semibold">Nilai SPK</th>
-                            <th class="py-3 pr-3 text-right font-semibold">Penerimaan</th>
-                            <th class="py-3 pr-3 text-right font-semibold">Biaya</th>
-                            <th class="py-3 pr-3 text-right font-semibold">Laba/Rugi</th>
-                            <th class="py-3 text-right font-semibold">Piutang</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-white/5">
-                        @foreach ($labaRugiSpk as $r)
-                            <tr class="transition hover:bg-gray-50 dark:hover:bg-white/5">
-                                <td class="py-3 pr-3">
-                                    <div class="font-mono text-xs text-gray-700 dark:text-gray-300">{{ $r['nomor_spk'] }}</div>
-                                    <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $r['pekerjaan'] }}
-                                    </div>
-                                </td>
-                                <td class="py-3 pr-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
-                                    {{ number_format($r['nilai_spk'], 0, ',', '.') }}
-                                </td>
-                                <td class="py-3 pr-3 text-right tabular-nums text-success-600 dark:text-success-400">
-                                    {{ number_format($r['penerimaan'], 0, ',', '.') }}
-                                </td>
-                                <td class="py-3 pr-3 text-right tabular-nums text-danger-600 dark:text-danger-400">
-                                    {{ number_format($r['biaya'], 0, ',', '.') }}
-                                </td>
-                                <td @class([
-                                    'py-3 pr-3 text-right font-semibold tabular-nums',
-                                    'text-success-700 dark:text-success-400' => $r['laba'] >= 0,
-                                    'text-danger-700 dark:text-danger-400' => $r['laba'] < 0,
-                                ])>
-                                    {{ $r['laba'] >= 0 ? '+' : '−' }}{{ number_format(abs($r['laba']), 0, ',', '.') }}
-                                </td>
-                                <td class="py-3 text-right tabular-nums text-warning-600 dark:text-warning-400">
-                                    {{ number_format($r['piutang'], 0, ',', '.') }}
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- Kartu untuk layar kecil --}}
-            <div class="space-y-3 lg:hidden">
-                @foreach ($labaRugiSpk as $r)
-                    <div class="rounded-lg border border-gray-200 p-3 dark:border-white/10">
-                        <div class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ $r['nomor_spk'] }}</div>
-                        <div class="mt-0.5 text-sm font-medium text-gray-900 dark:text-white">{{ $r['pekerjaan'] }}</div>
-                        <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">Nilai SPK</dt>
-                                <dd class="tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($r['nilai_spk'], 0, ',', '.') }}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">Penerimaan</dt>
-                                <dd class="tabular-nums text-success-600 dark:text-success-400">{{ number_format($r['penerimaan'], 0, ',', '.') }}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">Biaya</dt>
-                                <dd class="tabular-nums text-danger-600 dark:text-danger-400">{{ number_format($r['biaya'], 0, ',', '.') }}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">Piutang</dt>
-                                <dd class="tabular-nums text-warning-600 dark:text-warning-400">{{ number_format($r['piutang'], 0, ',', '.') }}</dd>
-                            </div>
-                        </dl>
-                        <div class="mt-2 flex items-center justify-between border-t border-gray-100 pt-2 dark:border-white/10">
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Laba/Rugi</span>
-                            <span @class([
-                                'text-sm font-bold tabular-nums',
-                                'text-success-600 dark:text-success-400' => $r['laba'] >= 0,
-                                'text-danger-600 dark:text-danger-400' => $r['laba'] < 0,
-                            ])>
-                                {{ $r['laba'] >= 0 ? '+' : '−' }}{{ number_format(abs($r['laba']), 0, ',', '.') }}
-                            </span>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        @endif
-    </x-filament::section>
-
-    {{-- =========================================================
-         PENGELUARAN PER KATEGORI
-         ========================================================= --}}
-    <x-filament::section
-        icon="heroicon-o-tag"
-        collapsible
-        collapsed
-    >
+    {{-- ============================================================
+         3. PENGELUARAN PER KATEGORI
+         ============================================================ --}}
+    <x-filament::section collapsible>
         <x-slot name="heading">Pengeluaran per Kategori</x-slot>
-        <x-slot name="description">Kategori konsisten karena divalidasi PHP Enum</x-slot>
-
-        @php $maksKategori = max(1, (float) ($perKategori->max('total') ?? 1)); @endphp
+        <x-slot name="description">
+            Ke mana uang keluar digunakan — material, upah, operasional, dan lainnya.
+        </x-slot>
 
         @if ($perKategori->isEmpty())
-            <x-filament::empty-state
-                icon="heroicon-o-inbox"
-                heading="Belum ada pengeluaran"
-                description="Tidak ada pengeluaran pada periode yang dipilih."
-            />
+            <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                Belum ada pengeluaran pada periode ini.
+            </p>
         @else
-            <div class="space-y-4">
-                @foreach ($perKategori as $k)
-                    @php
-                        $kategori = $k->kategori;
-                        $labelKategori = $kategori instanceof KategoriPengeluaran
-                            ? $kategori->label()
-                            : ($kategori ?: 'Tanpa kategori');
-                        $persen = round((float) $k->total / $maksKategori * 100, 2);
-                    @endphp
+            <div class="space-y-3">
+                @php $terbesar = max(1, $perKategori->max('total')); @endphp
+                @foreach ($perKategori as $r)
                     <div>
-                        <div class="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
-                            <span class="font-medium text-gray-700 dark:text-gray-300">
-                                {{ $labelKategori }}
-                                <span class="ml-1 text-xs font-normal text-gray-400">({{ $k->jumlah_transaksi }}×)</span>
-                            </span>
-                            <span class="shrink-0 font-semibold tabular-nums text-gray-900 dark:text-white">
-                                {{ number_format((float) $k->total, 0, ',', '.') }}
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-sm font-medium">{{ $r['label'] }}</span>
+                            <span class="text-sm tabular-nums">
+                                {{ $rp($r['total']) }}
+                                <span class="text-xs text-gray-500 dark:text-gray-400">
+                                    ({{ $r['jumlah_transaksi'] }}x)
+                                </span>
                             </span>
                         </div>
-                        <div class="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-                            <div class="h-full rounded-full bg-gradient-to-r from-danger-400 to-danger-600"
-                                 style="width: {{ $persen }}%"></div>
+                        <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                            <div class="h-full rounded-full bg-zinc-900 dark:bg-zinc-100"
+                                 style="width: {{ round($r['total'] / $terbesar * 100) }}%"></div>
                         </div>
                     </div>
                 @endforeach
@@ -526,107 +192,117 @@
         @endif
     </x-filament::section>
 
-    {{-- =========================================================
-         PIUTANG SPK
-         ========================================================= --}}
-    <x-filament::section
-        icon="heroicon-o-clock"
-        collapsible
-        collapsed
-    >
-        <x-slot name="heading">Piutang SPK</x-slot>
-        <x-slot name="description">SPK yang penerimaannya masih kurang dari nilai SPK</x-slot>
+    {{-- ============================================================
+         4. DAFTAR SPK
+         ============================================================ --}}
+    <x-filament::section collapsible collapsed>
+        <x-slot name="heading">Daftar SPK</x-slot>
+        <x-slot name="description">
+            Seluruh SPK beserta nilai dan statusnya. "Belum Diterima" = nilai SPK − sudah diterima.
+        </x-slot>
 
-        @if ($piutang->isEmpty())
-            <x-filament::empty-state
-                icon="heroicon-o-check-circle"
-                heading="Tidak ada piutang"
-                description="Semua SPK sudah lunas."
-            />
+        @if ($daftarSpk->isEmpty())
+            <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                Belum ada data SPK.
+            </p>
         @else
-            <div class="hidden overflow-x-auto sm:block">
+            <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-white/10 dark:text-gray-400">
-                            <th class="py-3 pr-3 font-semibold">SPK</th>
-                            <th class="py-3 pr-3 font-semibold">Status Tagihan</th>
-                            <th class="py-3 pr-3 text-right font-semibold">Nilai SPK</th>
-                            <th class="py-3 pr-3 text-right font-semibold">Retensi</th>
-                            <th class="py-3 pr-3 text-right font-semibold">Diterima</th>
-                            <th class="py-3 text-right font-semibold">Piutang</th>
+                        <tr class="border-b border-gray-200 text-left dark:border-gray-700">
+                            <th class="py-2 pr-3 font-semibold">Nomor SPK</th>
+                            <th class="py-2 pr-3 font-semibold">Pekerjaan</th>
+                            <th class="py-2 pr-3 text-right font-semibold">Nilai SPK</th>
+                            <th class="py-2 pr-3 text-right font-semibold">Diterima</th>
+                            <th class="py-2 pr-3 text-right font-semibold">Belum Diterima</th>
+                            <th class="py-2 pr-3 font-semibold">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-white/5">
-                        @foreach ($piutang as $r)
-                            <tr class="transition hover:bg-gray-50 dark:hover:bg-white/5">
-                                <td class="py-3 pr-3">
-                                    <div class="font-mono text-xs text-gray-700 dark:text-gray-300">{{ $r['nomor_spk'] }}</div>
-                                    <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $r['pekerjaan'] }}</div>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach ($daftarSpk as $r)
+                            <tr>
+                                <td class="py-2 pr-3 font-medium">{{ $r['nomor_spk'] }}</td>
+                                <td class="py-2 pr-3">
+                                    {{ \Illuminate\Support\Str::limit($r['pekerjaan'], 60) }}
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                                        {{ $r['mitra'] ?? '—' }}
+                                    </span>
                                 </td>
-                                <td class="py-3 pr-3">
-                                    <x-filament::badge color="gray" size="sm">{{ $r['status_tagihan'] }}</x-filament::badge>
-                                    @if (($r['umur_hari'] ?? null) !== null)
-                                        <div @class([
-                                            'mt-1 text-xs font-medium',
-                                            'text-danger-600 dark:text-danger-400' => $r['umur_hari'] > 90,
-                                            'text-warning-600 dark:text-warning-400' => $r['umur_hari'] > 60 && $r['umur_hari'] <= 90,
-                                            'text-gray-500 dark:text-gray-400' => $r['umur_hari'] <= 60,
-                                        ])>
-                                            {{ $r['umur_hari'] }} hari
-                                        </div>
-                                    @endif
+                                <td class="py-2 pr-3 text-right tabular-nums">{{ $rp($r['nilai_spk']) }}</td>
+                                <td class="py-2 pr-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                                    {{ $rp($r['diterima']) }}
                                 </td>
-                                <td class="py-3 pr-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
-                                    {{ number_format($r['nilai_spk'], 0, ',', '.') }}
+                                <td class="py-2 pr-3 text-right font-medium tabular-nums text-amber-600 dark:text-amber-400">
+                                    {{ $rp($r['belum_diterima']) }}
                                 </td>
-                                <td class="py-3 pr-3 text-right tabular-nums text-gray-500 dark:text-gray-400">
-                                    @if ($r['retensi_ditahan'] > 0)
-                                        <span class="text-gray-700 dark:text-gray-300">{{ number_format($r['retensi_ditahan'], 0, ',', '.') }}</span>
-                                    @else
-                                        —
-                                    @endif
+                                <td class="py-2 pr-3">
+                                    <x-filament::badge color="gray" size="sm">{{ $r['status_spk'] }}</x-filament::badge>
                                 </td>
-                                <td class="py-3 pr-3 text-right tabular-nums text-success-600 dark:text-success-400">
-                                    {{ number_format($r['diterima'], 0, ',', '.') }}
-                                </td>
-                                <td class="py-3 text-right font-semibold tabular-nums text-warning-700 dark:text-warning-400">
-                                    {{ number_format($r['sisa'], 0, ',', '.') }}
-                                </td>
-                                </tr>
-                                @endforeach
-                                </tbody>
-                                </table>
-                                </div>
-
-            {{-- Kartu untuk layar kecil --}}
-            <div class="space-y-3 sm:hidden">
-                @foreach ($piutang as $r)
-                    <div class="rounded-lg border border-gray-200 p-3 dark:border-white/10">
-                        <div class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ $r['nomor_spk'] }}</div>
-                        <div class="mt-0.5 text-sm font-medium text-gray-900 dark:text-white">{{ $r['pekerjaan'] }}</div>
-                        <div class="mt-2">
-                            <x-filament::badge color="gray" size="sm">{{ $r['status_tagihan'] }}</x-filament::badge>
-                        </div>
-                        <dl class="mt-2 grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">Nilai SPK</dt>
-                                <dd class="tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($r['nilai_spk'], 0, ',', '.') }}</dd>
-                            </div>
-                            <div>
-                                <dt class="text-gray-500 dark:text-gray-400">Diterima</dt>
-                                <dd class="tabular-nums text-success-600 dark:text-success-400">{{ number_format($r['diterima'], 0, ',', '.') }}</dd>
-                            </div>
-                        </dl>
-                        <div class="mt-2 flex items-center justify-between border-t border-gray-100 pt-2 dark:border-white/10">
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Sisa</span>
-                            <span class="text-sm font-bold tabular-nums text-warning-700 dark:text-warning-400">
-                                {{ number_format($r['sisa'], 0, ',', '.') }}
-                            </span>
-                        </div>
-                    </div>
-                @endforeach
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
     </x-filament::section>
 
+    {{-- ============================================================
+         5. TENGGAT SPK
+         ============================================================ --}}
+    <x-filament::section collapsible collapsed>
+        <x-slot name="heading">Tenggat SPK</x-slot>
+        <x-slot name="description">
+            Pekerjaan yang sudah lewat tenggat atau akan jatuh tempo dalam 14 hari.
+        </x-slot>
+
+        @php
+            $semuaTenggat = $spkLewatTenggat->map(fn ($s) => ['spk' => $s, 'lewat' => true])
+                ->concat($spkMendekatiTenggat->map(fn ($s) => ['spk' => $s, 'lewat' => false]));
+        @endphp
+
+        @if ($semuaTenggat->isEmpty())
+            <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                Tidak ada SPK yang lewat atau mendekati tenggat.
+            </p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-left dark:border-gray-700">
+                            <th class="py-2 pr-3 font-semibold">Nomor SPK</th>
+                            <th class="py-2 pr-3 font-semibold">Pekerjaan</th>
+                            <th class="py-2 pr-3 font-semibold">Tenggat</th>
+                            <th class="py-2 pr-3 font-semibold">Keterangan</th>
+                            <th class="py-2 pr-3 text-right font-semibold">Nilai SPK</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach ($semuaTenggat as $item)
+                            @php $s = $item['spk']; @endphp
+                            <tr>
+                                <td class="py-2 pr-3 font-medium">{{ $s->nomor_spk }}</td>
+                                <td class="py-2 pr-3">
+                                    {{ \Illuminate\Support\Str::limit($s->nama_pekerjaan, 50) }}
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400">
+                                        {{ $s->mitra?->nama ?? '—' }}
+                                    </span>
+                                </td>
+                                <td class="py-2 pr-3 tabular-nums">
+                                    {{ $s->tanggal_akhir?->format('d/m/Y') ?? '—' }}
+                                </td>
+                                <td class="py-2 pr-3">
+                                    <x-filament::badge :color="$item['lewat'] ? 'danger' : 'warning'" size="sm">
+                                        {{ $s->labelTenggat() }}
+                                    </x-filament::badge>
+                                </td>
+                                <td class="py-2 pr-3 text-right tabular-nums">
+                                    {{ $rp((float) $s->nilai_spk) }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </x-filament::section>
 </x-filament-panels::page>

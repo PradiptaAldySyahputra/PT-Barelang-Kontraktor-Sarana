@@ -9,7 +9,9 @@ use App\Enums\KategoriMitra;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use App\Models\Mitra;
+use App\Models\Spk;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -81,8 +83,7 @@ class SpkForm
                     ])
                     ->columns(2),
 
-                Section::make('Nilai & Retensi')
-                    ->description('Retensi dihitung otomatis dari nilai SPK × persen retensi. Isi 5% untuk SPK subkon/vendor.')
+                Section::make('Nilai SPK')
                     ->schema([
                         TextInput::make('nilai_spk')
                             ->label('Nilai SPK (Rp)')
@@ -93,38 +94,52 @@ class SpkForm
                             ->mask(RawJs::make('$money($input, \',\', \'.\')'))
                             ->stripCharacters('.')
                             ->dehydrateStateUsing(fn ($state): float => (float) $state),
-
-                        TextInput::make('persen_retensi')
-                            ->label('Persen Retensi (%)')
-                            ->numeric()
-                            ->minValue(0)
-                            ->maxValue(100)
-                            ->suffix('%')
-                            ->helperText('Contoh: 5 untuk SPK subkon'),
-
-                        TextInput::make('nilai_retensi')
-                            ->label('Nilai Retensi (Rp)')
-                            ->numeric()
-                            ->prefix('Rp')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->helperText('Terhitung otomatis'),
                     ])
-                    ->columns(3),
+                    ->columns(1),
 
-                Section::make('Status & Klasifikasi')
+                // ---------------------------------------------------------
+                // STATUS — HANYA TAMPIL, tidak bisa diubah dari sini
+                //
+                // ⚠️ KEPUTUSAN USER: status diubah lewat menu monitoring
+                // (Status SPK / Tagihan SPK) dengan form terpisah, supaya
+                // tidak ada risiko salah ubah data lain saat ganti status.
+                // ---------------------------------------------------------
+                // ---------------------------------------------------------
+                // STATUS
+                //
+                // ⚠️ KEPUTUSAN USER: saat UBAH, status hanya DITAMPILKAN —
+                // perubahannya lewat form terpisah (Ubah Status Pekerjaan /
+                // Ubah Status Tagihan). Saat TAMBAH (SPK baru), status diisi
+                // otomatis: Draft + Belum Ditagihkan.
+                // ---------------------------------------------------------
+                Section::make('Status (hanya tampil)')
+                    ->description('Status diubah lewat menu Status SPK & Tagihan SPK — bukan dari sini.')
+                    ->hiddenOn('create')
                     ->schema([
-                        Select::make('status_spk')
-                            ->label('Status SPK')
-                            ->options(StatusSpk::opsi())
-                            ->required()
-                            ->native(false),
+                        Placeholder::make('status_spk_tampil')
+                            ->label('Status Pekerjaan')
+                            ->content(fn (?Spk $record): string => $record?->status_spk?->label() ?? 'Draft'),
 
-                        Select::make('status_tagihan')
+                        Placeholder::make('status_tagihan_tampil')
                             ->label('Status Tagihan')
-                            ->options(StatusTagihan::opsi())
-                            ->native(false),
+                            ->content(fn (?Spk $record): string => $record?->status_tagihan?->label() ?? 'Belum Ditagihkan'),
+                    ])
+                    ->columns(2),
 
+                // Saat TAMBAH: status diisi otomatis (tidak perlu dipilih).
+                Section::make('Status Awal')
+                    ->description('SPK baru otomatis berstatus Draft & Belum Ditagihkan. Ubah lewat menu Status SPK / Tagihan SPK.')
+                    ->visibleOn('create')
+                    ->schema([
+                        Hidden::make('status_spk')
+                            ->default(StatusSpk::Draft->value),
+
+                        Hidden::make('status_tagihan')
+                            ->default(StatusTagihan::BelumDitagihkan->value),
+                    ]),
+
+                Section::make('Klasifikasi')
+                    ->schema([
                         Select::make('jenis_sumber')
                             ->label('Jenis Sumber')
                             ->options([

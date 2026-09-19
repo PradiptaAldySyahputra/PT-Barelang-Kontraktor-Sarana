@@ -24,14 +24,15 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Tabel LIST SPK — data induk SPK (bukan monitoring).
  *
- * ⚠️ REVISI USER: kolom **Biaya**, **Laba/Rugi**, dan **Piutang**
- * DIHAPUS dari tabel ini karena sudah dipindah ke menu monitoring:
- *   - Status SPK            → pantau status & tenggat
- *   - Tagihan SPK           → pantau tagihan belum selesai + piutang
- *   - Tagihan Selesai SPK   → riwayat tagihan selesai
+ * ⚠️ KEPUTUSAN USER (19 Sep 2026):
+ *   - Kolom **Biaya**, **Laba/Rugi**, **Piutang**, dan **Retensi** DIHAPUS.
+ *     Sistem murni mencatat data yang diinput — tidak ada perhitungan pajak,
+ *     biaya, laba/rugi, atau piutang.
+ *   - Status TIDAK diubah dari sini. Status diubah lewat menu monitoring
+ *     (Status SPK / Tagihan SPK) dengan form terpisah.
  *
  * Tabel ini fokus pada **identitas SPK**: nomor, pekerjaan, mitra,
- * tanggal, nilai, dan status.
+ * tanggal, nilai, pelaksana, dan status (tampil saja).
  */
 class SpksTable
 {
@@ -48,10 +49,14 @@ class SpksTable
                     ->weight('medium')
                     ->wrap(),
 
+                // Pekerjaan ditampilkan sebagai PARAGRAF memanjang (wrap)
+                // supaya tidak memotong nama pekerjaan yang panjang —
+                // permintaan user: "dibuat paragraf atau memanjang saja".
                 TextColumn::make('nama_pekerjaan')
                     ->label('Pekerjaan')
                     ->searchable()
                     ->wrap()
+                    ->lineClamp(4)
                     ->description(fn (Spk $record): ?string => $record->lokasi),
 
                 TextColumn::make('mitra.nama')
@@ -91,18 +96,6 @@ class SpksTable
                     ->description(fn (Spk $record): ?string => $record->subkon?->nama)
                     ->placeholder('—')
                     ->toggleable(),
-
-                TextColumn::make('persen_retensi')
-                    ->label('Retensi')
-                    ->state(fn (Spk $record): ?string => $record->persen_retensi !== null
-                        ? rtrim(rtrim((string) $record->persen_retensi, '0'), '.').'%'
-                        : null)
-                    ->description(fn (Spk $record): ?string => $record->nilai_retensi !== null
-                        ? 'Rp '.number_format((float) $record->nilai_retensi, 0, ',', '.')
-                        : null)
-                    ->placeholder('—')
-                    ->toggleable()
-                    ->alignCenter(),
 
                 TextColumn::make('status_spk')
                     ->label('Status SPK')
@@ -163,11 +156,6 @@ class SpksTable
                 Filter::make('disubkonkan')
                     ->label('Disubkonkan')
                     ->query(fn (Builder $q): Builder => $q->disubkonkan())
-                    ->toggle(),
-
-                Filter::make('ada_retensi')
-                    ->label('Ada Retensi')
-                    ->query(fn (Builder $q): Builder => $q->whereNotNull('persen_retensi')->where('persen_retensi', '>', 0))
                     ->toggle(),
 
                 Filter::make('periode')

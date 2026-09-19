@@ -43,8 +43,6 @@ class SpkFactory extends Factory
                 'Lokasi Contoh 2', 'Gudang PT PLN Batam', 'Batu Aji',
             ]),
             'nilai_spk' => $nilai,
-            'persen_retensi' => null,
-            'nilai_retensi' => null,
             'jenis_sumber' => fake()->randomElement(['pln', 'luar']),
             'sheet_lama' => null,
             'mitra_id' => Mitra::factory(),
@@ -67,20 +65,13 @@ class SpkFactory extends Factory
     }
 
     /**
-     * SPK subkon/vendor dengan retensi 5%.
-     *
-     * CATATAN: `nilai_retensi` TIDAK dihitung di sini — model Spk yang
-     * menghitungnya otomatis lewat hook `saving`, agar nilainya selalu
-     * mengikuti `nilai_spk` yang sebenarnya (termasuk saat ditimpa di seeder).
+     * SPK yang disubkonkan (dikerjakan pihak lain).
      */
     public function subkon(): static
     {
         return $this->state(fn (array $attributes): array => [
             'jenis_sumber' => 'subkon',
-            'persen_retensi' => 5.00,
-            // Status tagihan HARUS belum Dibayar — kalau Dibayar, retensi
-            // dianggap sudah dilepas sehingga retensiDitahan() = 0.
-            'status_tagihan' => StatusTagihan::BelumDitagihkan,
+            'dikerjakan_oleh' => DikerjakanOleh::Subkon,
         ]);
     }
 

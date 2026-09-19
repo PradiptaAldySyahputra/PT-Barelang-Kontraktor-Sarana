@@ -13,7 +13,9 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -47,6 +49,22 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandName('Barelang Kontraktor Sarana')
             ->favicon(asset('favicon.svg'))
+
+            // ---------------------------------------------------------
+            // TOMBOL TOGGLE SIDEBAR — DIPISAH DARI NAMA PERUSAHAAN
+            //
+            // ⚠️ PERMINTAAN USER: tombol tutup/buka sidebar jangan satu
+            // tempat dengan nama perusahaan, supaya di situ bisa ditambah
+            // logo. Jadi tombol ditaruh SEBELUM logo & nama brand, diikuti
+            // logo "BKS".
+            //
+            // Hook ini menyisipkan view di dalam header sidebar, tepat
+            // sebelum logo/nama brand dirender.
+            // ---------------------------------------------------------
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_LOGO_BEFORE,
+                fn (): View => view('filament.sidebar-toggle'),
+            )
             // ---------------------------------------------------------
             // Warna — MONOKROM (tema Clean Minimalist Enterprise)
             // ---------------------------------------------------------

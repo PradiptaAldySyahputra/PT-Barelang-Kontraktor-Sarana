@@ -161,13 +161,12 @@ class UangMasukForm
                                         ->when($record?->id, fn ($q) => $q->whereKeyNot($record->id))
                                         ->sum('jumlah');
 
-                                    $batas = $spk->nilaiTagih() - (float) $sudahDiterima;
+                                    $batas = (float) $spk->nilai_spk - (float) $sudahDiterima;
 
                                     if ((float) $value > $batas + 0.01) {
                                         $fail(sprintf(
-                                            'Melebihi piutang SPK. Nilai SPK Rp %s, retensi ditahan Rp %s, sudah diterima Rp %s — maksimal Rp %s.',
+                                            'Melebihi nilai SPK. Nilai SPK Rp %s, sudah diterima Rp %s — maksimal Rp %s.',
                                             number_format((float) $spk->nilai_spk, 0, ',', '.'),
-                                            number_format($spk->retensiDitahan(), 0, ',', '.'),
                                             number_format((float) $sudahDiterima, 0, ',', '.'),
                                             number_format(max(0, $batas), 0, ',', '.'),
                                         ));
@@ -193,10 +192,7 @@ class UangMasukForm
 
                                 $sisa = $spk->piutangDari((float) $sudahDiterima);
 
-                                return 'Piutang lancar SPK ini: Rp '.number_format($sisa, 0, ',', '.').
-                                    ($spk->retensiDitahan() > 0
-                                        ? ' (retensi ditahan Rp '.number_format($spk->retensiDitahan(), 0, ',', '.').' belum boleh ditagih)'
-                                        : '');
+                                return 'Belum diterima untuk SPK ini: Rp '.number_format($sisa, 0, ',', '.');
                             }),
 
                         Select::make('mitra_id')

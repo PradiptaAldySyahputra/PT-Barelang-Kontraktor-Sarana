@@ -6,7 +6,9 @@ namespace App\Filament\Resources\MonitoringSpk;
 
 use App\Enums\StatusTagihan;
 use App\Filament\Resources\MonitoringSpk\Pages\ListTagihanSelesaiSpk;
+use App\Filament\Resources\Spks\Pages\UbahStatusTagihan;
 use App\Models\Spk;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -18,10 +20,14 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * RIWAYAT TAGIHAN SELESAI SPK.
  *
- * Isi: SPK yang status tagihannya sudah `Dibayar` — untuk data riwayat.
- * Fokus: arsip, pencarian, dan rekap nilai yang sudah selesai.
+ * Isi: SPK yang status tagihannya sudah `Dibayar`.
+ * Fokus: arsip & pencarian.
  *
- * Baca saja.
+ * ⚠️ PERMINTAAN USER: "ditagihan selesai bisa di edit kalau misal salah input."
+ * Jadi ada tombol "Perbaiki Status" yang mengembalikan SPK ke menu Tagihan
+ * SPK kalau ternyata statusnya salah.
+ *
+ * Kolom Laba/Rugi DIHAPUS (sistem tidak menghitung laba/rugi).
  */
 class TagihanSelesaiSpkResource extends MonitoringSpkResource
 {
@@ -47,7 +53,7 @@ class TagihanSelesaiSpkResource extends MonitoringSpkResource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('tanggal_spk', 'desc')
+            ->defaultSort('updated_at', 'desc')
             ->columns([
                 TextColumn::make('status_tagihan')
                     ->label('Status')
@@ -66,6 +72,7 @@ class TagihanSelesaiSpkResource extends MonitoringSpkResource
                     ->label('Pekerjaan')
                     ->searchable()
                     ->wrap()
+                    ->lineClamp(3)
                     ->description(fn (Spk $r): ?string => $r->mitra?->nama),
 
                 TextColumn::make('tanggal_spk')
@@ -82,20 +89,12 @@ class TagihanSelesaiSpkResource extends MonitoringSpkResource
 
                 TextColumn::make('diterima')
                     ->label('Total Diterima')
-                    ->state(fn (Spk $r): float => (float) ($r->total_masuk ?? 0))
+                    ->state(fn (Spk $r): float => $r->totalPenerimaan())
                     ->money('IDR', locale: 'id')
                     ->color('success')
                     ->alignEnd(),
 
-                TextColumn::make('laba_rugi')
-                    ->label('Laba/Rugi')
-                    ->state(fn (Spk $r): float => (float) ($r->total_masuk ?? 0) - (float) ($r->total_keluar ?? 0))
-                    ->money('IDR', locale: 'id')
-                    ->weight('bold')
-                    ->color(fn ($state): string => (float) $state >= 0 ? 'success' : 'danger')
-                    ->alignEnd(),
-
-                TextColumn::make('selesai_pada')
+                TextColumn::make('updated_at')
                     ->label('Terakhir Diperbarui')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
@@ -124,7 +123,18 @@ class TagihanSelesaiSpkResource extends MonitoringSpkResource
                         ->when($data['dari'] ?? null, fn (Builder $q, $t): Builder => $q->whereDate('tanggal_spk', '>=', $t))
                         ->when($data['sampai'] ?? null, fn (Builder $q, $t): Builder => $q->whereDate('tanggal_spk', '<=', $t))),
             ])
-            ->recordActions([]);
+            ->recordActions([
+                // PERMINTAAN USER: bisa diperbaiki kalau salah input.
+                Action::make('perbaikiStatus')
+                    ->label('Perbaiki Status')
+                    ->icon('heroicon-m-arrow-uturn-left')
+                    ->color('warning')
+                    ->visible(fn (): bool => static::bolehUbahData())
+                    ->url(fn (Spk $r): string => UbahStatusTagihan::getUrl([
+                        'record' => $r,
+                        'asal' => 'tagihan-selesai',
+                    ])),
+            ]);
     }
 
     public static function getPages(): array

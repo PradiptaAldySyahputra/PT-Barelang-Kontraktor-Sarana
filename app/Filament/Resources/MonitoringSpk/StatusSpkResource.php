@@ -7,11 +7,10 @@ namespace App\Filament\Resources\MonitoringSpk;
 use App\Enums\DikerjakanOleh;
 use App\Enums\StatusSpk;
 use App\Filament\Resources\MonitoringSpk\Pages\ListStatusSpk;
-use App\Filament\Resources\Spks\Pages\EditSpk;
+use App\Filament\Resources\Spks\Pages\UbahStatusSpk;
 use App\Models\Spk;
 use Filament\Actions\Action;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -19,17 +18,19 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * MONITORING STATUS SPK.
+ * MONITORING STATUS SPK (progres pekerjaan).
  *
- * Fokus: pekerjaan mana yang perlu dikerjakan / mendekati tenggat.
- * Kolom Status & Tenggat diletakkan DI DEPAN agar langsung terlihat.
+ * ⚠️ KEPUTUSAN USER:
+ *   "di spk bagian status spk merubahnya lewat ubah status saja, jadi status
+ *    cuman menampilkan progres."
  *
- * ⚠️ REVISI USER: status sekarang bisa DIUBAH LANGSUNG dari tabel
- * (klik pada kolom Status → pilih status baru). Tidak perlu buka form.
- * Untuk ubah cepat lewat form ringkas, ada tombol "Ubah Status".
+ * Jadi:
+ *   - Kolom status di sini READ-ONLY (hanya menampilkan progres)
+ *   - Perubahan lewat tombol "Ubah Status Pekerjaan" → form TERPISAH
+ *   - Data lain (nomor, nilai, mitra) tetap di menu List SPK
  *
- * Data lain (nomor, nilai, mitra, dll) tetap TIDAK bisa diubah dari sini —
- * itu ada di menu List SPK.
+ * Status tagihan TIDAK diubah dari sini — ada menu & form sendiri
+ * (Tagihan SPK) supaya jelas bedanya.
  */
 class StatusSpkResource extends MonitoringSpkResource
 {
@@ -41,38 +42,26 @@ class StatusSpkResource extends MonitoringSpkResource
 
     protected static ?int $navigationSort = 2;
 
-    /**
-     * Status boleh diubah dari halaman monitoring ini.
-     *
-     * Ini pengecualian dari aturan "monitoring = baca saja": user meminta
-     * perubahan status dibuat semudah mungkin. Yang dibuka hanya kolom
-     * `status_spk` & `status_tagihan`, bukan seluruh data SPK.
-     */
-    public static function canEdit($record): bool
-    {
-        return static::bolehUbahData();
-    }
-
     public static function table(Table $table): Table
     {
         return $table
             ->defaultSort('tanggal_akhir')
             ->columns([
-                // ---- STATUS DI DEPAN & LANGSUNG BISA DIUBAH ----
-                //
-                // SelectColumn = dropdown langsung di dalam tabel, jadi
-                // mengubah status cukup 2 klik tanpa pindah halaman.
-                // Catatan: SelectColumn TIDAK mendukung badge()/color(),
-                // jadi tampil sebagai dropdown biasa (bukan lencana berwarna).
-                SelectColumn::make('status_spk')
-                    ->label('Status')
-                    ->options(StatusSpk::opsi())
-                    ->selectablePlaceholder(false)
-                    ->disabled(fn (): bool => ! static::bolehUbahData())
-                    ->afterStateUpdated(function (Spk $record): void {
-                        // Pastikan perubahan langsung tersimpan & tercatat.
-                        $record->save();
-                    }),
+                // ---- STATUS DI DEPAN (tampil saja) ----
+                TextColumn::make('status_spk')
+                    ->label('Status Pekerjaan')
+                    ->badge()
+                    ->formatStateUsing(fn (?StatusSpk $state): string => $state?->label() ?? '—')
+                    ->color(fn (?StatusSpk $state): string => match ($state) {
+                        StatusSpk::Draft => 'gray',
+                        StatusSpk::Terbit => 'info',
+                        StatusSpk::Berjalan => 'warning',
+                        StatusSpk::Selesai => 'success',
+                        StatusSpk::SudahDitagihkan => 'primary',
+                        StatusSpk::Dibatalkan => 'danger',
+                        default => 'gray',
+                    })
+                    ->sortable(),
 
                 TextColumn::make('tenggat')
                     ->label('Tenggat')
@@ -97,17 +86,12 @@ class StatusSpkResource extends MonitoringSpkResource
                     ->label('Pekerjaan')
                     ->searchable()
                     ->wrap()
+                    ->lineClamp(3)
                     ->description(fn (Spk $r): ?string => $r->lokasi),
 
                 TextColumn::make('mitra.nama')
                     ->label('Mitra')
                     ->placeholder('—'),
-
-                TextColumn::make('tanggal_spk')
-                    ->label('Tanggal SPK')
-                    ->date('d/m/Y')
-                    ->placeholder('TANPA SPK')
-                    ->sortable(),
 
                 TextColumn::make('dikerjakan_oleh')
                     ->label('Pelaksana')
@@ -117,7 +101,8 @@ class StatusSpkResource extends MonitoringSpkResource
                         : '—')
                     ->color(fn ($state): string => $state === DikerjakanOleh::Subkon ? 'warning' : 'gray')
                     ->description(fn (Spk $r): ?string => $r->subkon?->nama)
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->toggleable(),
 
                 TextColumn::make('nilai_spk')
                     ->label('Nilai SPK')
@@ -126,7 +111,6 @@ class StatusSpkResource extends MonitoringSpkResource
                     ->alignEnd(),
             ])
             ->filters([
-                // ---- FILTER STATUS (permintaan user) ----
                 SelectFilter::make('status_spk')
                     ->label('Status')
                     ->options(StatusSpk::opsi())
@@ -167,15 +151,16 @@ class StatusSpkResource extends MonitoringSpkResource
                     ->toggle(),
             ])
             ->recordActions([
-                // Form ringkas: hanya status. Untuk data lain, buka List SPK.
+                // Form TERPISAH, hanya status pekerjaan.
+                // `asal` dipakai supaya setelah simpan kembali ke sini.
                 Action::make('ubahStatus')
                     ->label('Ubah Status')
                     ->icon('heroicon-m-pencil-square')
                     ->color('primary')
                     ->visible(fn (): bool => static::bolehUbahData())
-                    ->url(fn (Spk $r): string => EditSpk::getUrl([
+                    ->url(fn (Spk $r): string => UbahStatusSpk::getUrl([
                         'record' => $r,
-                        'ringkas' => 1,
+                        'asal' => 'status-spk',
                     ])),
             ]);
     }

@@ -49,10 +49,10 @@ class DashboardWidgetTest extends TestCase
 
         foreach ([
             'Nilai SPK',
-            'Uang Masuk',
+            'Sudah Diterima',
             'Uang Keluar',
-            'Saldo Bersih',
-            'Piutang SPK',
+            'Belum Diterima',
+            'Nilai SPK',
         ] as $label) {
             $this->assertStringContainsString($label, $html, "Kartu '$label' tidak tampil");
         }
@@ -74,12 +74,13 @@ class DashboardWidgetTest extends TestCase
 
         $html = Livewire::test(RingkasanKeuangan::class)->html();
 
-        // 200jt nilai SPK, 120jt masuk, 65jt keluar, 55jt saldo, 80jt piutang
-        $this->assertStringContainsString('200.000.000', $html, 'Total nilai SPK salah');
-        $this->assertStringContainsString('120.000.000', $html, 'Total uang masuk salah');
-        $this->assertStringContainsString('65.000.000', $html, 'Total uang keluar salah');
-        $this->assertStringContainsString('55.000.000', $html, 'Saldo bersih salah');
-        $this->assertStringContainsString('80.000.000', $html, 'Piutang salah');
+        // Nilai SPK 200jt · diterima 120jt · keluar 65jt · belum diterima 80jt
+        // ⚠️ Kartu "Saldo" & "Piutang" sudah DIGANTI (revisi user):
+        // sekarang "Belum Diterima" = nilai SPK − sudah diterima.
+        $this->assertStringContainsString('200.000.000', $html, 'Nilai SPK salah');
+        $this->assertStringContainsString('120.000.000', $html, 'Sudah diterima salah');
+        $this->assertStringContainsString('65.000.000', $html, 'Uang keluar salah');
+        $this->assertStringContainsString('80.000.000', $html, 'Belum diterima salah');
     }
 
     // ---------------------------------------------------------
@@ -134,8 +135,8 @@ class DashboardWidgetTest extends TestCase
         $html = Livewire::test(SpkBerjalan::class)->html();
 
         $this->assertStringContainsString('WIDGET-BERJALAN-001', $html);
-        $this->assertStringContainsString('Laba/Rugi', $html);
-        $this->assertStringContainsString('Piutang', $html);
+        $this->assertStringContainsString('Belum Diterima', $html);
+        $this->assertStringContainsString('Sudah Diterima', $html);
     }
 
     public function test_tabel_spk_berjalan_hanya_menampilkan_spk_berjalan(): void
