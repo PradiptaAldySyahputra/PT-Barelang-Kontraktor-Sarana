@@ -3,6 +3,74 @@
 
 ---
 
+## [3.6] — Halaman Laporan — 19 September 2026
+
+### Halaman Laporan (`/admin/laporan`)
+
+| Bagian | Isi |
+|---|---|
+| **Ringkasan** | Uang masuk · uang keluar · saldo bersih · total piutang |
+| **Arus Kas per Bulan** | Masuk, keluar, selisih, jumlah transaksi per bulan |
+| **Pengeluaran per Kategori** | Total + bar proporsi per kategori |
+| **Laba-Rugi per SPK** | Nilai SPK · penerimaan · biaya · **laba/rugi** · piutang |
+| **Piutang SPK** | SPK belum lunas + status tagihan |
+
+**Filter periode:** Bulan Ini · 3 Bulan · 12 Bulan · Semua.
+
+### Ekspor CSV (5 jenis)
+
+Ekspor SPK · Arus Kas · Kategori · Laba-Rugi · Piutang.
+
+**Keputusan teknis:** memakai **CSV**, bukan PDF/Excel, karena:
+- Bisa dibuka langsung di **Excel** — aplikasi yang selama ini dipakai perusahaan
+- Tidak perlu paket tambahan (ringan)
+- Pemisah titik-koma (`;`) + **BOM UTF-8** agar Excel membaca karakter dengan benar
+
+> Isi CSV memakai **label Enum** (mis. "Material"), bukan nilai mentah ("material"),
+> agar mudah dibaca saat dibuka di Excel.
+
+**Hak akses:** Admin **dan** Direktur boleh melihat serta mengekspor laporan.
+Sesuai `Rules.md` §4 — Direktur hanya melihat, tapi laporan justru untuk dia.
+
+### 2 Bug Ditemukan & Diperbaiki
+
+| # | Bug | Penyebab | Perbaikan |
+|---|---|---|---|
+| 1 | Halaman laporan **error 500** — *"Object of class KategoriPengeluaran could not be converted to string"* | Kolom `kategori` **sudah di-cast ke Enum** oleh model, sehingga `KategoriPengeluaran::tryFrom((string) $x)` gagal | Pemeriksaan `instanceof` di view |
+| 2 | Ekspor CSV kategori ikut error yang sama | Sama — nilai Enum di-`fputcsv` langsung | Diperbaiki di **sumbernya** (method `ekspor()`), bukan hanya di view |
+
+> Pelajaran: ketika sebuah kolom sudah di-cast ke Enum, ia **bukan** string lagi.
+> Jangan di-cast ulang ke string — periksa dengan `instanceof`.
+
+### Testing
+
+**141 test, 386 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+### Git
+
+```
+9e5b59b feat: halaman Laporan + ekspor CSV
+3b438c3 docs: catat v3.5 (antarmuka tunggal Filament) + perbarui README
+715c46e feat: dashboard Filament + hapus halaman Blade lama
+aa69e59 docs: catat 4 resource selesai + bug tombol Direktur (v3.4)
+89e7e2c feat: lengkapi Resource Mitra, Uang Masuk, Uang Keluar, Pengguna
+53d4ed2 docs: catat keputusan Filament + 2 bug yang diperbaiki (v3.3)
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+### Yang Belum Dikerjakan
+
+| # | Item |
+|---|---|
+| 1 | Perbarui `Architecture.md` & `Design.md` agar konsisten dengan Filament |
+| 2 | Impor data lama 2024–2026 dari Excel `file-Excel-perusahaan.xlsx` |
+| 3 | Deployment lokal 2 PC (static IP, auto-start, backup, UPS) |
+
+---
+
 ## [3.5] — Antarmuka Tunggal Filament — 19 September 2026
 
 ### 🐞 Masalah yang Dilaporkan User
