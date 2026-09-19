@@ -13,18 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Alias middleware peran, dipakai di route:
+        // Alias middleware peran — berguna untuk halaman Filament kustom:
         //   ->middleware('peran:admin')
         //   ->middleware('peran:admin,direktur')
+        //
+        // Untuk CRUD standar, pembatasan sudah dilakukan di masing-masing
+        // Resource lewat canCreate/canEdit/canDelete + trait BolehUbahData.
         $middleware->alias([
             'peran' => PastikanPeran::class,
         ]);
-
-        // Arahkan tamu (belum login) ke halaman login
-        $middleware->redirectGuestsTo(fn () => route('login'));
-
-        // Arahkan pengguna yang sudah login dari /login ke dashboard
-        $middleware->redirectUsersTo(fn () => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

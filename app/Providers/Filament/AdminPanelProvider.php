@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Enums\Peran;
+use App\Filament\Widgets\GrafikArusKas;
+use App\Filament\Widgets\RingkasanKeuangan;
+use App\Filament\Widgets\SpkBerjalan;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -52,6 +55,9 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 AccountWidget::class,
+                RingkasanKeuangan::class,
+                GrafikArusKas::class,
+                SpkBerjalan::class,
             ])
             ->middleware([
                 EncryptCookies::class,

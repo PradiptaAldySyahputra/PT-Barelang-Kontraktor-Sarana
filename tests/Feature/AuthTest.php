@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\Peran;
+use App\Filament\Resources\Spks\SpkResource;
 use App\Models\Pengguna;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -13,119 +14,35 @@ use Tests\TestCase;
 /**
  * Uji autentikasi & pembatasan akses berbasis peran.
  *
- * Sesuai Rules.md §4: "Authorization wajib memakai middleware role —
- * BUKAN hanya menyembunyikan menu."
+ * Sejak v3.5, SELURUH antarmuka memakai panel Filament di /admin.
+ * Halaman Blade lama (login & dashboard custom) sudah dihapus.
  *
- * Jadi test ini memastikan request yang tidak berhak DITOLAK (403),
- * bukan sekadar menunya tidak tampil.
+ * Untuk uji login lewat Filament (Livewire), lihat FilamentTest.
+ *
+ * Sesuai Rules.md §4: pembatasan dilakukan di level otorisasi,
+ * bukan sekadar menyembunyikan menu.
  */
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
     // ---------------------------------------------------------
-    // Halaman login
+    // Pintu masuk
     // ---------------------------------------------------------
 
-    public function test_halaman_login_bisa_dibuka_tamu(): void
+    public function test_beranda_mengarahkan_ke_panel_filament(): void
     {
-        $this->get(route('login'))->assertOk()->assertSee('SIAKAD SPK');
+        $this->get('/')->assertRedirect('/admin');
     }
 
-    public function test_tamu_diarahkan_ke_login_saat_buka_dashboard(): void
+    public function test_tamu_diarahkan_ke_login_filament(): void
     {
-        $this->get(route('dashboard'))->assertRedirect(route('login'));
+        $this->get('/admin')->assertRedirect('/admin/login');
     }
 
-    public function test_tamu_yang_buka_beranda_akhirnya_sampai_di_login(): void
+    public function test_halaman_login_filament_bisa_dibuka_tamu(): void
     {
-        // Beranda mengarahkan ke dashboard, lalu middleware auth
-        // mengarahkan tamu ke halaman login (2 hop).
-        $this->get('/')->assertRedirect(route('dashboard'));
-
-        $this->get(route('dashboard'))->assertRedirect(route('login'));
-    }
-
-    // ---------------------------------------------------------
-    // Proses login
-    // ---------------------------------------------------------
-
-    public function test_admin_bisa_login_dengan_kredensial_benar(): void
-    {
-        $admin = Pengguna::factory()->admin()->create([
-            'email' => 'admin-login@bks.test',
-            'password' => 'rahasia123',
-        ]);
-
-        $this->post(route('login.proses'), [
-            'email' => 'admin-login@bks.test',
-            'password' => 'rahasia123',
-        ])->assertRedirect(route('dashboard'));
-
-        $this->assertAuthenticatedAs($admin);
-    }
-
-    public function test_direktur_bisa_login(): void
-    {
-        Pengguna::factory()->direktur()->create([
-            'email' => 'dir-login@bks.test',
-            'password' => 'rahasia123',
-        ]);
-
-        $this->post(route('login.proses'), [
-            'email' => 'dir-login@bks.test',
-            'password' => 'rahasia123',
-        ])->assertRedirect(route('dashboard'));
-
-        $this->assertAuthenticated();
-    }
-
-    public function test_login_gagal_dengan_password_salah(): void
-    {
-        Pengguna::factory()->create([
-            'email' => 'salah@bks.test',
-            'password' => 'benar123',
-        ]);
-
-        $this->post(route('login.proses'), [
-            'email' => 'salah@bks.test',
-            'password' => 'ngawur',
-        ])->assertSessionHasErrors('email');
-
-        $this->assertGuest();
-    }
-
-    public function test_login_gagal_kalau_email_tidak_terdaftar(): void
-    {
-        $this->post(route('login.proses'), [
-            'email' => 'tidak-ada@bks.test',
-            'password' => 'apa-saja',
-        ])->assertSessionHasErrors('email');
-
-        $this->assertGuest();
-    }
-
-    public function test_login_butuh_email_dan_password(): void
-    {
-        $this->post(route('login.proses'), [])
-            ->assertSessionHasErrors(['email', 'password']);
-
-        $this->assertGuest();
-    }
-
-    public function test_akun_nonaktif_tidak_bisa_login(): void
-    {
-        Pengguna::factory()->nonaktif()->create([
-            'email' => 'nonaktif@bks.test',
-            'password' => 'rahasia123',
-        ]);
-
-        $this->post(route('login.proses'), [
-            'email' => 'nonaktif@bks.test',
-            'password' => 'rahasia123',
-        ])->assertSessionHasErrors('email');
-
-        $this->assertGuest();
+        $this->get('/admin/login')->assertOk();
     }
 
     public function test_pengguna_sudah_login_tidak_bisa_buka_halaman_login(): void
@@ -133,46 +50,33 @@ class AuthTest extends TestCase
         $admin = Pengguna::factory()->admin()->create();
 
         $this->actingAs($admin)
-            ->get(route('login'))
-            ->assertRedirect(route('dashboard'));
+            ->get('/admin/login')
+            ->assertRedirect('/admin');
     }
 
     // ---------------------------------------------------------
-    // Logout
+    // Akses panel
     // ---------------------------------------------------------
 
-    public function test_pengguna_bisa_logout(): void
+    public function test_admin_bisa_buka_dashboard_panel(): void
     {
         $admin = Pengguna::factory()->admin()->create();
 
-        $this->actingAs($admin)
-            ->post(route('logout'))
-            ->assertRedirect(route('login'));
-
-        $this->assertGuest();
+        $this->actingAs($admin)->get('/admin')->assertOk();
     }
 
-    // ---------------------------------------------------------
-    // Akses dashboard
-    // ---------------------------------------------------------
-
-    public function test_admin_bisa_buka_dashboard(): void
-    {
-        $admin = Pengguna::factory()->admin()->create();
-
-        $this->actingAs($admin)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertSee('Total Nilai SPK');
-    }
-
-    public function test_direktur_bisa_buka_dashboard(): void
+    public function test_direktur_bisa_buka_dashboard_panel(): void
     {
         $direktur = Pengguna::factory()->direktur()->create();
 
-        $this->actingAs($direktur)
-            ->get(route('dashboard'))
-            ->assertOk();
+        $this->actingAs($direktur)->get('/admin')->assertOk();
+    }
+
+    public function test_akun_nonaktif_tidak_bisa_masuk_panel(): void
+    {
+        $nonaktif = Pengguna::factory()->admin()->nonaktif()->create();
+
+        $this->assertFalse($nonaktif->canAccessPanel(filament()->getPanel('admin')));
     }
 
     // ---------------------------------------------------------
@@ -181,7 +85,6 @@ class AuthTest extends TestCase
 
     public function test_middleware_peran_menolak_peran_yang_tidak_berhak(): void
     {
-        // Daftarkan route uji yang hanya boleh Admin
         Route::middleware(['web', 'auth', 'peran:admin'])
             ->get('/uji-hanya-admin', fn (): string => 'rahasia admin');
 
@@ -249,5 +152,17 @@ class AuthTest extends TestCase
 
         $this->assertSame(Peran::Admin, $admin->peran);
         $this->assertSame(Peran::Direktur, $direktur->peran);
+    }
+
+    public function test_hak_akses_resource_mengikuti_peran(): void
+    {
+        $admin = Pengguna::factory()->admin()->create();
+        $direktur = Pengguna::factory()->direktur()->create();
+
+        $this->actingAs($admin);
+        $this->assertTrue(SpkResource::canCreate());
+
+        $this->actingAs($direktur);
+        $this->assertFalse(SpkResource::canCreate());
     }
 }
