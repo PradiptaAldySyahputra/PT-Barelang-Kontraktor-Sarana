@@ -29,24 +29,37 @@ class MitraFactory extends Factory
         ];
     }
 
+    /**
+     * Pemberi kerja — termasuk PT PLN Batam.
+     *
+     * Nama method `pln()` dipertahankan agar test lama tetap jalan,
+     * tetapi kategorinya sekarang `mitra` (revisi user).
+     */
     public function pln(): static
     {
         return $this->state(fn (array $attributes): array => [
             'nama' => 'PT PLN Batam',
-            'kategori' => KategoriMitra::Pln,
+            'kategori' => KategoriMitra::Mitra,
         ]);
     }
 
-    public function pelanggan(): static
+    /**
+     * Pemberi kerja / pihak luar (bukan PLN).
+     */
+    public function mitra(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'kategori' => KategoriMitra::Pelanggan,
+            'kategori' => KategoriMitra::Mitra,
         ]);
     }
 
+    /**
+     * Subkon — penerima pekerjaan dari kita.
+     */
     public function subkon(): static
     {
         return $this->state(fn (array $attributes): array => [
+            'nama' => 'CV Subkon '.fake()->numerify('###'),
             'kategori' => KategoriMitra::Subkon,
         ]);
     }

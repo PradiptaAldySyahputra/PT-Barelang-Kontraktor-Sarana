@@ -12,7 +12,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Model `mitra` — pihak terkait (PLN, pelanggan, vendor, subkon).
+ * Model `mitra` — pihak terkait.
+ *
+ * HANYA 2 kategori (revisi user):
+ *   - `mitra`  → pemberi kerja / pihak luar (termasuk PT PLN Batam, pelanggan, vendor)
+ *   - `subkon` → penerima pekerjaan dari kita (kita bayar mereka)
  *
  * @property int $id
  * @property string $nama
@@ -87,13 +91,30 @@ class Mitra extends Model
     }
 
     /**
+     * Mitra yang bisa menjadi PEMBERI KERJA (kategori `mitra`).
+     *
      * @param  Builder<Mitra>  $query
      */
     public function scopePemberiKerja(Builder $query): void
     {
-        $query->whereIn('kategori', [
-            KategoriMitra::Pln->value,
-            KategoriMitra::Pelanggan->value,
-        ]);
+        $query->where('kategori', KategoriMitra::Mitra->value);
+    }
+
+    /**
+     * Mitra yang menerima pekerjaan dari kita (kategori `subkon`).
+     *
+     * @param  Builder<Mitra>  $query
+     */
+    public function scopeSubkon(Builder $query): void
+    {
+        $query->where('kategori', KategoriMitra::Subkon->value);
+    }
+
+    /**
+     * Apakah mitra ini subkon?
+     */
+    public function isSubkon(): bool
+    {
+        return $this->kategori === KategoriMitra::Subkon;
     }
 }

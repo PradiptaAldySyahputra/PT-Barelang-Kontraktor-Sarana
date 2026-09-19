@@ -25,13 +25,16 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Tabel daftar SPK.
+ * Tabel LIST SPK — data induk SPK (bukan monitoring).
  *
- * Laba/rugi & piutang dihitung on-the-fly lewat subquery SUM (withSum)
- * — bukan kolom tersimpan. Lihat Schema.md §6.
+ * ⚠️ REVISI USER: kolom **Biaya**, **Laba/Rugi**, dan **Piutang**
+ * DIHAPUS dari tabel ini karena sudah dipindah ke menu monitoring:
+ *   - Status SPK            → pantau status & tenggat
+ *   - Tagihan SPK           → pantau tagihan belum selesai + piutang
+ *   - Tagihan Selesai SPK   → riwayat tagihan selesai
  *
- * `piutang_lancar` memakai `piutangDari()` yang SADAR RETENSI: retensi yang
- * masih ditahan tidak dihitung sebagai piutang (lihat Rules.md §2).
+ * Tabel ini fokus pada **identitas SPK**: nomor, pekerjaan, mitra,
+ * tanggal, nilai, dan status.
  */
 class SpksTable
 {
@@ -60,22 +63,16 @@ class SpksTable
                     ->toggleable(),
 
                 TextColumn::make('tanggal_spk')
-                    ->label('Tanggal')
+                    ->label('Tanggal SPK')
                     ->date('d/m/Y')
                     ->placeholder('TANPA SPK')
                     ->sortable(),
 
-                TextColumn::make('tenggat')
+                TextColumn::make('tanggal_akhir')
                     ->label('Tenggat')
-                    ->state(fn (Spk $record): ?string => $record->labelTenggat())
-                    ->description(fn (Spk $record): ?string => $record->tanggal_akhir?->format('d/m/Y'))
-                    ->badge()
-                    ->color(fn (Spk $record): string => match (true) {
-                        $record->sudahLewatTenggat() => 'danger',
-                        $record->mendekatiTenggat() => 'warning',
-                        default => 'gray',
-                    })
+                    ->date('d/m/Y')
                     ->placeholder('—')
+                    ->sortable()
                     ->toggleable(),
 
                 TextColumn::make('nilai_spk')
@@ -84,45 +81,17 @@ class SpksTable
                     ->sortable()
                     ->alignEnd(),
 
-                TextColumn::make('nilai_retensi')
+                TextColumn::make('persen_retensi')
                     ->label('Retensi')
-                    ->money('IDR', locale: 'id')
+                    ->state(fn (Spk $record): ?string => $record->persen_retensi !== null
+                        ? rtrim(rtrim((string) $record->persen_retensi, '0'), '.').'%'
+                        : null)
+                    ->description(fn (Spk $record): ?string => $record->nilai_retensi !== null
+                        ? 'Rp '.number_format((float) $record->nilai_retensi, 0, ',', '.')
+                        : null)
                     ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->alignEnd(),
-
-                TextColumn::make('total_masuk')
-                    ->label('Penerimaan')
-                    ->money('IDR', locale: 'id')
-                    ->state(fn (Spk $record): float => (float) ($record->total_masuk ?? 0))
-                    ->color('success')
-                    ->alignEnd(),
-
-                TextColumn::make('total_keluar')
-                    ->label('Biaya')
-                    ->money('IDR', locale: 'id')
-                    ->state(fn (Spk $record): float => (float) ($record->total_keluar ?? 0))
-                    ->color('danger')
-                    ->alignEnd(),
-
-                TextColumn::make('laba_rugi')
-                    ->label('Laba/Rugi')
-                    ->state(fn (Spk $record): float => (float) ($record->total_masuk ?? 0) - (float) ($record->total_keluar ?? 0))
-                    ->money('IDR', locale: 'id')
-                    ->weight('bold')
-                    ->color(fn ($state): string => (float) $state >= 0 ? 'success' : 'danger')
-                    ->alignEnd(),
-
-                // Piutang LANCAR — retensi ditahan TIDAK dihitung
-                TextColumn::make('piutang_lancar')
-                    ->label('Piutang')
-                    ->state(fn (Spk $record): float => $record->piutangDari((float) ($record->total_masuk ?? 0)))
-                    ->money('IDR', locale: 'id')
-                    ->color('warning')
-                    ->alignEnd()
-                    ->description(fn (Spk $record): ?string => $record->retensiDitahan() > 0
-                        ? 'retensi '.number_format($record->retensiDitahan(), 0, ',', '.')
-                        : null),
+                    ->toggleable()
+                    ->alignCenter(),
 
                 TextColumn::make('status_spk')
                     ->label('Status SPK')
@@ -139,7 +108,7 @@ class SpksTable
                     }),
 
                 TextColumn::make('status_tagihan')
-                    ->label('Tagihan')
+                    ->label('Status Tagihan')
                     ->badge()
                     ->formatStateUsing(fn (?StatusTagihan $state): string => $state?->label() ?? '—')
                     ->color(fn (?StatusTagihan $state): string => match ($state) {
@@ -153,9 +122,6 @@ class SpksTable
                     ->toggleable(),
             ])
             ->filters([
-                // ---------------------------------------------------------
-                // FILTER CEPAT — pekerjaan sehari-hari
-                // ---------------------------------------------------------
                 SelectFilter::make('status_spk')
                     ->label('Status SPK')
                     ->options(StatusSpk::opsi()),
@@ -179,29 +145,9 @@ class SpksTable
                         'lainnya' => 'Lainnya',
                     ]),
 
-                Filter::make('belum_lunas')
-                    ->label('Belum Lunas')
-                    ->query(fn (Builder $q): Builder => $q->where('status_tagihan', '!=', StatusTagihan::Dibayar->value))
-                    ->toggle(),
-
-                Filter::make('lewat_tenggat')
-                    ->label('Lewat Tenggat')
-                    ->query(fn (Builder $q): Builder => $q->lewatTenggat())
-                    ->toggle(),
-
-                Filter::make('mendekati_tenggat')
-                    ->label('Mendekati Tenggat (14 hari)')
-                    ->query(fn (Builder $q): Builder => $q->mendekatiTenggat())
-                    ->toggle(),
-
                 Filter::make('ada_retensi')
                     ->label('Ada Retensi')
                     ->query(fn (Builder $q): Builder => $q->whereNotNull('persen_retensi')->where('persen_retensi', '>', 0))
-                    ->toggle(),
-
-                Filter::make('piutang_menua')
-                    ->label('Piutang lebih dari 90 hari')
-                    ->query(fn (Builder $q): Builder => $q->piutangMenua(90))
                     ->toggle(),
 
                 Filter::make('periode')

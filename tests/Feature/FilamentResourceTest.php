@@ -64,7 +64,7 @@ class FilamentResourceTest extends TestCase
         Livewire::test(CreateMitra::class)
             ->fillForm([
                 'nama' => 'PT PLN Batam',
-                'kategori' => KategoriMitra::Pln->value,
+                'kategori' => KategoriMitra::Mitra->value,
                 'kontak' => '0812-3456',
                 'is_aktif' => true,
             ])
@@ -73,7 +73,7 @@ class FilamentResourceTest extends TestCase
 
         $this->assertDatabaseHas('mitra', [
             'nama' => 'PT PLN Batam',
-            'kategori' => KategoriMitra::Pln->value,
+            'kategori' => KategoriMitra::Mitra->value,
         ]);
     }
 

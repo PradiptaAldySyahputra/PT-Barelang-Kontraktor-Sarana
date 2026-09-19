@@ -38,10 +38,8 @@ class MitrasTable
                     ->badge()
                     ->formatStateUsing(fn (?KategoriMitra $state): string => $state?->label() ?? '—')
                     ->color(fn (?KategoriMitra $state): string => match ($state) {
-                        KategoriMitra::Pln => 'primary',
-                        KategoriMitra::Pelanggan => 'info',
+                        KategoriMitra::Mitra => 'primary',
                         KategoriMitra::Subkon => 'warning',
-                        KategoriMitra::Vendor => 'success',
                         default => 'gray',
                     })
                     ->sortable(),

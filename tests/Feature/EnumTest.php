@@ -121,15 +121,14 @@ class EnumTest extends TestCase
 
     public function test_kategori_mitra_punya_empat_nilai(): void
     {
-        $this->assertCount(4, KategoriMitra::cases());
+        $this->assertCount(2, KategoriMitra::cases()); // revisi user: mitra & subkon saja
     }
 
     public function test_pln_dan_pelanggan_adalah_pemberi_kerja(): void
     {
-        $this->assertTrue(KategoriMitra::Pln->pemberiKerja());
-        $this->assertTrue(KategoriMitra::Pelanggan->pemberiKerja());
+        // Revisi user: PLN masuk ke `mitra`, jadi hanya `mitra` yang pemberi kerja.
+        $this->assertTrue(KategoriMitra::Mitra->pemberiKerja());
         $this->assertFalse(KategoriMitra::Subkon->pemberiKerja());
-        $this->assertFalse(KategoriMitra::Vendor->pemberiKerja());
     }
 
     // ---------------------------------------------------------

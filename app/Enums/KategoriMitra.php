@@ -5,33 +5,52 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * Kategori mitra (pihak terkait).
+ * Kategori mitra — HANYA 2 (revisi user).
+ *
+ * | Kategori | Arti |
+ * |---|---|
+ * | `mitra`  | Pemberi kerja / pihak luar: **PT PLN Batam**, pelanggan, vendor |
+ * | `subkon` | Penerima pekerjaan dari kita (kita bayar mereka) |
+ *
+ * ⚠️ PERUBAHAN dari versi sebelumnya (4 kategori: pln/pelanggan/vendor/subkon):
+ * User memutuskan PLN masuk ke **mitra**, sehingga hanya tersisa 2 kategori.
+ * Data lama dimigrasi lewat `2026_09_20_000001_ubah_kategori_mitra_table.php`.
  *
  * Sesuai Schema.md — kolom `mitra.kategori`.
  */
 enum KategoriMitra: string
 {
-    case Pln = 'pln';
-    case Pelanggan = 'pelanggan';
-    case Vendor = 'vendor';
+    case Mitra = 'mitra';
     case Subkon = 'subkon';
 
     public function label(): string
     {
         return match ($this) {
-            self::Pln => 'PLN',
-            self::Pelanggan => 'Pelanggan',
-            self::Vendor => 'Vendor',
+            self::Mitra => 'Mitra',
             self::Subkon => 'Subkon',
         };
     }
 
     /**
-     * Mitra yang bisa menjadi pemberi kerja SPK?
+     * Keterangan singkat untuk helper di form.
+     */
+    public function keterangan(): string
+    {
+        return match ($this) {
+            self::Mitra => 'Pemberi kerja / pihak luar — termasuk PT PLN Batam & pelanggan',
+            self::Subkon => 'Penerima pekerjaan dari kita — kita bayar mereka',
+        };
+    }
+
+    /**
+     * Boleh menjadi pemberi kerja SPK?
+     *
+     * `mitra` (termasuk PLN) = pemberi kerja.
+     * `subkon` = penerima pekerjaan, bukan pemberi kerja.
      */
     public function pemberiKerja(): bool
     {
-        return in_array($this, [self::Pln, self::Pelanggan], true);
+        return $this === self::Mitra;
     }
 
     /**

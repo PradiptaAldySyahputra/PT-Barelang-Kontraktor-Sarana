@@ -35,7 +35,8 @@ class MitraForm
                             ->options(KategoriMitra::opsi())
                             ->required()
                             ->native(false)
-                            ->helperText('PLN & Pelanggan = pemberi kerja. Subkon & Vendor = penerima pekerjaan.'),
+                            ->live()
+                            ->helperText(fn (): string => 'Mitra = pemberi kerja (termasuk PLN). Subkon = penerima pekerjaan dari kita.'),
 
                         Toggle::make('is_aktif')
                             ->label('Aktif')

@@ -42,6 +42,8 @@ class SpkResource extends Resource
 
     protected static ?string $pluralModelLabel = 'SPK';
 
+    protected static ?string $navigationLabel = 'List SPK';
+
     protected static ?string $recordTitleAttribute = 'nomor_spk';
 
     protected static ?int $navigationSort = 1;
