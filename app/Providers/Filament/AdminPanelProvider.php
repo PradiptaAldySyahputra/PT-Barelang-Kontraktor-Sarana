@@ -43,15 +43,22 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
             ->brandName('Barelang Kontraktor Sarana')
+            // ---------------------------------------------------------
+            // Warna — MONOKROM (tema Clean Minimalist Enterprise)
+            // ---------------------------------------------------------
+            // primary = Zinc (netral/arang), BUKAN biru. Ini membuat tombol
+            // utama berwarna hampir hitam sesuai gaya Vercel/Linear.
+            // gray juga Zinc agar seluruh panel konsisten netral.
             ->colors([
-                'primary' => Color::Blue,
-                'gray' => Color::Slate,
+                'primary' => Color::Zinc,
+                'gray' => Color::Zinc,
                 'success' => Color::Emerald,
                 'warning' => Color::Amber,
                 'danger' => Color::Rose,
-                'info' => Color::Sky,
+                'info' => Color::Zinc,
             ])
 
             // ---------------------------------------------------------
