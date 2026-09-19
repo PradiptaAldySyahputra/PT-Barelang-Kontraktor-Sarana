@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\DikerjakanOleh;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use Database\Factories\SpkFactory;
@@ -35,6 +36,8 @@ use Illuminate\Support\Carbon;
  * @property int|null $mitra_id
  * @property StatusSpk|null $status_spk
  * @property StatusTagihan|null $status_tagihan
+ * @property DikerjakanOleh $dikerjakan_oleh
+ * @property int|null $subkon_id
  * @property int $dibuat_oleh
  */
 class Spk extends Model
@@ -63,6 +66,8 @@ class Spk extends Model
         'mitra_id',
         'status_spk',
         'status_tagihan',
+        'dikerjakan_oleh',
+        'subkon_id',
         'dibuat_oleh',
     ];
 
@@ -79,6 +84,7 @@ class Spk extends Model
             'nilai_retensi' => 'decimal:2',
             'status_spk' => StatusSpk::class,
             'status_tagihan' => StatusTagihan::class,
+            'dikerjakan_oleh' => DikerjakanOleh::class,
         ];
     }
 
@@ -142,6 +148,29 @@ class Spk extends Model
     public function mitra(): BelongsTo
     {
         return $this->belongsTo(Mitra::class, 'mitra_id');
+    }
+
+    /**
+     * Mitra subkon — hanya terisi jika `dikerjakan_oleh = subkon`.
+     *
+     * @return BelongsTo<Mitra, $this>
+     */
+    public function subkon(): BelongsTo
+    {
+        return $this->belongsTo(Mitra::class, 'subkon_id');
+    }
+
+    /**
+     * Apakah SPK ini disubkonkan ke pihak lain?
+     *
+     * ⚠️ Dinamai `isDisubkonkan()` (bukan `disubkonkan()`) karena nama itu
+     * BENTROK dengan `scopeDisubkonkan()` — PHP akan menolak panggilan
+     * statis `Spk::disubkonkan()`. Pola yang sama pernah terjadi pada
+     * `dariSpk()` vs `scopeDariSpk()`.
+     */
+    public function isDisubkonkan(): bool
+    {
+        return $this->dikerjakan_oleh === DikerjakanOleh::Subkon;
     }
 
     /**
@@ -409,6 +438,26 @@ class Spk extends Model
         $query->whereNotNull('tanggal_akhir')
             ->whereDate('tanggal_akhir', '>=', now()->toDateString())
             ->whereDate('tanggal_akhir', '<=', now()->addDays($hari)->toDateString());
+    }
+
+    /**
+     * SPK yang disubkonkan ke pihak lain.
+     *
+     * @param  Builder<Spk>  $query
+     */
+    public function scopeDisubkonkan(Builder $query): void
+    {
+        $query->where('dikerjakan_oleh', DikerjakanOleh::Subkon->value);
+    }
+
+    /**
+     * SPK yang dikerjakan sendiri.
+     *
+     * @param  Builder<Spk>  $query
+     */
+    public function scopeDikerjakanSendiri(Builder $query): void
+    {
+        $query->where('dikerjakan_oleh', DikerjakanOleh::Sendiri->value);
     }
 
     /**

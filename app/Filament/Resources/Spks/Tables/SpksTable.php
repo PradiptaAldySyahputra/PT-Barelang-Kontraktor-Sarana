@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Spks\Tables;
 
+use App\Enums\DikerjakanOleh;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use App\Filament\Resources\Spks\SpkResource;
@@ -81,6 +82,17 @@ class SpksTable
                     ->sortable()
                     ->alignEnd(),
 
+                TextColumn::make('dikerjakan_oleh')
+                    ->label('Pelaksana')
+                    ->badge()
+                    ->formatStateUsing(fn ($state): string => $state instanceof DikerjakanOleh
+                        ? $state->labelPendek()
+                        : '—')
+                    ->color(fn ($state): string => $state === DikerjakanOleh::Subkon ? 'warning' : 'gray')
+                    ->description(fn (Spk $record): ?string => $record->subkon?->nama)
+                    ->placeholder('—')
+                    ->toggleable(),
+
                 TextColumn::make('persen_retensi')
                     ->label('Retensi')
                     ->state(fn (Spk $record): ?string => $record->persen_retensi !== null
@@ -144,6 +156,15 @@ class SpksTable
                         'internal' => 'Internal',
                         'lainnya' => 'Lainnya',
                     ]),
+
+                SelectFilter::make('dikerjakan_oleh')
+                    ->label('Pelaksana')
+                    ->options(DikerjakanOleh::opsi()),
+
+                Filter::make('disubkonkan')
+                    ->label('Disubkonkan')
+                    ->query(fn (Builder $q): Builder => $q->disubkonkan())
+                    ->toggle(),
 
                 Filter::make('ada_retensi')
                     ->label('Ada Retensi')

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\MonitoringSpk;
 
+use App\Enums\DikerjakanOleh;
 use App\Enums\StatusSpk;
 use App\Filament\Resources\MonitoringSpk\Pages\ListStatusSpk;
 use App\Models\Spk;
@@ -86,6 +87,16 @@ class StatusSpkResource extends MonitoringSpkResource
                     ->date('d/m/Y')
                     ->placeholder('TANPA SPK')
                     ->sortable(),
+
+                TextColumn::make('dikerjakan_oleh')
+                    ->label('Pelaksana')
+                    ->badge()
+                    ->formatStateUsing(fn ($state): string => $state instanceof DikerjakanOleh
+                        ? $state->labelPendek()
+                        : '—')
+                    ->color(fn ($state): string => $state === DikerjakanOleh::Subkon ? 'warning' : 'gray')
+                    ->description(fn (Spk $r): ?string => $r->subkon?->nama)
+                    ->placeholder('—'),
 
                 TextColumn::make('nilai_spk')
                     ->label('Nilai SPK')

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\DikerjakanOleh;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use App\Models\Mitra;
@@ -49,6 +50,8 @@ class SpkFactory extends Factory
             'mitra_id' => Mitra::factory(),
             'status_spk' => fake()->randomElement(StatusSpk::cases()),
             'status_tagihan' => fake()->randomElement(StatusTagihan::cases()),
+            'dikerjakan_oleh' => DikerjakanOleh::Sendiri,
+            'subkon_id' => null,
             'dibuat_oleh' => Pengguna::factory(),
         ];
     }
@@ -108,6 +111,28 @@ class SpkFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'status_spk' => StatusSpk::SudahDitagihkan,
             'status_tagihan' => StatusTagihan::Dibayar,
+        ]);
+    }
+
+    /**
+     * SPK yang disubkonkan ke pihak lain (kita bayar mereka).
+     */
+    public function disubkonkan(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'dikerjakan_oleh' => DikerjakanOleh::Subkon,
+            'subkon_id' => Mitra::factory()->subkon(),
+        ]);
+    }
+
+    /**
+     * SPK yang dikerjakan tim sendiri.
+     */
+    public function dikerjakanSendiri(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'dikerjakan_oleh' => DikerjakanOleh::Sendiri,
+            'subkon_id' => null,
         ]);
     }
 }

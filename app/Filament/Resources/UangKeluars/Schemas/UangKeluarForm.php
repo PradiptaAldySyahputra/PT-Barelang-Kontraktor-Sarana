@@ -49,7 +49,66 @@ class UangKeluarForm
                             ->prefix('Rp')
                             ->mask(RawJs::make('$money($input, \',\', \'.\')'))
                             ->stripCharacters('.')
-                            ->dehydrateStateUsing(fn ($state): float => (float) $state),
+                            ->live(onBlur: true)
+                            ->dehydrateStateUsing(fn ($state): float => (float) $state)
+                            // -------------------------------------------------
+                            // CEGAH NOMINAL TIDAK WAJAR.
+                            //
+                            // Tanpa ini, "upah tukang" bisa terisi Rp 250 miliar
+                            // (pernah terjadi saat uji) dan laporan laba-rugi
+                            // langsung rusak.
+                            //
+                            // Batas: Rp 10 miliar — jauh di atas transaksi nyata
+                            // perusahaan, tetapi menahan salah ketik.
+                            // -------------------------------------------------
+                            ->maxValue(10_000_000_000)
+                            ->rules([
+                                fn (Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get): void {
+                                    $spkId = $get('spk_id');
+
+                                    if (blank($spkId)) {
+                                        return;
+                                    }
+
+                                    $spk = Spk::find($spkId);
+
+                                    if (! $spk) {
+                                        return;
+                                    }
+
+                                    // Peringatkan (bukan tolak) jika biaya total SPK
+                                    // sudah melebihi nilai SPK — biasanya salah input.
+                                    $biayaLain = (float) $spk->uangKeluar()->sum('jumlah');
+                                    $total = $biayaLain + (float) $value;
+                                    $nilai = (float) $spk->nilai_spk;
+
+                                    if ($nilai > 0 && $total > $nilai * 1.5) {
+                                        $fail(sprintf(
+                                            'Total biaya SPK ini akan menjadi Rp %s, jauh melebihi nilai SPK Rp %s. Periksa kembali nominalnya.',
+                                            number_format($total, 0, ',', '.'),
+                                            number_format($nilai, 0, ',', '.'),
+                                        ));
+                                    }
+                                },
+                            ])
+                            ->helperText(function (Get $get): ?string {
+                                $spkId = $get('spk_id');
+
+                                if (blank($spkId)) {
+                                    return null;
+                                }
+
+                                $spk = Spk::find($spkId);
+
+                                if (! $spk) {
+                                    return null;
+                                }
+
+                                $biaya = (float) $spk->uangKeluar()->sum('jumlah');
+
+                                return 'Biaya SPK ini tercatat: Rp '.number_format($biaya, 0, ',', '.').
+                                    ' dari nilai SPK Rp '.number_format((float) $spk->nilai_spk, 0, ',', '.');
+                            }),
 
                         Select::make('kategori')
                             ->label('Kategori')

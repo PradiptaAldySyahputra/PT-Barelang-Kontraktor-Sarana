@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Spks\Schemas;
 
+use App\Enums\DikerjakanOleh;
+use App\Enums\KategoriMitra;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
+use App\Models\Mitra;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 
@@ -133,6 +139,49 @@ class SpkForm
                             ->label('Sheet Lama (referensi Excel)')
                             ->maxLength(100)
                             ->helperText('Opsional — untuk keperluan migrasi data lama'),
+                    ])
+                    ->columns(2),
+
+                // ---------------------------------------------------------
+                // PELAKSANA PEKERJAAN (permintaan user)
+                //
+                // Kasus: bangun 5 gardu — 3 dikerjakan sendiri, 2 disubkonkan.
+                // Karena schema dibatasi 5 tabel, pekerjaan yang sebagian
+                // disubkonkan dibuat sebagai SPK TERPISAH.
+                // ---------------------------------------------------------
+                Section::make('Pelaksana Pekerjaan')
+                    ->description('Tandai apakah SPK ini dikerjakan tim sendiri atau diserahkan ke subkon (kita bayar mereka).')
+                    ->schema([
+                        Radio::make('dikerjakan_oleh')
+                            ->label('Dikerjakan Oleh')
+                            ->options(DikerjakanOleh::opsi())
+                            ->default(DikerjakanOleh::Sendiri->value)
+                            ->required()
+                            ->live()
+                            ->inline()
+                            ->columnSpanFull(),
+
+                        Select::make('subkon_id')
+                            ->label('Mitra Subkon')
+                            ->options(
+                                fn (): array => Mitra::query()
+                                    ->where('kategori', KategoriMitra::Subkon->value)
+                                    ->orderBy('nama')
+                                    ->pluck('nama', 'id')
+                                    ->all()
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->visible(fn (Get $get): bool => $get('dikerjakan_oleh') === DikerjakanOleh::Subkon->value)
+                            ->required(fn (Get $get): bool => $get('dikerjakan_oleh') === DikerjakanOleh::Subkon->value)
+                            ->helperText('Belum ada subkon? Tambahkan dulu di menu Data Mitra dengan kategori "Subkon".')
+                            ->columnSpanFull(),
+
+                        Placeholder::make('catatan_subkon')
+                            ->label('')
+                            ->content('Kalau pekerjaan hanya SEBAGIAN disubkonkan (mis. 5 gardu: 3 sendiri, 2 subkon), buat SPK terpisah untuk bagian yang disubkonkan.')
+                            ->visible(fn (Get $get): bool => $get('dikerjakan_oleh') === DikerjakanOleh::Subkon->value)
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);
