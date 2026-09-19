@@ -3,6 +3,261 @@
 
 ---
 
+## [4.1] — Perbaikan Menyeluruh dari Hasil Audit — 19 September 2026
+
+### Latar Belakang
+
+User meminta saya **mengaudit** sistem dan memberi masukan. Audit menemukan
+beberapa masalah **serius pada angka**, bukan hanya tampilan. User lalu
+memerintahkan: *"perbaiki semuanya"*.
+
+---
+
+### 🔴 1. RETENSI TIDAK BERFUNGSI — piutang salah Rp 5 juta/SPK
+
+**Temuan audit:**
+
+```
+SUBKON-001
+  nilai_spk         :  100.000.000
+  retensi (5%)      :    5.000.000   ← tersimpan, tapi MENGANGGUR
+  sudah diterima    :   45.000.000
+  PIUTANG (dulu)    :   55.000.000   ← retensi tidak dikurangi (SALAH)
+  piutang seharusnya:   50.000.000
+  SELISIH           :    5.000.000
+```
+
+Retensi dihitung dan ditampilkan, tetapi **tidak dipakai di perhitungan mana pun**.
+Method `nilaiBersih()` ada tapi tidak pernah dipanggil dari UI.
+
+**Keputusan saya (dapat dikoreksi):** retensi diperlakukan sebagai **dana ditahan
+pemberi kerja** sampai masa pemeliharaan selesai — praktik standar kontraktor
+Indonesia.
+
+```
+nilai_tagih    = nilai_spk − retensi_ditahan
+piutang_lancar = nilai_tagih − sudah_diterima
+```
+
+Retensi **dilepas** saat `status_tagihan = Dibayar`.
+
+**Ditampilkan terpisah** di laporan (tidak disembunyikan) supaya bisa dikoreksi
+kalau cara perusahaan berbeda.
+
+| | Sebelum | Sesudah |
+|---|---|---|
+| Piutang SUBKON-001 | Rp 55.000.000 ❌ | **Rp 50.000.000** ✅ |
+| Retensi | menganggur | ditampilkan sebagai **dana ditahan** |
+
+Implementasi: `Spk::retensiDitahan()`, `nilaiTagih()`, `piutangDari()`,
+`sisaHakPenuhDari()`. Diuji di `tests/Feature/RetensiTest.php` (15 test).
+
+---
+
+### 🔴 2. Uang Masuk Bisa Melebihi Piutang SPK
+
+**Temuan:** untuk SPK Rp 100 juta, sistem **menerima** input Rp 500 juta tanpa
+protes. Angka laba-rugi langsung rusak.
+
+**Perbaikan:** `jumlah` dibatasi `nilaiTagih() − sudah_diterima`. Form menolak
+dengan pesan yang menjelaskan batasnya (nilai SPK, retensi, sudah diterima, maksimal).
+
+> Uang masuk **luar SPK** (mode manual) **tidak dibatasi** — itu memang penerimaan lain.
+
+Diuji di `tests/Feature/BatasUangMasukTest.php` (6 test).
+
+---
+
+### 🔴 3. Status Tagihan Diisi Manual
+
+**Temuan:** `status_tagihan` diketik tangan. Risiko: tertulis "Dibayar" padahal
+uangnya belum masuk.
+
+**Perbaikan:** `SinkronStatusTagihanObserver` (dipasang via `#[ObservedBy]` di model
+`UangMasuk`) menyinkronkan status dari pembayaran nyata:
+
+| Kondisi | Status |
+|---|---|
+| Piutang lancar = 0 | `Dibayar` |
+| Ada piutang, sudah ada bayaran | `MenungguPembayaran` |
+| Belum ada bayaran, status sebelumnya di-set sistem | `BelumDitagihkan` |
+| Belum ada bayaran, status **manual** | **tidak disentuh** |
+
+Menangani create / update / delete / restore / forceDelete, termasuk saat
+`spk_id` dipindah (SPK lama & baru dihitung ulang).
+
+> ⚠️ **Bug ditemukan saat mengerjakan:** versi pertama observer **tidak**
+> mengembalikan status saat pembayaran dihapus — status tetap "Dibayar" padahal
+> uangnya sudah dihapus. Ketangkap oleh
+> `test_menghapus_pembayaran_mengembalikan_status`. Sudah diperbaiki.
+
+Diuji di `tests/Feature/SinkronStatusTagihanTest.php` (8 test).
+
+---
+
+### ⭐ 4. Umur Piutang (Aging) — fitur baru
+
+Kelompok: `0-30` · `31-60` · `61-90` · `>90` · `tanpa-tanggal`.
+Dihitung dari `tanggal_spk`. Muncul sebagai bagian laporan + ekspor CSV.
+
+Berguna untuk kontraktor yang menagih PLN: langsung terlihat tagihan mana yang macet.
+
+---
+
+### ⭐ 5. Peringatan Tenggat SPK — fitur baru
+
+`tanggal_akhir` sebelumnya **menganggur** (ada kolomnya, tidak dipakai).
+
+| Kondisi | Tampilan |
+|---|---|
+| Lewat tenggat | Badge **merah** + panel peringatan |
+| ≤ 14 hari lagi | Badge **kuning** |
+| Masih lama | Badge abu |
+
+Implementasi: `Spk::labelTenggat()`, scope `lewatTenggat()`, `mendekatiTenggat()`.
+
+---
+
+### ⭐ 6. Filter Cepat & Pencarian
+
+Tabel SPK kini punya filter: **Belum Lunas** · **Lewat Tenggat** ·
+**Mendekati Tenggat** · **Ada Retensi** · **Piutang > 90 hari** ·
+filter periode (dari–sampai tanggal) · filter mitra & jenis sumber.
+
+Kolom baru: **Tenggat** (badge) dan **Piutang Lancar** (dengan keterangan retensi).
+
+---
+
+### 🔴 7. Favicon Rusak
+
+`public/favicon.ico` berisi **0 byte** → tab browser menampilkan ikon rusak.
+Diganti `public/favicon.svg` (monokrom, inisial "BKS"), didaftarkan lewat
+`->favicon()` di panel.
+
+---
+
+### 🔴 8. Backup Otomatis — WAJIB sebelum dipakai kerja
+
+**Temuan:** **tidak ada backup sama sekali.** Untuk deployment lokal di mana
+PC Direktur = server, kerusakan hardisk berarti seluruh data keuangan perusahaan
+hilang.
+
+**Perbaikan:** perintah `php artisan bks:backup`
+
+| Aspek | Implementasi |
+|---|---|
+| Hasil | `storage/app/backup/bks-YYYY-MM-DD-HHMMSS.sql.gz` |
+| Kompresi | `gzencode` PHP (tidak butuh binary `gzip`) |
+| Retensi | Hapus otomatis > 30 hari (`--hari=N`) |
+| Jadwal | **Harian 23:00** via Laravel Scheduler |
+| Isi | `mysqldump --single-transaction --routines --triggers` |
+| **Sudah diuji** | ✅ Dump 11 KB · **RESTORE BERHASIL** (13 tabel, 4 SPK, 2 pengguna) |
+
+> ⚠️ **Backup harian TIDAK jalan sendiri.** Harus didaftarkan
+> `php artisan schedule:run` di cron/Task Scheduler. Caranya di
+> `Architecture.md` §7.7.
+>
+> ⚠️ Backup di komputer yang sama **tidak** melindungi dari kerusakan disk —
+> tetap perlu disalin ke media eksternal (manual).
+
+---
+
+### ⭐ 9. Ekspor CSV Diperluas: 5 → 7 jenis
+
+Tambah **Aging** dan **Tenggat**. Kolom ekspor piutang & laba-rugi ditambah
+retensi ditahan, nilai dapat ditagih, dan umur hari.
+
+---
+
+### 📄 10. Dokumentasi Disinkronkan dengan Kenyataan
+
+| Dokumen | Perbaikan |
+|---|---|
+| `Architecture.md` §2 | Frontend **Blade → Filament 5**, ditandai **menyimpang dari SRS** beserta alasannya |
+| `Architecture.md` §7.7 | Backup yang **sudah** diimplementasi + cara pasang cron |
+| `Rules.md` §2 | **Konsep retensi** (butir 3), status otomatis (14), batas uang masuk (15), aging (16), tenggat (17) |
+| `Schema.md` §6 | Kolom turunan **diperbaiki**: piutang lancar, retensi ditahan, aging, tenggat + peringatan retensi |
+| `Design.md` §3, §8 | Navigasi & laporan disesuaikan dengan kenyataan |
+| `README.md` | Status fitur + bagian **Perintah Penting** |
+
+**Ketidaksesuaian yang diperbaiki:** `Schema.md` menyebut `nomor_transaksi`
+padahal kolom itu **sudah dihapus** (diganti `nomor_spk`) — dikonfirmasi lewat
+`DESCRIBE uang_masuk` di database nyata.
+
+---
+
+### Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| 9 halaman utama | ✅ HTTP 200 semua |
+| 7 jenis ekspor CSV | ✅ HTTP 200, `text/csv` |
+| Piutang SUBKON-001 | ✅ Rp 50.000.000 (sebelumnya 55.000.000) |
+| Backup | ✅ 11,38 KB |
+| **Restore backup** | ✅ 13 tabel, 4 SPK, 2 pengguna |
+| Favicon | ✅ `favicon.svg` 493 byte |
+| Filter SPK baru | ✅ 5 filter tampil |
+| Bagian aging di laporan | ✅ Tampil |
+| `php artisan schedule:list` | ✅ Backup harian 23:00 terdaftar |
+
+**213 test, 600 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+> Test baru: `RetensiTest` (15) · `SinkronStatusTagihanTest` (8) ·
+> `BatasUangMasukTest` (6).
+
+---
+
+### 🔴 PELAJARAN
+
+1. **Fitur yang "sudah ada" belum tentu BERFUNGSI.** Retensi dihitung, disimpan,
+   dan tampil di form — tetapi tidak dipakai di perhitungan apa pun. Yang
+   menemukannya adalah **pemeriksaan angka nyata di database**, bukan pembacaan kode.
+2. **Status yang diisi manual cepat atau lambat akan salah.** Sinkronkan dari
+   sumber kebenaran (pembayaran nyata).
+3. **Backup tidak bisa ditunda.** Ini satu-satunya fitur yang melindungi dari
+   kehilangan seluruh data perusahaan.
+4. **Test yang gagal kadang menemukan bug nyata, bukan test yang salah.** Bug
+   observer (status tidak kembali setelah pembayaran dihapus) ditemukan begitu.
+
+---
+
+### Git
+
+```
+dbfb748 feat: retensi, aging piutang, tenggat, validasi, status otomatis, backup, docs
+e7d4991 docs: catat v4.0 (tema Clean Minimalist Enterprise + titik rollback)
+1df98b9 feat: tema Clean Minimalist Enterprise (Vercel/Linear style)
+e082cef docs: catat v3.9 (perbaikan navbar, panel 500, laporan responsif)
+cea5f04 fix: rapikan navbar, panel, dan halaman laporan agar responsif
+6b042b4 docs: catat v3.8 (hapus SIAKAD, sidebar collapsible, UI diperbaiki)
+077122f feat: hapus nama SIAKAD, sidebar bisa ditutup, perbaiki UI dashboard & laporan
+2b003d8 docs: catat v3.7 (perbaikan /login 404 + pelajaran rute)
+6980e16 fix: /login 404 - tambah pengalihan rute lama ke Filament
+4162348 docs: catat v3.6 (halaman laporan + ekspor CSV)
+9e5b59b feat: halaman Laporan + ekspor CSV
+3b438c3 docs: catat v3.5 (antarmuka tunggal Filament) + perbarui README
+715c46e feat: dashboard Filament + hapus halaman Blade lama
+aa69e59 docs: catat 4 resource selesai + bug tombol Direktur (v3.4)
+89e7e2c feat: lengkapi Resource Mitra, Uang Masuk, Uang Keluar, Pengguna
+53d4ed2 docs: catat keputusan Filament + 2 bug yang diperbaiki (v3.3)
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+### Yang Masih Tersisa
+
+| # | Item |
+|---|---|
+| 1 | Impor data lama 2024–2026 dari Excel (11 sheet) |
+| 2 | Setup deployment 2 PC (static IP, auto-start, cron, UPS) |
+| 3 | Salin backup ke media eksternal (manual) |
+| 4 | Dokumen SPK (scan SPK, BAST, kuitansi) — masih ditunda |
+| 5 | Pajak (PPN/PPh) — belum diputuskan |
+
+---
+
 ## [4.0] — Tema Clean Minimalist Enterprise (Vercel/Linear) — 19 September 2026
 
 ### Permintaan User
