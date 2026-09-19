@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\UangKeluars\Pages;
 
 use App\Filament\Resources\UangKeluars\UangKeluarResource;
@@ -12,12 +14,24 @@ class EditUangKeluar extends EditRecord
 {
     protected static string $resource = UangKeluarResource::class;
 
+    protected static ?string $title = 'Ubah Uang Keluar';
+
     protected function getHeaderActions(): array
     {
         return [
             DeleteAction::make(),
-            ForceDeleteAction::make(),
             RestoreAction::make(),
+            ForceDeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
+    protected function getSavedNotificationTitle(): ?string
+    {
+        return 'Perubahan uang keluar tersimpan';
     }
 }

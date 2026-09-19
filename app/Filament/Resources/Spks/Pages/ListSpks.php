@@ -19,7 +19,7 @@ class ListSpks extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()->label('Tambah SPK'),
+            CreateAction::make()->visible(fn (): bool => SpkResource::bolehUbahData())->label('Tambah SPK'),
         ];
     }
 

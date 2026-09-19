@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Spks\Tables;
 
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
+use App\Filament\Resources\Spks\SpkResource;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -144,14 +145,14 @@ class SpksTable
                 TrashedFilter::make()->label('Data Terhapus'),
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
-                RestoreAction::make(),
+                EditAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
+                DeleteAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
+                RestoreAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                ]),
+                ])->visible(fn (): bool => SpkResource::bolehUbahData()),
             ]);
     }
 }

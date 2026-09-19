@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\Penggunas\Pages;
 
 use App\Filament\Resources\Penggunas\PenggunaResource;
@@ -10,10 +12,12 @@ class ListPenggunas extends ListRecords
 {
     protected static string $resource = PenggunaResource::class;
 
+    protected static ?string $title = 'Daftar Pengguna';
+
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()->visible(fn (): bool => PenggunaResource::bolehUbahData())->label('Tambah Pengguna'),
         ];
     }
 }

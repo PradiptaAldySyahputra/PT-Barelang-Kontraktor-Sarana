@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\UangMasuks;
 
+use App\Filament\Concerns\BolehUbahData;
 use App\Filament\Resources\UangMasuks\Pages\CreateUangMasuk;
 use App\Filament\Resources\UangMasuks\Pages\EditUangMasuk;
 use App\Filament\Resources\UangMasuks\Pages\ListUangMasuks;
@@ -16,11 +19,29 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
+/**
+ * Resource Uang Masuk — penerimaan dana.
+ *
+ * Form 2 mode: Berdasarkan SPK / Manual (luar SPK).
+ * Sumber disimpulkan dari `spk_id`, bukan kolom tersimpan.
+ *
+ * Hak akses (Rules.md §4): Admin = CRUD penuh; Direktur = hanya lihat.
+ */
 class UangMasukResource extends Resource
 {
+    use BolehUbahData;
+
     protected static ?string $model = UangMasuk::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Transaksi';
+
+    protected static ?string $modelLabel = 'Uang Masuk';
+
+    protected static ?string $pluralModelLabel = 'Uang Masuk';
+
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {
@@ -32,11 +53,10 @@ class UangMasukResource extends Resource
         return UangMasuksTable::configure($table);
     }
 
-    public static function getRelations(): array
+    public static function getEloquentQuery(): Builder
     {
-        return [
-            //
-        ];
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     public static function getPages(): array
@@ -48,11 +68,22 @@ class UangMasukResource extends Resource
         ];
     }
 
-    public static function getRecordRouteBindingEloquentQuery(): Builder
+    // ---------------------------------------------------------
+    // Hak akses — hanya Admin yang boleh mengubah data
+    // ---------------------------------------------------------
+
+    public static function canCreate(): bool
     {
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
+        return auth()->user()?->bolehInput() ?? false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return auth()->user()?->bolehInput() ?? false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->bolehInput() ?? false;
     }
 }

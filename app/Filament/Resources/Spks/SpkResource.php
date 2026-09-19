@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Spks;
 
+use App\Filament\Concerns\BolehUbahData;
 use App\Filament\Resources\Spks\Pages\CreateSpk;
 use App\Filament\Resources\Spks\Pages\EditSpk;
 use App\Filament\Resources\Spks\Pages\ListSpks;
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
  */
 class SpkResource extends Resource
 {
+    use BolehUbahData;
+
     protected static ?string $model = Spk::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
