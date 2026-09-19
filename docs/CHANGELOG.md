@@ -3,6 +3,75 @@
 
 ---
 
+## [3.7] — Perbaikan: /login 404 — 19 September 2026
+
+### 🐞 Masalah yang Dilaporkan User
+
+> *"halaman login tidak bisa diakses notfound, bagian apa yang belum anda lakukan?"*
+
+**Jawaban: pengalihan rute lama belum dibuat.**
+
+### Penyebab
+
+Di **v3.5** halaman Blade lama dihapus dan login dipindah ke `/admin/login`.
+Namun rute **`/login` tidak disisakan pengalihannya** — jadi membuka `/login`
+menghasilkan **404**, padahal sebelumnya di situ ada halaman login.
+
+> Ini **kelalaian saya**: saat menghapus rute lama, seharusnya sekaligus
+> menyediakan pengalihan agar bookmark/link lama tidak mati.
+
+### Perbaikan — Pengalihan Rute Lama
+
+| URL lama | Dialihkan ke |
+|---|---|
+| `/login` | `/admin/login` |
+| `/dashboard` | `/admin` |
+| `/home` | `/admin` |
+| `/admin/dashboard` | `/admin` |
+
+URL yang **benar-benar** tidak ada **tetap 404** — pengalihan tidak menelan semua URL.
+
+### Verifikasi
+
+| URL | Hasil |
+|---|---|
+| `/` | ✅ 302 → `/admin` |
+| **`/login`** | ✅ 302 → `/admin/login` **(sebelumnya 404)** |
+| `/dashboard` | ✅ 302 → `/admin` |
+| `/home` | ✅ 302 → `/admin` |
+| `/admin/login` | ✅ 200 |
+| `/halaman-ngawur` | ✅ 404 (benar) |
+
+**151 test, 411 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+> Test regresi: `tests/Feature/PengalihanRuteTest.php` (10 test).
+
+### 🔴 PELAJARAN PENTING
+
+**Saat menghapus/memindahkan rute, SELALU sisakan pengalihan (redirect).**
+Menghapus rute tanpa pengalihan akan mematikan bookmark, tautan yang sudah
+dibagikan, dan kebiasaan pengguna mengetik URL — dan menghasilkan 404 yang
+membingungkan.
+
+### Git
+
+```
+6980e16 fix: /login 404 - tambah pengalihan rute lama ke Filament
+4162348 docs: catat v3.6 (halaman laporan + ekspor CSV)
+9e5b59b feat: halaman Laporan + ekspor CSV
+3b438c3 docs: catat v3.5 (antarmuka tunggal Filament) + perbarui README
+715c46e feat: dashboard Filament + hapus halaman Blade lama
+aa69e59 docs: catat 4 resource selesai + bug tombol Direktur (v3.4)
+89e7e2c feat: lengkapi Resource Mitra, Uang Masuk, Uang Keluar, Pengguna
+53d4ed2 docs: catat keputusan Filament + 2 bug yang diperbaiki (v3.3)
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+---
+
 ## [3.6] — Halaman Laporan — 19 September 2026
 
 ### Halaman Laporan (`/admin/laporan`)
