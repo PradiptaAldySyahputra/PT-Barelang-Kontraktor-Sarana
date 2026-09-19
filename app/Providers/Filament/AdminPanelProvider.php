@@ -25,9 +25,15 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
  * Panel utama aplikasi.
  *
  * Dipakai oleh Admin (input data) dan Direktur (monitoring).
- * Pembatasan hak akses dilakukan lewat:
- *   1. canAccessPanel() di model Pengguna
- *   2. canCreate()/canEdit()/canDelete() + trait BolehUbahData di Resource
+ *
+ * ⚠️ CATATAN tentang brand:
+ * JANGAN memakai brandLogo() berupa view HTML. Di Filament 5, jika brandLogo
+ * diisi, komponen logo HANYA merender gambar itu dan NAMA BRAND DISEMBUNYIKAN
+ * — navbar jadi tampak rusak (hanya kotak inisial, tanpa nama).
+ * Cukup pakai brandName() agar nama perusahaan tampil rapi dan responsif.
+ *
+ * Kalau nanti ada file logo asli (PNG/SVG), baru pakai:
+ *   ->brandLogo(asset('images/logo.svg'))
  */
 class AdminPanelProvider extends PanelProvider
 {
@@ -38,28 +44,28 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName('PT Barelang Kontraktor Sarana')
-            ->brandLogo(fn () => view('filament.brand-logo'))
-            ->brandLogoHeight('2.25rem')
-            ->favicon(fn () => asset('favicon.svg'))
+            ->brandName('Barelang Kontraktor Sarana')
             ->colors([
                 'primary' => Color::Blue,
                 'gray' => Color::Slate,
                 'success' => Color::Emerald,
                 'warning' => Color::Amber,
                 'danger' => Color::Rose,
+                'info' => Color::Sky,
             ])
+
             // ---------------------------------------------------------
             // Navigasi
             // ---------------------------------------------------------
-            // sidebarFullyCollapsibleOnDesktop = sidebar bisa DITUTUP TOTAL
-            // (hilang dari layar) atau dibuka kembali, bukan sekadar
-            // menyusut jadi ikon. Tombol toggle ada di header.
+            // Sidebar bisa DITUTUP TOTAL lalu dibuka kembali (bukan hanya
+            // menyusut jadi ikon). Tombol toggle ada di topbar.
             ->sidebarFullyCollapsibleOnDesktop()
-            ->collapsibleNavigationGroups(true)  // grup menu bisa dilipat
-            ->sidebarWidth('16rem')
+            ->collapsibleNavigationGroups(true)
+            ->sidebarWidth('15rem')
             ->collapsedSidebarWidth('4.5rem')
-            ->spa()                              // navigasi tanpa reload penuh
+
+            // Layout
+            ->maxContentWidth('full')
 
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')

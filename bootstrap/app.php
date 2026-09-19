@@ -13,15 +13,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Alias middleware peran — berguna untuk halaman Filament kustom:
+        // Alias middleware peran — untuk halaman Filament kustom:
         //   ->middleware('peran:admin')
         //   ->middleware('peran:admin,direktur')
-        //
-        // Untuk CRUD standar, pembatasan sudah dilakukan di masing-masing
-        // Resource lewat canCreate/canEdit/canDelete + trait BolehUbahData.
         $middleware->alias([
             'peran' => PastikanPeran::class,
         ]);
+
+        // Tamu yang membuka rute ber-middleware `auth` diarahkan LANGSUNG
+        // ke halaman login Filament — bukan lewat /login dulu (2 hop).
+        // Ini berlaku untuk rute biasa seperti /admin/laporan/ekspor/{jenis}.
+        $middleware->redirectGuestsTo(fn () => '/admin/login');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
