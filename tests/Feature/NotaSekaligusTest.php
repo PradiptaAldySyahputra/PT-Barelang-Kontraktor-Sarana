@@ -180,7 +180,7 @@ class NotaSekaligusTest extends TestCase
         $this->assertStringContainsString('pratinjau', strtolower($html));
     }
 
-    public function test_halaman_ubah_juga_punya_pratinjau_sejajar(): void
+    public function test_halaman_ubah_juga_punya_pratinjau(): void
     {
         $keluar = UangKeluar::factory()->create();
 
@@ -189,7 +189,8 @@ class NotaSekaligusTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Pratinjau nota tampil di sebelah kiri', $html);
+        // Revisi user: pratinjau LEBAR PENUH di ATAS field, bukan di samping.
+        $this->assertStringContainsString('Buka di tab baru', $html);
     }
 
     // =========================================================
@@ -243,6 +244,75 @@ class NotaSekaligusTest extends TestCase
         $this->assertNotNull($keluar->bukti, 'Kolom bukti harus terisi path nota');
         $this->assertIsArray($keluar->bukti);
         $this->assertNotEmpty($keluar->bukti);
+    }
+
+    /**
+     * ⚠️ REGRESI BUG PENTING.
+     *
+     * Versi lama memanggil `$f->store('public')` — padahal parameter pertama
+     * `store()` adalah NAMA FOLDER, bukan nama disk. Akibatnya file tersimpan
+     * di folder bersarang `storage/app/public/public/xxx.pdf` sehingga nota
+     * TIDAK bisa dibuka (file "belum ada").
+     *
+     * Test ini memastikan path nota selalu berada di dalam folder
+     * `uang_keluar/`, dan TIDAK diawali `public/`.
+     */
+    public function test_path_nota_tidak_bersarang_di_folder_public(): void
+    {
+        $this->actingAs($this->admin);
+
+        Livewire::test(CreateUangKeluar::class)
+            ->fillForm([
+                'nota_sekaligus' => [$this->nota('path-uji.pdf')],
+            ])
+            ->fillForm([
+                'pengeluaran' => [
+                    ['tanggal' => '2026-09-01', 'jumlah' => 1_000_000, 'kategori' => 'material'],
+                ],
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $keluar = UangKeluar::first();
+        $path = is_array($keluar->bukti) ? ($keluar->bukti[0] ?? null) : $keluar->bukti;
+
+        $this->assertNotNull($path, 'Path nota tidak boleh kosong');
+        $this->assertStringStartsWith(
+            'uang_keluar/',
+            $path,
+            'Path nota harus di dalam folder uang_keluar/ — bukan folder bersarang'
+        );
+        $this->assertStringNotContainsString(
+            'public/',
+            $path,
+            'Path nota TIDAK boleh mengandung "public/" (bug store($disk))'
+        );
+        $this->assertFalse(
+            str_starts_with($path, 'public/'),
+            'Path nota tidak boleh diawali "public/"'
+        );
+    }
+
+    public function test_file_nota_benar_benar_tersimpan(): void
+    {
+        $this->actingAs($this->admin);
+
+        Livewire::test(CreateUangKeluar::class)
+            ->fillForm([
+                'nota_sekaligus' => [$this->nota('tersimpan.pdf')],
+            ])
+            ->fillForm([
+                'pengeluaran' => [
+                    ['tanggal' => '2026-09-01', 'jumlah' => 1_000_000, 'kategori' => 'material'],
+                ],
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $keluar = UangKeluar::first();
+        $path = is_array($keluar->bukti) ? ($keluar->bukti[0] ?? null) : $keluar->bukti;
+
+        Storage::disk('public')->assertExists($path);
     }
 
     // =========================================================

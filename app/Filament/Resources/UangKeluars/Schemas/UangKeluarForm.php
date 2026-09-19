@@ -25,22 +25,34 @@ use Filament\Support\RawJs;
  * Form Uang Keluar — pengeluaran.
  *
  * DUA BENTUK:
- *   1. `configure()`        → SATU pengeluaran + pratinjau nota sejajar.
- *                             Dipakai halaman UBAH.
+ *   1. `configure()`         → SATU pengeluaran + pratinjau nota.
+ *                              Dipakai halaman UBAH.
  *   2. `configureSekaligus()` → BEBERAPA pengeluaran sekaligus.
- *                             Dipakai halaman TAMBAH.
+ *                              Dipakai halaman TAMBAH.
  *
- * ⚠️ CARA KERJA "SEKALIGUS" (revisi user):
- *   1. Admin mengunggah nota (boleh banyak sekaligus, tanpa batas 4).
- *   2. Sistem MENGHITUNG jumlah nota yang diunggah.
- *   3. Sistem otomatis membuat SEJUMLAH ITU baris form.
- *   4. Tiap baris menampilkan PRATINJAU notanya SEJAJAR dengan field.
+ * ⚠️ TATA LETAK (revisi user):
+ *   "gunakan space semuanya, form upload diatas dan form input dibawah...
+ *    form pertama akan luas, ketika di scroll kebawah form akan jelas dan
+ *    gambar/pdf nota pasti jelas dan harus presisi, jangan separuh"
  *
- *   Jadi admin tidak menambah baris manual — baris muncul sendiri
- *   mengikuti jumlah nota.
+ *   Maka tiap baris disusun VERTIKAL dan LEBAR PENUH:
  *
- *   Catatan: isi nota TIDAK dibaca otomatis (tidak ada OCR). Angka
- *   diisi manual sesuai nota yang tampil di sebelahnya.
+ *     ┌────────────────────────────────────────────┐
+ *     │  PRATINJAU NOTA  (lebar penuh, tinggi besar)│
+ *     ├────────────────────────────────────────────┤
+ *     │  Tanggal        │ Jumlah                    │
+ *     │  Kategori       │ Penerima                  │
+ *     │  Terkait SPK    │ Keterangan                │
+ *     └────────────────────────────────────────────┘
+ *
+ *   Tidak ada kolom yang dihemat — pratinjau dapat lebar penuh supaya
+ *   PDF/gambar nota jelas terbaca (bukan separuh).
+ *
+ * ⚠️ CARA KERJA "SEKALIGUS":
+ *   Unggah N nota → otomatis N baris. Tidak ada tombol tambah/hapus baris.
+ *
+ *   Catatan: isi nota TIDAK dibaca otomatis (tidak ada OCR). Angka diisi
+ *   manual sesuai nota yang tampil di atasnya.
  *
  * TIDAK ADA approval Direktur (keputusan user 19 Sep 2026).
  */
@@ -127,6 +139,50 @@ class UangKeluarForm
     }
 
     /**
+     * Ambil path dari state FileUpload.
+     *
+     * ⚠️ BUG YANG PERNAH TERJADI (penting, jangan diulang):
+     * Versi sebelumnya memanggil `$f->store($disk)` dengan `$disk` = 'public'.
+     * Padahal parameter pertama `store()` adalah **NAMA FOLDER**, bukan nama
+     * disk. Akibatnya file tersimpan di folder bersarang:
+     *
+     *     storage/app/public/public/xxxx.pdf   ← SALAH
+     *     storage/app/public/uang_keluar/...   ← seharusnya
+     *
+     * Sekarang: pakai `getStatePath()` (Filament sudah menyimpan file ke
+     * folder yang benar). Fallback pun memakai signature yang benar:
+     * `store('uang_keluar', $disk)`.
+     */
+    private static function pathFile(mixed $f): ?string
+    {
+        if (is_string($f)) {
+            return $f;
+        }
+
+        if (! is_object($f)) {
+            return null;
+        }
+
+        // TemporaryUploadedFile / FileUploadedFile — Filament sudah tahu
+        // lokasinya. Ini jalur normal.
+        if (method_exists($f, 'getStatePath')) {
+            $path = $f->getStatePath();
+
+            if (filled($path)) {
+                return $path;
+            }
+        }
+
+        // Fallback: simpan sendiri ke folder yang BENAR.
+        // Perhatikan urutan argumen: (folder, disk) — bukan (disk).
+        if (method_exists($f, 'store')) {
+            return $f->store('uang_keluar', config('filament.default_filesystem_disk', 'public'));
+        }
+
+        return null;
+    }
+
+    /**
      * Field unggah nota + logika yang membuat baris form mengikuti jumlah nota.
      */
     private static function unggahNota(): FileUpload
@@ -141,7 +197,9 @@ class UangKeluarForm
             ->maxFiles(30)
             ->dehydrated(false)
             ->live()
-            ->helperText('Boleh pilih BANYAK nota sekaligus (Ctrl/Cmd + klik). Jumlah baris form di bawah akan otomatis menyesuaikan jumlah nota. Angka diisi manual sesuai nota.')
+            ->panelLayout('grid')
+            ->imagePreviewHeight('150')
+            ->helperText('Pilih BANYAK nota sekaligus (Ctrl/Cmd + klik). Jumlah baris form di bawah otomatis menyesuaikan jumlah nota. Angka diisi manual sesuai nota.')
             ->afterStateUpdated(function ($state, Set $set, Get $get): void {
                 // ---------------------------------------------------------
                 // INTI FITUR: jumlah baris = jumlah nota yang diunggah.
@@ -157,8 +215,6 @@ class UangKeluarForm
                 $lama = collect($get('pengeluaran') ?? [])->values();
 
                 if ($files->isEmpty()) {
-                    // Belum ada nota → sediakan 1 baris kosong supaya form
-                    // tetap bisa dipakai tanpa nota.
                     $set('pengeluaran', [
                         array_merge($lama->get(0) ?? [], ['bukti' => []]),
                     ]);
@@ -182,105 +238,77 @@ class UangKeluarForm
     }
 
     /**
-     * Ambil path dari state FileUpload (bisa string atau objek file).
-     */
-    private static function pathFile(mixed $f): ?string
-    {
-        if (is_string($f)) {
-            return $f;
-        }
-
-        if (is_object($f)) {
-            if (method_exists($f, 'getStatePath')) {
-                return $f->getStatePath();
-            }
-
-            if (method_exists($f, 'store')) {
-                return $f->store(config('filament.default_filesystem_disk', 'public'));
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Satu baris form pengeluaran (dipakai di repeater & form tunggal).
+     * Satu baris form pengeluaran.
      *
-     * @param  bool  $denganPratinjau  tampilkan pratinjau nota di sebelah kiri
+     * Susunan VERTIKAL & LEBAR PENUH:
+     *   [pratinjau nota — lebar penuh]
+     *   [field form — lebar penuh, 2 kolom]
+     *
      * @return array<int, mixed>
      */
-    private static function fieldPengeluaran(bool $denganPratinjau = true): array
+    private static function fieldPengeluaran(): array
     {
-        $field = [];
-
-        if ($denganPratinjau) {
+        return [
             // ---------------------------------------------------------
-            // PRATINJAU NOTA — SEJAJAR dengan field (permintaan user).
-            //
-            // Karena kolom `bukti` sudah terisi path nota oleh unggahan,
-            // pratinjau bisa langsung dirender dari state baris ini.
+            // PRATINJAU NOTA — LEBAR PENUH, di ATAS field (permintaan user).
             // ---------------------------------------------------------
-            $field[] = Placeholder::make('pratinjau_nota')
+            Placeholder::make('pratinjau_nota')
                 ->hiddenLabel()
                 ->content(fn (Get $get) => view('filament.components.pratinjau-nota', [
                     'files' => $get('bukti'),
                 ]))
-                ->columnSpan(1);
-        }
-
-        $field[] = Group::make([
-            DatePicker::make('tanggal')
-                ->label('Tanggal')
-                ->native(false)
-                ->displayFormat('d/m/Y')
-                ->default(now()),
-
-            TextInput::make('jumlah')
-                ->label('Jumlah (Rp)')
-                ->numeric()
-                ->minValue(0.01)
-                ->maxValue(self::BATAS_NOMINAL)
-                ->prefix('Rp')
-                ->mask(RawJs::make('$money($input, \',\', \'.\')'))
-                ->stripCharacters('.')
-                ->dehydrateStateUsing(fn ($state): ?float => filled($state) ? (float) $state : null),
-
-            Select::make('kategori')
-                ->label('Kategori')
-                ->options(KategoriPengeluaran::opsi())
-                ->native(false),
-
-            TextInput::make('penerima')
-                ->label('Penerima / Toko')
-                ->maxLength(200)
-                ->placeholder('mis. Toko Material Contoh'),
-
-            Select::make('spk_id')
-                ->label('Terkait SPK')
-                ->options(self::opsiSpk())
-                ->searchable()
-                ->preload()
-                ->placeholder('— umum / tidak terkait SPK —'),
-
-            Textarea::make('keterangan')
-                ->label('Keterangan')
-                ->rows(2)
-                ->maxLength(500)
                 ->columnSpanFull(),
-        ])
-            ->columns(2)
-            ->columnSpan($denganPratinjau ? 3 : 2);
 
-        // ---------------------------------------------------------
-        // Simpan path nota sebagai state tersembunyi.
-        //
-        // Path nota diisi otomatis oleh unggahan (bukan diketik), jadi
-        // field-nya tidak perlu tampil — tetapi HARUS tetap ada sebagai
-        // komponen agar nilainya ikut tersimpan saat form disimpan.
-        // ---------------------------------------------------------
-        $field[] = Hidden::make('bukti');
+            // ---------------------------------------------------------
+            // FIELD FORM — LEBAR PENUH, di BAWAH pratinjau.
+            // ---------------------------------------------------------
+            Group::make([
+                DatePicker::make('tanggal')
+                    ->label('Tanggal')
+                    ->native(false)
+                    ->displayFormat('d/m/Y')
+                    ->default(now()),
 
-        return $field;
+                TextInput::make('jumlah')
+                    ->label('Jumlah (Rp)')
+                    ->numeric()
+                    ->minValue(0.01)
+                    ->maxValue(self::BATAS_NOMINAL)
+                    ->prefix('Rp')
+                    ->mask(RawJs::make('$money($input, \',\', \'.\')'))
+                    ->stripCharacters('.')
+                    ->dehydrateStateUsing(fn ($state): ?float => filled($state) ? (float) $state : null),
+
+                Select::make('kategori')
+                    ->label('Kategori')
+                    ->options(KategoriPengeluaran::opsi())
+                    ->native(false),
+
+                TextInput::make('penerima')
+                    ->label('Penerima / Toko')
+                    ->maxLength(200)
+                    ->placeholder('mis. Toko Material Contoh'),
+
+                Select::make('spk_id')
+                    ->label('Terkait SPK')
+                    ->options(self::opsiSpk())
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('— umum / tidak terkait SPK —'),
+
+                Textarea::make('keterangan')
+                    ->label('Keterangan')
+                    ->rows(2)
+                    ->maxLength(500),
+            ])
+                ->columns(2)
+                ->columnSpanFull(),
+
+            // Path nota diisi otomatis oleh unggahan (bukan diketik), jadi
+            // tidak perlu tampil — tetapi HARUS ada sebagai komponen agar
+            // nilainya ikut tersimpan.
+            Hidden::make('bukti'),
+        ];
     }
 
     // =========================================================
@@ -291,78 +319,76 @@ class UangKeluarForm
     {
         return $schema
             ->components([
-                Section::make('Detail Pengeluaran')
-                    ->description('Pratinjau nota tampil di sebelah kiri form.')
+                Section::make('Nota')
+                    ->description('Pratinjau nota. Klik "Buka di tab baru" untuk melihat ukuran penuh.')
                     ->schema([
-                        // Pratinjau nota lama (sudah tersimpan) — sejajar.
                         Placeholder::make('pratinjau_nota')
                             ->hiddenLabel()
                             ->content(fn (Get $get) => view('filament.components.pratinjau-nota', [
                                 'files' => $get('bukti'),
                             ]))
-                            ->columnSpan(1),
+                            ->columnSpanFull(),
+                    ]),
 
-                        Group::make([
-                            DatePicker::make('tanggal')
-                                ->label('Tanggal Keluar')
-                                ->required()
-                                ->native(false)
-                                ->displayFormat('d/m/Y')
-                                ->default(now()),
+                Section::make('Detail Pengeluaran')
+                    ->schema([
+                        DatePicker::make('tanggal')
+                            ->label('Tanggal Keluar')
+                            ->required()
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->default(now()),
 
-                            TextInput::make('jumlah')
-                                ->label('Jumlah (Rp)')
-                                ->required()
-                                ->numeric()
-                                ->minValue(0.01)
-                                ->prefix('Rp')
-                                ->mask(RawJs::make('$money($input, \',\', \'.\')'))
-                                ->stripCharacters('.')
-                                ->live(onBlur: true)
-                                ->dehydrateStateUsing(fn ($state): float => (float) $state)
-                                ->maxValue(self::BATAS_NOMINAL)
-                                ->rules(self::aturanJumlah())
-                                ->helperText(self::helperJumlah()),
+                        TextInput::make('jumlah')
+                            ->label('Jumlah (Rp)')
+                            ->required()
+                            ->numeric()
+                            ->minValue(0.01)
+                            ->prefix('Rp')
+                            ->mask(RawJs::make('$money($input, \',\', \'.\')'))
+                            ->stripCharacters('.')
+                            ->live(onBlur: true)
+                            ->dehydrateStateUsing(fn ($state): float => (float) $state)
+                            ->maxValue(self::BATAS_NOMINAL)
+                            ->rules(self::aturanJumlah())
+                            ->helperText(self::helperJumlah()),
 
-                            Select::make('kategori')
-                                ->label('Kategori')
-                                ->options(KategoriPengeluaran::opsi())
-                                ->required()
-                                ->native(false)
-                                ->helperText('WAJIB dipilih dari daftar — agar laporan tidak terpecah.'),
+                        Select::make('kategori')
+                            ->label('Kategori')
+                            ->options(KategoriPengeluaran::opsi())
+                            ->required()
+                            ->native(false)
+                            ->helperText('WAJIB dipilih dari daftar — agar laporan tidak terpecah.'),
 
-                            TextInput::make('penerima')
-                                ->label('Penerima')
-                                ->maxLength(200)
-                                ->placeholder('mis. Toko Bangunan Jaya / Mandor Arif'),
+                        TextInput::make('penerima')
+                            ->label('Penerima')
+                            ->maxLength(200)
+                            ->placeholder('mis. Toko Bangunan Jaya / Mandor Arif'),
 
-                            Select::make('spk_id')
-                                ->label('Kaitkan ke SPK (opsional)')
-                                ->options(self::opsiSpk())
-                                ->searchable()
-                                ->preload()
-                                ->placeholder('— Tidak terkait SPK —')
-                                ->live()
-                                ->afterStateUpdated(function (?int $state, Set $set, Get $get): void {
-                                    $spk = $state ? Spk::find($state) : null;
+                        Select::make('spk_id')
+                            ->label('Kaitkan ke SPK (opsional)')
+                            ->options(self::opsiSpk())
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('— Tidak terkait SPK —')
+                            ->live()
+                            ->afterStateUpdated(function (?int $state, Set $set, Get $get): void {
+                                $spk = $state ? Spk::find($state) : null;
 
-                                    if ($spk !== null && blank($get('penerima'))) {
-                                        $set('penerima', $spk->mitra?->nama);
-                                    }
-                                })
-                                ->helperText('Kosongkan untuk biaya operasional kantor.'),
+                                if ($spk !== null && blank($get('penerima'))) {
+                                    $set('penerima', $spk->mitra?->nama);
+                                }
+                            })
+                            ->helperText('Kosongkan untuk biaya operasional kantor.'),
 
-                            Textarea::make('keterangan')
-                                ->label('Keterangan')
-                                ->rows(2)
-                                ->maxLength(500)
-                                ->placeholder('mis. di potong 120.000 (uang material)')
-                                ->columnSpanFull(),
-                        ])
-                            ->columns(2)
-                            ->columnSpan(3),
+                        Textarea::make('keterangan')
+                            ->label('Keterangan')
+                            ->rows(3)
+                            ->maxLength(500)
+                            ->placeholder('mis. di potong 120.000 (uang material)')
+                            ->columnSpanFull(),
                     ])
-                    ->columns(4),
+                    ->columns(2),
 
                 Section::make('Bukti Pengeluaran')
                     ->description('Jumlah file BEBAS — nota, kuitansi, transfer, foto. Bisa lebih dari satu.')
@@ -397,12 +423,13 @@ class UangKeluarForm
                     ]),
 
                 Section::make('2. Isi Rincian')
-                    ->description('Satu baris untuk tiap nota. Nota tampil di sebelah kiri, isi angkanya di kanan sesuai nota tersebut. Baris kosong tidak akan tersimpan.')
+                    ->description('Satu baris untuk tiap nota — nota tampil di atas, isi angkanya di bawah sesuai nota tersebut. Baris kosong tidak akan tersimpan.')
                     ->schema([
                         Repeater::make('pengeluaran')
                             ->hiddenLabel()
-                            ->schema(self::fieldPengeluaran(denganPratinjau: true))
-                            ->columns(4)
+                            ->schema(self::fieldPengeluaran())
+                            // 1 kolom: pratinjau & field sama-sama lebar penuh
+                            ->columns(1)
                             ->defaultItems(1)
                             ->minItems(1)
                             ->maxItems(30)

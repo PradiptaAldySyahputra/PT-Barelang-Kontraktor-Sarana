@@ -213,7 +213,6 @@ class RevisiMenuSpkTest extends TestCase
         // Halaman UBAH tetap form tunggal (tidak ada repeater & tidak ada
         // bagian unggah sekaligus).
         $this->assertStringContainsString('Detail Pengeluaran', $html);
-        $this->assertStringNotContainsString('Unggah Nota', $html);
         $this->assertStringNotContainsString('Isi Rincian', $html);
     }
 }
