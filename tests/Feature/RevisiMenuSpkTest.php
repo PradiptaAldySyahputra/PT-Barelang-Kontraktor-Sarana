@@ -188,15 +188,17 @@ class RevisiMenuSpkTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_tambah_uang_keluar_menyediakan_4_baris(): void
+    public function test_tambah_uang_keluar_menyediakan_unggah_nota(): void
     {
+        // Revisi lanjutan: jumlah baris mengikuti jumlah nota, bukan 4 tetap.
         $html = $this->actingAs($this->admin)
             ->get('/admin/uang-keluars/create')
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Unggah Nota Sekaligus', $html);
+        $this->assertStringContainsString('Unggah Nota', $html);
         $this->assertStringContainsString('nota_sekaligus', $html);
+        $this->assertStringContainsString('Isi Rincian', $html);
     }
 
     public function test_ubah_uang_keluar_masih_satu_form(): void
@@ -208,8 +210,10 @@ class RevisiMenuSpkTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        // Halaman UBAH tetap form tunggal (tidak ada repeater 4 baris)
+        // Halaman UBAH tetap form tunggal (tidak ada repeater & tidak ada
+        // bagian unggah sekaligus).
         $this->assertStringContainsString('Detail Pengeluaran', $html);
-        $this->assertStringNotContainsString('Unggah Nota Sekaligus', $html);
+        $this->assertStringNotContainsString('Unggah Nota', $html);
+        $this->assertStringNotContainsString('Isi Rincian', $html);
     }
 }

@@ -157,17 +157,19 @@ class PelaksanaDanMassalTest extends TestCase
             ->assertOk();
     }
 
-    public function test_halaman_tambah_menyiapkan_4_baris(): void
+    public function test_halaman_tambah_menyiapkan_1_baris_awal(): void
     {
+        // Revisi user: baris TIDAK lagi tetap 4 — jumlahnya mengikuti
+        // jumlah nota yang diunggah. Tanpa nota, disediakan 1 baris kosong.
         $this->actingAs($this->admin);
 
         Livewire::test(CreateUangKeluar::class)
             ->assertSet('data.pengeluaran', function ($value): bool {
-                return is_array($value) && count($value) === 4;
+                return is_array($value) && count($value) === 1;
             });
     }
 
-    public function test_halaman_tambah_punya_unggah_sekaligus(): void
+    public function test_halaman_tambah_punya_unggah_nota(): void
     {
         $html = $this->actingAs($this->admin)
             ->get('/admin/uang-keluars/create')
@@ -175,7 +177,7 @@ class PelaksanaDanMassalTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('nota_sekaligus', $html);
-        $this->assertStringContainsString('Unggah Nota Sekaligus', $html);
+        $this->assertStringContainsString('Unggah Nota', $html);
     }
 
     public function test_simpan_4_pengeluaran_sekaligus(): void
