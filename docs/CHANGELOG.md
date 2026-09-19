@@ -3,6 +3,154 @@
 
 ---
 
+## [4.0] — Tema Clean Minimalist Enterprise (Vercel/Linear) — 19 September 2026
+
+### Permintaan User
+
+> *"Bertindaklah sebagai Senior UI/UX Designer... tema Clean Minimalist Enterprise /
+> Modern SaaS (Gaya Vercel & Linear style)... monokrom netral, border tipis, tanpa
+> gradasi/shadow berlebihan, font sistem, tombol minimalis... **kalau tidak sesuai
+> kembalikan lagi desainnya**"*
+
+### 🛡️ TITIK ROLLBACK (dibuat SEBELUM perubahan)
+
+Sesuai permintaan *"kalau tidak sesuai kembalikan lagi"*, dibuat tag Git lebih dulu:
+
+```bash
+git tag sebelum-redesign-v1   # = commit e082cef
+```
+
+Cara mengembalikan:
+
+| Perintah | Efek |
+|---|---|
+| `git checkout sebelum-redesign-v1` | Lihat versi lama (read-only, aman) |
+| `git revert 1df98b9` | Batalkan tema ini, buat commit baru (aman) |
+| `git reset --hard sebelum-redesign-v1` | Hapus semua setelahnya (**hati-hati**) |
+
+---
+
+### Cara Tema Dipasang
+
+```bash
+php artisan make:filament-theme admin
+```
+
+Perintah ini membuat `resources/css/filament/admin/theme.css` dan **otomatis**
+mendaftarkan `->viteTheme('resources/css/filament/admin/theme.css')` di
+`AdminPanelProvider`. Lalu `npm run build`.
+
+---
+
+### Prinsip Desain yang Diterapkan
+
+| # | Prinsip | Penerapan |
+|---|---|---|
+| 1 | **Monokrom netral** | `primary` & `gray` = `Color::Zinc` (**bukan biru lagi**) |
+| 2 | **Tipografi font sistem** | `system-ui, -apple-system, Segoe UI, Roboto…` |
+| 3 | **Border tipis** | `1px #e4e4e7` sebagai pembatas, bukan shadow |
+| 4 | **Shadow minimal** | 8 aturan `box-shadow:none!important` di komponen utama |
+| 5 | **Tint lembut** | Header tabel `#fafafa`, sidebar aktif `#f4f4f5` |
+| 6 | **Tombol minimalis** | Utama hampir hitam `#18181b`, sekunder putih + border tipis |
+
+**Palet:**
+
+| Peran | Warna |
+|---|---|
+| Latar | `#fafafa` |
+| Kartu/panel | `#ffffff` |
+| Border | `#e4e4e7` |
+| Teks utama | `#18181b` |
+| Teks sekunder | `#71717a` |
+| Tombol utama | `#18181b` → hover `#09090b` |
+
+### 14 Komponen Ditata
+
+Tipografi · Warna · Latar · Sidebar · Topbar · Section/kartu · Tombol · Input ·
+Tabel · Badge · Dropdown & modal · Stat widget · Header halaman · Pagination & tabs
+
+Mode gelap juga didukung untuk semua komponen.
+
+---
+
+### ⚠️ Titik Rawan yang Ditemukan
+
+**1. Urutan CSS menentukan kemenangan.**
+Filament menaruh CSS variable-nya di `<style>` **inline** dalam `<head>`.
+File tema dimuat lewat `<link>` yang posisinya **lebih akhir** → aturan tema menang.
+
+> Diverifikasi: `<style>` inline di posisi 434, `<link theme>` di posisi ~4000.
+> Test `test_tema_dimuat_setelah_css_inline_filament()` menjaga urutan ini.
+
+**2. Filament memaksa font Inter.**
+Filament mendefinisikan `--font-sans: var(--font-family)` di mana
+`--font-family: 'Inter Variable'`. Override saya di `:root` diletakkan **setelah**
+definisi Filament sehingga menang, plus `font-family: var(--font-sans) !important`
+untuk mengunci.
+
+**3. Warna biru tidak cukup dihapus lewat CSS.**
+Lebih kokoh mengubahnya di **level PHP** (`Color::Zinc`) daripada menimpa
+`--primary-*` lewat CSS. Dua lapis: PHP + CSS.
+
+---
+
+### Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| Tema terdaftar di panel | ✅ `resources/css/filament/admin/theme.css` |
+| File tema dimuat di halaman | ✅ `theme-R2cOj57n.css` |
+| Tema dimuat **setelah** CSS inline | ✅ (posisi 434 < 4000) |
+| Warna biru default | ✅ **0 kemunculan** |
+| `--primary-600` | ✅ `oklch(0.442 0.017 285.786)` (Zinc) |
+| Font sistem | ✅ `system-ui, -apple-system` + `!important` |
+| Shadow dihapus | ✅ 8 aturan `box-shadow:none!important` |
+| 14 komponen ditata | ✅ Semua ada di CSS |
+| 9 halaman utama | ✅ HTTP 200 semua |
+
+**184 test, 515 assertion — semua lulus.** Pint (PSR-12) lolos.
+
+> Test regresi: `tests/Feature/TemaTest.php` (11 test).
+
+---
+
+### 🔴 BATASAN PENTING
+
+**Saya tidak bisa melihat gambar.** Verifikasi saya bersifat **struktural**:
+CSS variable, urutan pemuatan, kelas komponen, warna dalam file CSS.
+
+**Saya TIDAK bisa menilai apakah tampilannya enak dilihat.** Penilaian estetika
+harus dari user. Kalau ada yang janggal, sebutkan **bagian mana** dan
+**apa yang salah** (mis. "tombol terlalu gelap", "jarak antar section terlalu
+lebar") — deskripsi konkret sangat membantu.
+
+---
+
+### Git
+
+```
+1df98b9 feat: tema Clean Minimalist Enterprise (Vercel/Linear style)
+e082cef docs: catat v3.9 (perbaikan navbar, panel 500, laporan responsif)
+cea5f04 fix: rapikan navbar, panel, dan halaman laporan agar responsif
+6b042b4 docs: catat v3.8 (hapus SIAKAD, sidebar collapsible, UI diperbaiki)
+077122f feat: hapus nama SIAKAD, sidebar bisa ditutup, perbaiki UI dashboard & laporan
+2b003d8 docs: catat v3.7 (perbaikan /login 404 + pelajaran rute)
+6980e16 fix: /login 404 - tambah pengalihan rute lama ke Filament
+4162348 docs: catat v3.6 (halaman laporan + ekspor CSV)
+9e5b59b feat: halaman Laporan + ekspor CSV
+3b438c3 docs: catat v3.5 (antarmuka tunggal Filament) + perbarui README
+715c46e feat: dashboard Filament + hapus halaman Blade lama
+aa69e59 docs: catat 4 resource selesai + bug tombol Direktur (v3.4)
+89e7e2c feat: lengkapi Resource Mitra, Uang Masuk, Uang Keluar, Pengguna
+53d4ed2 docs: catat keputusan Filament + 2 bug yang diperbaiki (v3.3)
+4aa6215 feat: install Filament 5 + Resource SPK
+47eb7be docs: catat progres implementasi v3.2
+bb0a500 feat: autentikasi, middleware peran, dan dashboard
+494f9c2 feat: fondasi database + model SPK & kontrol keuangan
+```
+
+---
+
 ## [3.9] — Perbaikan Navbar & Tata Letak Laporan — 19 September 2026
 
 ### 🐞 Masalah yang Dilaporkan User
