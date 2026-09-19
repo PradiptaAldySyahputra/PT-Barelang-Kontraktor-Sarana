@@ -3,6 +3,242 @@
 
 ---
 
+## [4.3] — Penyederhanaan Sistem & Penataan UI — 19 September 2026
+
+### Ringkasan: 10 permintaan user
+
+| # | Permintaan | Hasil |
+|---|---|---|
+| 1 | Tombol toggle sidebar jangan satu tempat dengan nama perusahaan | ✅ Dipisah, ditambah logo |
+| 2 | Dashboard tata letak berantakan, informasi tidak jelas | ✅ Disusun 4 baris logis |
+| 3 | Laporan berantakan, laba/rugi tak perlu | ✅ Buang yang tak ada datanya |
+| 4 | Bagian Pengguna hanya Direktur yang lihat | ✅ Admin tidak melihat menu |
+| 5 | Filter mitra jadi 3 saja | ✅ Aktif · Mitra · Subkon |
+| 6 | Retensi tidak penting, hapus saja | ✅ Dihapus total dari sistem |
+| 7 | Keterangan pekerjaan dibuat memanjang | ✅ Paragraf, tidak memakan space |
+| 8 | Status diubah lewat form terpisah | ✅ 2 halaman khusus |
+| 9 | Setelah ubah status kembali ke menu yang sesuai | ✅ Parameter `asal` |
+| 10 | — | — |
+
+---
+
+### 🔴 PERUBAHAN BESAR: SISTEM DISEDERHANAKAN
+
+**Keputusan user:** *"dari user tidak ada itu seperti pajak, biaya, laba/rugi,
+dan piutang jadi murni input berdasarkan data yang ada."*
+
+Yang **DIHAPUS** dari sistem:
+
+| Fitur | Alasan |
+|---|---|
+| **Retensi** (`persen_retensi`, `nilai_retensi`) | Excel tidak memuatnya; perusahaan tidak memakainya |
+| **Laba/Rugi per SPK** | Tidak ada data biaya yang lengkap |
+| **Piutang & Umur Piutang (aging)** | Tidak ada data pembayaran lengkap |
+| **Kolom Retensi** di form/tabel/factory/seeder | Ikut dihapus |
+
+**Yang tersisa — hanya data yang benar-benar diinput:**
+
+```
+Nilai SPK  →  Uang Masuk  →  Uang Keluar
+Belum Diterima = Nilai SPK − Uang Masuk
+```
+
+Migrasi: `2026_09_20_000003_hapus_retensi_dari_spk_table.php`
+(drop kolom `persen_retensi` & `nilai_retensi`)
+
+Method yang dihapus dari model `Spk`: `hitungRetensi()`, `terapkanRetensi()`,
+`retensiDitahan()`, `nilaiTagih()`, `sisaHakPenuhDari()`, `nilaiBersih()`,
+`umurHari()`, `kategoriUmur()`, `scopePiutangMenua()`, hook `saving`.
+
+Method baru: `sudahLunas()`, `sisaTagih()`, `piutang()` (disederhanakan).
+
+---
+
+### 1. SIDEBAR — Tombol Toggle Dipisah dari Nama Perusahaan
+
+**Permintaan:** *"untuk menutup sidebar icon atau buttonnya jangan sama
+letaknya dengan nama perusahaan nanti di situ bisa ditambah logo atau apa"*
+
+**Sebelum:** tombol toggle bawaan Filament menempel di area brand.
+**Sesudah:**
+
+```
+┌─────────────────────────────────────┐
+│  [⊞ toggle]  [BKS]  Barelang Kontraktor Sarana │
+└─────────────────────────────────────┘
+```
+
+- View baru: `resources/views/filament/sidebar-toggle.blade.php`
+- Dipasang lewat `renderHook(PanelsRenderHook::SIDEBAR_LOGO_BEFORE)`
+- Tombol desktop: `$store.sidebar.isOpenDesktop` (toggle buka/tutup)
+- Tombol mobile: `$store.sidebar.close()`
+- Logo "BKS": kotak monokrom — mudah diganti logo asli perusahaan
+
+---
+
+### 2. DASHBOARD — Tata Letak & Informasi
+
+**Permintaan:** *"tata letak berantakan ada space yang tidak terpakai disamping
+Pengeluaran per Kategori, informasi yang ingin disampaikan itu tidak tau apa saja"*
+
+**Widget "Pengeluaran per Kategori" DIHAPUS** — grafiknya pendek sehingga
+menyisakan ruang kosong besar di sebelahnya.
+
+**Widget baru:** "Status Tagihan" (donut) — pasangan seimbang dengan
+"SPK per Status", keduanya pendek sehingga berdampingan rapi.
+
+**Kartu ringkasan disusun 4 BARIS LOGIS** — tiap kartu menjawab satu pertanyaan:
+
+| Baris | Tema | Kartu |
+|---|---|---|
+| 1 | **UANG** | Nilai SPK · Sudah Diterima · Uang Keluar · Belum Diterima |
+| 2 | **PEKERJAAN** | SPK Berjalan · Lewat Tenggat · Mendekati Tenggat |
+| 3 | **TAGIHAN** | Belum Ditagihkan · Sedang Ditagih · Sudah Dibayar |
+| 4 | **MASTER** | Mitra · Subkon |
+
+Setiap kartu diberi **keterangan yang menjelaskan artinya**, bukan hanya angka.
+
+Tabel "Perlu Perhatian — SPK Berjalan" diurutkan **paling lewat tenggat di atas**.
+
+---
+
+### 3. LAPORAN — Hanya Data yang Ada
+
+**Dihapus:** Laba-Rugi per SPK, Piutang, Umur Piutang (aging), Retensi.
+
+**Sisa 5 bagian** (tiap bagian ada judul + penjelasan singkat):
+
+| # | Bagian | Isi |
+|---|---|---|
+| 1 | **Ringkasan** | 4 angka utama + selisih masuk−keluar |
+| 2 | **Arus Uang per Bulan** | Uang masuk & keluar tiap bulan |
+| 3 | **Pengeluaran per Kategori** | Dengan bar proporsi visual |
+| 4 | **Daftar SPK** | Nilai & status per SPK |
+| 5 | **Tenggat SPK** | Yang lewat / mendekati tenggat |
+
+**Ekspor CSV: 7 → 4 jenis** (`spk`, `masuk`, `keluar`, `tenggat`).
+Jenis lama (`laba_rugi`, `piutang`, `aging`, `cashflow`, `kategori`) → **404**.
+
+---
+
+### 4. PENGGUNA — Hanya Direktur
+
+**Permintaan:** *"bagian pengguna hanya direktur yang bisa lihat."*
+
+- `shouldRegisterNavigation()` + `canViewAny()` → hanya **Direktur**
+- **Admin**: menu tidak muncul, halaman **403**
+- **Direktur**: bisa lihat & kelola akun
+- Pengaman tetap: tidak bisa hapus/nonaktifkan akun **sendiri**
+
+Ini **kebalikan** dari resource lain (SPK/Mitra/Uang = Admin yang boleh).
+
+---
+
+### 5. FILTER MITRA — 3 Pilihan
+
+**Permintaan:** *"jadikan 3 saja aktif, mitra, dan subkon"*
+
+- TernaryFilter **Aktif** (Semua / Aktif / Nonaktif)
+- SelectFilter **Kategori** (Mitra / Subkon)
+- Filter lama "PLN" & "Subkon & Vendor" dihapus (sudah tidak relevan)
+
+---
+
+### 6. STATUS — Form Terpisah & Read-Only
+
+**Permintaan:** *"di spk bagian status spk merubahnya lewat ubah status saja,
+jadi status cuman menampilkan progres... jadi formnya masing masing untuk
+status progres spk dan status tagihan spk dan itu saling berkaitan sampai ke
+tagihan selesai, ditagihan selesai bisa di edit kalau misal salah input."*
+
+**Dua halaman BARU, jelas bedanya:**
+
+| Halaman | URL | Isi |
+|---|---|---|
+| **Ubah Status Pekerjaan** | `/admin/spks/{id}/status-pekerjaan` | Hanya status pekerjaan |
+| **Ubah Status Tagihan** | `/admin/spks/{id}/status-tagihan` | Hanya status tagihan |
+
+Tiap halaman menampilkan **konteks SPK (read-only)** + **satu field status**.
+
+**Di tabel:** status jadi **READ-ONLY** (badge berwarna, bukan dropdown).
+**Di form Ubah SPK:** status hanya ditampilkan.
+**Di form Tambah SPK:** status otomatis **Draft + Belum Ditagihkan**.
+
+**Tagihan Selesai SPK:** ada tombol **"Perbaiki Status"** — salah input bisa
+dikembalikan ke menu Tagihan SPK.
+
+---
+
+### 7. REDIRECT KEMBALI KE MENU YANG SESUAI
+
+**Permintaan:** *"misal saya tadi isi form ubah status tapi malah kembali ke
+list spk jadi perbaiki bagian lain juga."*
+
+Kedua halaman status menerima parameter `asal`:
+
+| `asal` | Setelah simpan kembali ke |
+|---|---|
+| `status-spk` | Menu Status SPK |
+| `tagihan-spk` | Menu Tagihan SPK |
+| `tagihan-selesai` | Menu Tagihan Selesai SPK |
+| (kosong) | List SPK |
+
+---
+
+### 8. KETERANGAN PEKERJAAN JADI PARAGRAF
+
+**Permintaan:** *"untuk keterangan pada bagian pekerjaan spk dibuat paragraf
+atau memanjang saja biar tidak memakang space tetapi tetap disesuaikan."*
+
+`TextColumn nama_pekerjaan` → `wrap()` + `lineClamp(4)` di List SPK dan
+semua halaman monitoring. Nama pekerjaan panjang tidak lagi terpotong
+sepenggal-sepenggal.
+
+---
+
+### 🔴 BUG YANG DITEMUKAN SAAT PENGERJAAN
+
+| # | Bug | Dampak | Perbaikan |
+|---|---|---|---|
+| 1 | **Status NULL saat buat SPK baru** | Form Tambah tidak punya field status setelah dibuat read-only → data rusak | Tambah `Hidden` default + section "Status Awal" |
+| 2 | Import `StatusSpk`/`StatusTagihan` hilang | Form SPK error 500 | Import dikembalikan |
+| 3 | Trait `BolehUbahData` hilang dari PenggunaResource | `BadMethodCallException` | Trait dipasang kembali |
+| 4 | Banyak test lama menguji fitur yang sudah dihapus | 35 test gagal | Test disesuaikan/dihapus |
+
+> Bug #1 dan #3 **hanya muncul saat halaman benar-benar dibuka** — unit test
+> biasa tidak menangkapnya. Verifikasi HTTP per halaman tetap penting.
+
+---
+
+### Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| Test suite | ✅ **280 test, 801 assertion** — semua lulus |
+| Pint (PSR-12) | ✅ lolos |
+| 11 halaman admin | ✅ HTTP 200 |
+| 2 form status terpisah | ✅ HTTP 200 |
+| 4 ekspor CSV | ✅ HTTP 200 |
+| 3 jenis ekspor lama | ✅ 404 (benar) |
+| Admin buka `/admin/penggunas` | ✅ 403 (benar) |
+| Kolom retensi di database | ✅ terkonfirmasi hilang |
+
+---
+
+### Yang Masih Tersisa
+
+| # | Item | Catatan |
+|---|---|---|
+| 1 | **Periksa 2 anomali Excel** | Nilai Rp 460 M (ARIF) & nomor SPK duplikat (0015) |
+| 2 | **Tinjau asumsi** `tanggal_akhir` +90 hari | Excel tidak punya kolom ini |
+| 3 | **Set IP static + cron backup** | Ikuti `docs/SETUP-SERVER.md` |
+| 4 | **Ganti password default** | `admin@bks.test` / `password` |
+| 5 | **Uang masuk/keluar masih kosong** | Excel hanya berisi daftar SPK (90 SPK) |
+| 6 | Dokumen SPK (BAST, kuitansi) | Masih ditunda |
+| 7 | Ganti logo "BKS" dengan logo asli | Tinggal ganti view `sidebar-toggle.blade.php` |
+
+---
+
 ## [4.2] — Audit Keamanan, Impor Data Asli & Setup Server — 19 September 2026
 
 ### Bagian 1 — Audit Keamanan
