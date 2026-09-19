@@ -28,22 +28,39 @@
 
 | Layer | Teknologi | Alasan |
 |---|---|---|
-| Backend Framework | **Laravel** (full Laravel) | Matang, dokumentasi lengkap, cocok CRUD & laporan |
+| Backend Framework | **Laravel 13** (full Laravel) | Matang, dokumentasi lengkap, cocok CRUD & laporan |
 | Bahasa | PHP 8.3+ | Kebutuhan minimum Laravel modern |
 | Database | **MySQL / MariaDB** | Relasional, stabil, gratis |
 | ORM | Eloquent ORM | Relasi eksplisit, query aggregate |
 | Validasi Enum | **PHP Enum + `Rule::enum()`** | ⭐ Pengganti tabel master (lihat `Schema.md` §7) |
-| Frontend | **Blade Template** | Keputusan SRS — server-rendered |
-| Authentication | Laravel Auth / Breeze / Fortify | Login, logout, session, password hashing |
-| Authorization | Middleware Role | Batasi akses Admin/Direktur |
+| **Frontend / Admin Panel** | **Filament 5** (`/admin`) | ⚠️ **MENYIMPANG dari SRS** — lihat catatan di bawah |
+| Tema Tampilan | **Clean Minimalist Enterprise** (Vercel/Linear) — CSS tema Filament | Monokrom, border tipis, font sistem |
+| Authentication | Filament Login + Laravel Auth | Login, logout, session, password hashing |
+| Authorization | `canAccessPanel()` + `canCreate/canEdit/canDelete` + trait `BolehUbahData` | Batasi akses Admin/Direktur |
 | File Storage | Laravel Storage | Simpan bukti transaksi (uang masuk & keluar) |
-| Grafik | Chart.js / ApexCharts | Grafik cashflow & margin |
-| Export Laporan | DomPDF/TCPDF (PDF), PhpSpreadsheet (Excel) | Laporan cetak |
+| Grafik | Chart.js (bawaan Filament ChartWidget) | Grafik arus kas, status SPK, kategori |
+| Export Laporan | **CSV** (bawaan, tanpa paket) | Bisa dibuka di Excel — aplikasi yang dipakai perusahaan |
 | **Deployment** | **Lokal di PC Direktur (jaringan kantor)** | Biaya rendah, data tetap di perusahaan |
 | Web Server Lokal | Apache/Nginx (via Laragon/XAMPP) | Menjalankan aplikasi di port lokal |
+| Backup | `php artisan bks:backup` + Laravel Scheduler | Dump harian `.sql.gz`, retensi 30 hari |
+
+> ⚠️ **PERUBAHAN PENTING dari v1.0 — Frontend BUKAN Blade lagi:**
+>
+> SRS mengunci frontend ke **Blade Template**, tetapi implementasi memakai
+> **Filament 5** (panel admin di `/admin`). Alasannya:
+> - 5 modul CRUD (SPK, Mitra, Uang Masuk, Uang Keluar, Pengguna) + laporan
+>   dikerjakan jauh lebih cepat, dengan tabel/filter/pencarian/upload bawaan.
+> - Menghemat waktu pengerjaan magang secara signifikan.
+> - Model, migration, Enum, dan seluruh logika bisnis **tetap sama** —
+>   Filament bekerja di atas Eloquent yang sudah ada.
+>
+> **Konsekuensi:** dokumen SRS menyebut Blade → **tidak sinkron**. Perubahan ini
+> dicatat di `CHANGELOG.md` v3.3 beserta alasan lengkapnya.
+>
+> **Catatan:** halaman Blade lama (dashboard & login) sudah **dihapus** di v3.5
+> dan digantikan Filament sepenuhnya.
 
 > ✅ **Perubahan dari v1.0:** *Hosting VPS DigitalOcean/Niagahoster* **dihapus** → **deployment lokal**.
-> Frontend dikunci ke **Blade** (sebelumnya "Vue.js atau React.js via Inertia.js").
 
 ## 3. Struktur Modul Aplikasi
 
@@ -224,14 +241,46 @@ Bagian ini **tidak ada di v1.0**. Sesuai BAB VI SRS.
 
 Data keuangan kritikal — backup tidak boleh mengandalkan disiplin manual.
 
+**✅ SUDAH DIIMPLEMENTASI:** `php artisan bks:backup`
+
+| Aspek | Implementasi |
+|---|---|
+| Perintah | `php artisan bks:backup` |
+| Hasil | `storage/app/backup/bks-YYYY-MM-DD-HHMMSS.sql.gz` |
+| Kompresi | `gzencode` PHP (tidak butuh binary `gzip`) |
+| Retensi | Otomatis hapus backup > 30 hari (`--hari=N` untuk mengubah) |
+| Jadwal | **Harian 23:00** via Laravel Scheduler (`routes/console.php`) |
+| Isi | `mysqldump --single-transaction --routines --triggers` (13 tabel) |
+| Sudah diuji | ✅ Dump 11 KB, **restore berhasil** (4 SPK, 2 pengguna terbaca) |
+
+**⚠️ WAJIB dijalankan agar jadwal bekerja** (pilih salah satu):
+
+```bash
+# Linux/macOS — crontab -e
+* * * * * cd /path/ke/proyek && php artisan schedule:run >> /dev/null 2>&1
+
+# Windows — Task Scheduler
+# Buat tugas harian yang menjalankan:
+#   php artisan schedule:run
+```
+
+Cek jadwal terdaftar:
+```bash
+php artisan schedule:list
+```
+
+**⚠️ Yang MASIH perlu dilakukan manual** (belum bisa diotomatiskan):
+
 | Strategi | Frekuensi | Simpan di |
 |---|---|---|
-| `mysqldump` otomatis (Task Scheduler/cron) | Harian, di luar jam kerja | Folder terpisah di PC Direktur |
 | Salin hasil dump ke media eksternal | Harian/mingguan | Flashdisk / HDD eksternal |
 | Salin ke lokasi kedua | Mingguan | Cloud (terenkripsi) |
 
+> Backup yang tersimpan di **komputer yang sama** tidak melindungi dari
+> kerusakan hardisk. **Salin keluar dari PC Direktur.**
+
 Saran konkret:
-- Rotasi **7 backup harian + 4 mingguan + 12 bulanan**.
+- Rotasi **7 backup harian + 4 mingguan + 12 bulanan** (otomatis: 30 hari).
 - **Uji restore** minimal sekali sebelum sistem dipakai penuh.
 - Backup juga `storage/app` (folder bukti) — bagian dari audit trail.
 

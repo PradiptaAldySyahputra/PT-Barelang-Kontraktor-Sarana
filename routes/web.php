@@ -45,7 +45,7 @@ Route::redirect('/admin/dashboard', '/admin');
 
 Route::get('/admin/laporan/ekspor/{jenis}', function (string $jenis) {
     abort_unless(
-        in_array($jenis, ['spk', 'laba_rugi', 'piutang', 'cashflow', 'kategori'], true),
+        in_array($jenis, ['spk', 'laba_rugi', 'piutang', 'aging', 'tenggat', 'cashflow', 'kategori'], true),
         404
     );
 

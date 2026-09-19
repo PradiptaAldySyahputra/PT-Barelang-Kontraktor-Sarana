@@ -46,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
             ->brandName('Barelang Kontraktor Sarana')
+            ->favicon(asset('favicon.svg'))
             // ---------------------------------------------------------
             // Warna — MONOKROM (tema Clean Minimalist Enterprise)
             // ---------------------------------------------------------

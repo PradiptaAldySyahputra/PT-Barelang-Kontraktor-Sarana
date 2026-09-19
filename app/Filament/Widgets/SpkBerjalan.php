@@ -82,10 +82,24 @@ class SpkBerjalan extends TableWidget
 
                 TextColumn::make('piutang')
                     ->label('Piutang')
-                    ->state(fn (Spk $record): float => max(0, (float) $record->nilai_spk - (float) ($record->total_masuk ?? 0)))
+                    ->state(fn (Spk $record): float => $record->piutangDari((float) ($record->total_masuk ?? 0)))
                     ->money('IDR', locale: 'id')
                     ->color('warning')
-                    ->alignEnd(),
+                    ->alignEnd()
+                    ->description(fn (Spk $record): ?string => $record->retensiDitahan() > 0
+                        ? 'retensi '.number_format($record->retensiDitahan(), 0, ',', '.')
+                        : null),
+
+                TextColumn::make('tenggat')
+                    ->label('Tenggat')
+                    ->state(fn (Spk $record): ?string => $record->labelTenggat())
+                    ->badge()
+                    ->color(fn (Spk $record): string => match (true) {
+                        $record->sudahLewatTenggat() => 'danger',
+                        $record->mendekatiTenggat() => 'warning',
+                        default => 'gray',
+                    })
+                    ->placeholder('—'),
             ])
             ->paginated([5, 10, 25]);
     }

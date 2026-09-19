@@ -152,7 +152,22 @@ class LaporanTest extends TestCase
         $html = Livewire::test(Laporan::class)->html();
 
         $this->assertStringContainsString('LAPORAN-001', $html);
-        $this->assertStringContainsString('Belum Ditagihkan', $html);
+
+        // Status berubah OTOMATIS lewat SinkronStatusTagihanObserver:
+        // SPK ini sudah menerima pembayaran (120jt dari 200jt), jadi
+        // statusnya menjadi "Menunggu Pembayaran" — bukan lagi
+        // "Belum Ditagihkan" yang diisi manual.
+        $this->assertStringContainsString('Menunggu Pembayaran', $html);
+    }
+
+    public function test_piutang_laporan_mengurangi_retensi_yang_ditahan(): void
+    {
+        $this->actingAs($this->admin);
+
+        $html = Livewire::test(Laporan::class)->html();
+
+        // SPK di test ini tanpa retensi -> piutang = 200jt - 120jt = 80jt
+        $this->assertStringContainsString('80.000.000', $html);
     }
 
     public function test_label_kategori_enum_tampil_bukan_nilai_mentah(): void

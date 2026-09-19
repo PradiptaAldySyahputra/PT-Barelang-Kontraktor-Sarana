@@ -41,26 +41,81 @@ Sistem ini **HANYA** untuk pengelolaan **SPK, uang masuk, uang keluar**, dan kon
 1. **SPK adalah entitas inti.** Tidak ada entitas PROYEK.
 2. **Retensi SPK = 5%** dari nilai SPK (untuk SPK subkon/vendor).
    - `nilai_retensi = nilai_spk × persen_retensi / 100`
-3. **Tidak ada approval.** Admin langsung mencatat transaksi; Direktur hanya memantau.
-4. **Sumber uang masuk disimpulkan dari `spk_id`:**
+   - Dihitung **otomatis** oleh hook `saving` di model `Spk` — tidak boleh diisi manual.
+
+3. **⭐ RETENSI ADALAH DANA DITAHAN — BUKAN PIUTANG LANCAR.**
+   Retensi adalah bagian nilai SPK yang **ditahan pemberi kerja** sampai masa
+   pemeliharaan selesai. Karena itu retensi **belum boleh ditagih**.
+
+   ```
+   nilai_tagih  = nilai_spk − retensi_ditahan      (yang boleh ditagih sekarang)
+   piutang      = nilai_tagih − sudah_diterima      (piutang LANCAR)
+   sisa_hak_penuh = nilai_spk − sudah_diterima      (termasuk retensi)
+   ```
+
+   **Kapan retensi dilepas?** Saat `status_tagihan = Dibayar` (pekerjaan selesai
+   & masa pemeliharaan berjalan/selesai). Setelah itu nilai penuh boleh ditagih.
+
+   > ⚠️ **Konsekuensi penting:** laporan piutang & laba-rugi **wajib** memakai
+   > piutang lancar (retensi dikurangi). Kalau tidak, piutang akan **lebih besar
+   > dari kenyataan** sebesar nilai retensi.
+   >
+   > Contoh nyata: SPK Rp 100 jt, retensi 5% (Rp 5 jt), sudah diterima Rp 45 jt.
+   > - ❌ Salah: piutang = 100 − 45 = **Rp 55 jt**
+   > - ✅ Benar: piutang = (100 − 5) − 45 = **Rp 50 jt**
+   >
+   > Implementasi: `Spk::retensiDitahan()`, `Spk::nilaiTagih()`,
+   > `Spk::piutangDari()`. Diuji di `tests/Feature/RetensiTest.php`.
+
+4. **Tidak ada approval.** Admin langsung mencatat transaksi; Direktur hanya memantau.
+5. **Sumber uang masuk disimpulkan dari `spk_id`:**
    - `spk_id` **terisi** → uang masuk dari SPK
    - `spk_id` **NULL** → uang masuk dari luar SPK
-5. **Uang keluar boleh memiliki `spk_id = NULL`** untuk pengeluaran umum.
+6. **Uang keluar boleh memiliki `spk_id = NULL`** untuk pengeluaran umum.
    Untuk biaya langsung pekerjaan, `spk_id` diisi agar laba-rugi per SPK dapat dihitung.
-6. **Jumlah transaksi harus > 0.** Arah transaksi ditentukan oleh **tabel**
+7. **Jumlah transaksi harus > 0.** Arah transaksi ditentukan oleh **tabel**
    (`uang_masuk`/`uang_keluar`), **bukan** tanda minus.
-7. **Nominal rupiah disimpan `DECIMAL(18,2)` — DILARANG `FLOAT`/`DOUBLE`.**
-8. **Transaksi tidak boleh dihapus permanen** — gunakan soft delete dengan jejak audit.
-9. **Saldo & rekap tidak disimpan sebagai kolom statis** — dihitung dari akumulasi transaksi.
-10. **⭐ WAJIB: `status_spk`, `status_tagihan`, `kategori`, `jenis_sumber`, `peran`, dan
+8. **Nominal rupiah disimpan `DECIMAL(18,2)` — DILARANG `FLOAT`/`DOUBLE`.**
+9. **Transaksi tidak boleh dihapus permanen** — gunakan soft delete dengan jejak audit.
+10. **Saldo & rekap tidak disimpan sebagai kolom statis** — dihitung dari akumulasi transaksi.
+11. **⭐ WAJIB: `status_spk`, `status_tagihan`, `kategori`, `jenis_sumber`, `peran`, dan
     `mitra.kategori` divalidasi memakai PHP Enum + dropdown.**
     Karena schema hanya 5 tabel (`db.txt`), kolom-kolom ini berupa teks. Tanpa validasi Enum,
     laporan akan **terpecah** (mis. "Material" vs "Material Bangunan" vs "Material2" jadi
     3 baris terpisah). Risiko ini sudah dibuktikan dengan uji di MariaDB — lihat `Schema.md` §8.
-11. **Setiap transaksi sebaiknya memiliki bukti** — tidak wajib, tapi UI harus mendorong user.
+12. **Setiap transaksi sebaiknya memiliki bukti** — tidak wajib, tapi UI harus mendorong user.
     **Jumlah file bebas** (disimpan sebagai JSON array di kolom `bukti`).
-12. **Kolom keterangan tersedia pada `uang_masuk` dan `uang_keluar`.**
+13. **Kolom keterangan tersedia pada `uang_masuk` dan `uang_keluar`.**
     > 📌 Pada tabel `spk`, kolom `keterangan` **dihapus** sesuai keputusan user.
+
+14. **⭐ `status_tagihan` DISINKRONKAN OTOMATIS dari pembayaran nyata.**
+    Diatur oleh `SinkronStatusTagihanObserver` (dipasang di model `UangMasuk`).
+
+    | Kondisi | Status yang di-set |
+    |---|---|
+    | Piutang lancar = 0 | `Dibayar` |
+    | Ada piutang, sudah ada pembayaran | `MenungguPembayaran` |
+    | Belum ada pembayaran & status sebelumnya di-set sistem | `BelumDitagihkan` |
+    | Belum ada pembayaran & status **manual** (`SudahDitagihkan`/`RevisiDokumen`) | **tidak disentuh** |
+
+    > ⚠️ Tanpa sinkronisasi ini, status bisa tertulis "Dibayar" padahal uangnya
+    > belum masuk — laporan jadi tidak benar.
+    > Diuji di `tests/Feature/SinkronStatusTagihanTest.php`.
+
+15. **⭐ UANG MASUK TIDAK BOLEH MELEBIHI PIUTANG LANCAR SPK.**
+    Untuk SPK yang dipilih, `jumlah` dibatasi `nilaiTagih() − sudah_diterima`.
+    Kalau melebihi, form menolak dengan pesan yang menjelaskan batasnya.
+    > Uang masuk **luar SPK** (mode manual, `spk_id` NULL) **tidak dibatasi**.
+    > Diuji di `tests/Feature/BatasUangMasukTest.php`.
+
+16. **⭐ UMUR PIUTANG (AGING) dihitung dari `tanggal_spk`.**
+    Kelompok: `0-30` · `31-60` · `61-90` · `>90` · `tanpa-tanggal`.
+    Dipakai di laporan & filter. Implementasi: `Spk::kategoriUmur()`.
+
+17. **⭐ TENGGAT SPK (`tanggal_akhir`) DIPAKAI untuk peringatan.**
+    - Lewat tenggat → badge merah
+    - ≤ 14 hari lagi → badge kuning
+    Implementasi: `Spk::labelTenggat()`, scope `lewatTenggat()`, `mendekatiTenggat()`.
 
 ## 3. Status Kanonis
 

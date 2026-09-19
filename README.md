@@ -16,13 +16,39 @@ serta memantau laba-rugi per SPK.
 | **Database (5 tabel)** | ✅ `pengguna`, `mitra`, `spk`, `uang_masuk`, `uang_keluar` |
 | **PHP Enum** | ✅ `Peran`, `StatusSpk`, `StatusTagihan`, `KategoriPengeluaran`, `KategoriMitra` |
 | **Model Eloquent + relasi** | ✅ 5 model, relasi lengkap, soft delete |
-| **Kolom turunan** | ✅ Laba-rugi, piutang, total penerimaan/biaya per SPK |
+| **Kolom turunan** | ✅ Laba-rugi, piutang lancar, retensi, aging, tenggat |
 | **Auto-hitung retensi 5%** | ✅ Otomatis saat SPK disimpan |
-| **Seeder data contoh** | ✅ Akun, mitra, SPK, transaksi |
-| **Unit & Feature test** | ✅ 34 test, 86 assertion — semua lulus |
-| Autentikasi & middleware role | ⏳ Belum |
-| CRUD (form & tabel) | ⏳ Belum |
-| Dashboard & laporan | ⏳ Belum |
+| **Autentikasi & role** | ✅ Filament login + pembatasan Admin/Direktur |
+| **5 modul CRUD** | ✅ SPK, Mitra, Uang Masuk, Uang Keluar, Pengguna |
+| **Form uang masuk 2 mode** | ✅ Berdasarkan SPK / Manual (luar SPK) |
+| **Upload bukti** | ✅ Jumlah file bebas (JSON array) |
+| **Dashboard** | ✅ Kartu ringkasan + grafik arus kas + SPK per status |
+| **Laporan + ekspor CSV** | ✅ 7 bagian, 7 jenis ekspor |
+| **⭐ Retensi = dana ditahan** | ✅ Dikurangi dari piutang, ditampilkan terpisah |
+| **⭐ Umur piutang (aging)** | ✅ 0-30 · 31-60 · 61-90 · >90 hari |
+| **⭐ Peringatan tenggat** | ✅ Lewat tenggat & mendekati tenggat (14 hari) |
+| **⭐ Batas uang masuk** | ✅ Tidak boleh melebihi piutang SPK |
+| **⭐ Status tagihan otomatis** | ✅ Disinkronkan dari pembayaran nyata |
+| **⭐ Backup otomatis** | ✅ `php artisan bks:backup` + jadwal harian 23:00 |
+| **Tema UI** | ✅ Clean Minimalist Enterprise (Vercel/Linear) |
+| **Test** | ✅ **213 test, 600 assertion** — semua lulus |
+| Impor data lama dari Excel | ⏳ Belum |
+| Setup deployment 2 PC | ⏳ Belum |
+
+---
+
+## 1b. Perintah Penting
+
+```bash
+php artisan bks:backup          # backup database (.sql.gz)
+php artisan bks:backup --hari=7 # simpan 7 hari saja
+php artisan schedule:list       # lihat jadwal (backup harian 23:00)
+php artisan schedule:run        # jalankan tugas terjadwal (untuk cron/Task Scheduler)
+```
+
+> ⚠️ **Backup harian TIDAK jalan sendiri** kecuali Anda mendaftarkan
+> `php artisan schedule:run` di cron (Linux) atau Task Scheduler (Windows).
+> Lihat `docs/Architecture.md` §7.7.
 
 ---
 
@@ -236,17 +262,13 @@ Langkah penting:
 
 ## 10. Yang Belum Dikerjakan
 
-| # | Item |
-|---|---|
-| 1 | Autentikasi (login/logout) + middleware role Admin/Direktur |
-| 2 | CRUD SPK (form + tabel + filter) |
-| 3 | Form uang masuk **2 mode** (berdasarkan SPK / manual) |
-| 4 | Form uang keluar + upload bukti (jumlah file bebas) |
-| 5 | CRUD mitra |
-| 6 | Dashboard (kartu ringkasan + grafik) |
-| 7 | Laporan (SPK, cashflow, piutang, laba-rugi per SPK) |
-| 8 | Export PDF & Excel |
-| 9 | Blade layout + Tailwind |
+| # | Item | Catatan |
+|---|---|---|
+| 1 | **Impor data lama 2024–2026** dari Excel | `docs/file-Excel-perusahaan.xlsx` (11 sheet) |
+| 2 | **Setup deployment 2 PC** | Static IP, auto-start, cron backup, UPS |
+| 3 | **Salin backup ke media eksternal** | Manual — backup di PC yang sama tidak melindungi dari kerusakan disk |
+| 4 | Dokumen SPK (scan SPK, BAST, kuitansi) | Masih ditunda (lihat `Schema.md` §9) |
+| 5 | Pajak (PPN/PPh) | Belum diputuskan |
 
 ### Keputusan yang Masih Menggantung
 

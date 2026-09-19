@@ -34,29 +34,45 @@
 
 ## 3. Struktur Navigasi Sidebar
 
-```
-📊 Dashboard
-    └── Ringkasan SPK, cashflow, saldo, laba-rugi
+> ⚠️ **SUDAH DIIMPLEMENTASI di Filament** (`/admin`). Sidebar bisa
+> **ditutup/dibuka** (`sidebarFullyCollapsibleOnDesktop`) dan **grup menu bisa
+> dilipat** (`collapsibleNavigationGroups`). Tema: **Clean Minimalist Enterprise**
+> (monokrom, border tipis, font sistem).
 
-🗂️ Data Mitra
+```
+Dashboard
+    └── Kartu ringkasan · Grafik arus kas · SPK per status
+        · Pengeluaran per kategori · Tabel SPK berjalan
+
+Data Mitra
     └── Mitra               (PLN, vendor, subkon, pelanggan)
 
-💼 Transaksi
+Transaksi
     ├── SPK                 ⭐ entitas inti
     ├── Uang Masuk          (2 mode: dari SPK / manual)
     └── Uang Keluar
 
-📈 Laporan
-    ├── Laporan SPK
-    ├── Laporan Uang Masuk
-    ├── Laporan Uang Keluar
-    ├── Laporan Cashflow
-    ├── Laporan SPK Belum Dibayar
-    └── Laporan Laba-Rugi per SPK    ⭐
+Laporan
+    └── Laporan Keuangan    (satu halaman, 7 bagian + 7 ekspor CSV)
 
-⚙️ Pengaturan
+Pengaturan
     └── Pengguna
 ```
+
+**Isi halaman Laporan** (satu halaman, bukan banyak menu):
+
+| Bagian | Isi |
+|---|---|
+| Ringkasan | Uang masuk · keluar · saldo · **piutang lancar** · retensi ditahan |
+| Peringatan Tenggat | SPK lewat tenggat & mendekati tenggat |
+| **Umur Piutang (Aging)** | 0-30 · 31-60 · 61-90 · >90 · tanpa tanggal |
+| Arus Kas per Bulan | Masuk, keluar, selisih |
+| Laba-Rugi per SPK | Penerimaan − biaya, + piutang lancar & retensi |
+| Pengeluaran per Kategori | Total + bar proporsi |
+| Piutang SPK | Umur hari, retensi, diterima, piutang lancar |
+
+**Ekspor CSV (7 jenis):** Daftar SPK · Laba-Rugi · Piutang · **Aging** ·
+**Tenggat** · Arus Kas · Kategori.
 
 > 📌 **Tidak ada menu Master Data** untuk Status SPK / Status Tagihan / Kategori Pengeluaran.
 > Karena schema hanya 5 tabel, nilainya dikelola lewat **PHP Enum** dan muncul sebagai
@@ -204,12 +220,21 @@ Sesuai revisi `db.txt`, form memiliki **pilihan mode** di bagian atas:
 
 ## 8. Desain Laporan
 
-- Semua laporan memiliki **filter periode** (tanggal awal–akhir) dan filter SPK/kategori.
-- **Tombol export PDF dan Excel** di setiap halaman laporan.
-- **Laporan SPK Belum Dibayar** — selisih nilai SPK vs pembayaran + umur piutang.
-- **Laporan Cashflow** — perbandingan uang masuk vs keluar per periode.
-- **Laporan Laba-Rugi per SPK** — Penerimaan − Pengeluaran = Estimasi Laba/Rugi.
+> ✅ **SUDAH DIIMPLEMENTASI** di `/admin/laporan` (satu halaman, 7 bagian).
+
+- Semua laporan memiliki **filter periode**: Bulan Ini · 3 Bulan · 12 Bulan · Semua.
+- **Ekspor CSV** (7 jenis) lewat dropdown — bukan tombol PDF/Excel terpisah.
+  CSV dipilih karena bisa langsung dibuka di **Excel**, aplikasi yang selama ini
+  dipakai perusahaan. Pemisah `;` + BOM UTF-8 agar Excel membaca karakter benar.
+- **Laporan Piutang** — memakai **piutang LANCAR** (retensi ditahan dikurangi),
+  dilengkapi **umur piutang (aging)**: 0-30 · 31-60 · 61-90 · >90 hari.
+- **Peringatan Tenggat** — SPK lewat tenggat (merah) & mendekati tenggat (kuning).
+- **Laporan Cashflow** — perbandingan uang masuk vs keluar per bulan.
+- **Laporan Laba-Rugi per SPK** — Penerimaan − Pengeluaran = Estimasi Laba/Rugi,
+  plus kolom **Piutang Lancar** dan **Retensi Ditahan**.
 - Format tampilan rupiah **tidak boleh** mengubah nilai asli di database.
+- **Responsif**: kartu 1→2→4 kolom; tabel punya **versi kartu** untuk layar kecil.
+- Angka memakai **tabular-nums** agar mudah dibandingkan; selisih/laba bertanda **+ / −**.
 
 ## 9. Desain Upload Bukti
 

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Observers\SinkronStatusTagihanObserver;
 use Database\Factories\UangMasukFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $keterangan
  * @property array<int, string>|null $bukti
  */
+#[ObservedBy(SinkronStatusTagihanObserver::class)]
 class UangMasuk extends Model
 {
     /** @use HasFactory<UangMasukFactory> */

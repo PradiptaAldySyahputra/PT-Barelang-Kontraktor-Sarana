@@ -134,7 +134,70 @@ class UangMasukForm
                             ->prefix('Rp')
                             ->mask(RawJs::make('$money($input, \',\', \'.\')'))
                             ->stripCharacters('.')
-                            ->dehydrateStateUsing(fn ($state): float => (float) $state),
+                            ->live(onBlur: true)
+                            ->dehydrateStateUsing(fn ($state): float => (float) $state)
+                            // -------------------------------------------------
+                            // CEGAH uang masuk melebihi piutang SPK.
+                            //
+                            // Tanpa ini, untuk SPK Rp 100 juta bisa diinput
+                            // Rp 500 juta dan angka laba-rugi langsung rusak.
+                            // -------------------------------------------------
+                            ->rules([
+                                fn (Get $get, ?object $record): \Closure => function (string $attribute, $value, \Closure $fail) use ($get, $record): void {
+                                    $spkId = $get('spk_id');
+
+                                    if (blank($spkId)) {
+                                        return; // mode manual (luar SPK) — tidak dibatasi
+                                    }
+
+                                    $spk = Spk::find($spkId);
+
+                                    if (! $spk) {
+                                        return;
+                                    }
+
+                                    // Saat EDIT, kecualikan nominal record ini sendiri.
+                                    $sudahDiterima = $spk->uangMasuk()
+                                        ->when($record?->id, fn ($q) => $q->whereKeyNot($record->id))
+                                        ->sum('jumlah');
+
+                                    $batas = $spk->nilaiTagih() - (float) $sudahDiterima;
+
+                                    if ((float) $value > $batas + 0.01) {
+                                        $fail(sprintf(
+                                            'Melebihi piutang SPK. Nilai SPK Rp %s, retensi ditahan Rp %s, sudah diterima Rp %s — maksimal Rp %s.',
+                                            number_format((float) $spk->nilai_spk, 0, ',', '.'),
+                                            number_format($spk->retensiDitahan(), 0, ',', '.'),
+                                            number_format((float) $sudahDiterima, 0, ',', '.'),
+                                            number_format(max(0, $batas), 0, ',', '.'),
+                                        ));
+                                    }
+                                },
+                            ])
+                            ->helperText(function (Get $get, ?object $record): ?string {
+                                $spkId = $get('spk_id');
+
+                                if (blank($spkId)) {
+                                    return null;
+                                }
+
+                                $spk = Spk::find($spkId);
+
+                                if (! $spk) {
+                                    return null;
+                                }
+
+                                $sudahDiterima = $spk->uangMasuk()
+                                    ->when($record?->id, fn ($q) => $q->whereKeyNot($record->id))
+                                    ->sum('jumlah');
+
+                                $sisa = $spk->piutangDari((float) $sudahDiterima);
+
+                                return 'Piutang lancar SPK ini: Rp '.number_format($sisa, 0, ',', '.').
+                                    ($spk->retensiDitahan() > 0
+                                        ? ' (retensi ditahan Rp '.number_format($spk->retensiDitahan(), 0, ',', '.').' belum boleh ditagih)'
+                                        : '');
+                            }),
 
                         Select::make('mitra_id')
                             ->label('Mitra / Pengirim')

@@ -235,11 +235,26 @@ Bukti jadi kolom `bukti` bertipe **JSON** di `uang_masuk` & `uang_keluar`.
 | **Total Nilai SPK** | `SUM(spk.nilai_spk)` |
 | **Jumlah SPK per Status** | `COUNT(*) GROUP BY status_spk` |
 | **Retensi SPK** | `nilai_spk × persen_retensi / 100` |
-| **Nilai Bersih SPK** | `nilai_spk − nilai_retensi` |
+| **⭐ Retensi Ditahan** | `nilai_retensi`, **kecuali** `status_tagihan = Dibayar` → `0` |
+| **⭐ Nilai Tagih** | `nilai_spk − retensi_ditahan` |
+| **⭐ Piutang Lancar** | `nilai_tagih − penerimaan` (**retensi TIDAK dihitung**) |
+| **Sisa Hak Penuh** | `nilai_spk − penerimaan` (termasuk retensi) |
 | **Penerimaan per SPK** | `SUM(uang_masuk.jumlah) WHERE spk_id = X` |
 | **Biaya per SPK** | `SUM(uang_keluar.jumlah) WHERE spk_id = X` |
-| **Piutang per SPK** | `nilai_spk − penerimaan SPK tersebut` |
 | **Estimasi Laba/Rugi per SPK** | Penerimaan per SPK − Biaya per SPK |
+| **⭐ Umur Piutang** | `DATEDIFF(hari ini, tanggal_spk)` → kelompok `0-30`/`31-60`/`61-90`/`>90` |
+| **⭐ Tenggat** | `DATEDIFF(tanggal_akhir, hari ini)` → lewat / ≤14 hari |
+
+> ⚠️ **PERHATIAN — retensi BUKAN piutang lancar.**
+> Retensi adalah dana yang **ditahan pemberi kerja** sampai masa pemeliharaan
+> selesai, jadi belum boleh ditagih.
+>
+> Contoh: SPK Rp 100 jt, retensi 5% (Rp 5 jt), sudah diterima Rp 45 jt.
+> - ❌ Salah: piutang = `100 − 45` = **Rp 55 jt**
+> - ✅ Benar: piutang = `(100 − 5) − 45` = **Rp 50 jt**
+>
+> Rincian lengkap di `Rules.md` §2 butir 3. Implementasi: `Spk::retensiDitahan()`,
+> `Spk::nilaiTagih()`, `Spk::piutangDari()`. Diuji di `tests/Feature/RetensiTest.php`.
 
 ## 7. ⚠️ Risiko Desain 5 Tabel & Mitigasinya
 

@@ -44,6 +44,8 @@
                     'spk' => 'Daftar SPK',
                     'laba_rugi' => 'Laba-Rugi per SPK',
                     'piutang' => 'Piutang SPK',
+                    'aging' => 'Umur Piutang (Aging)',
+                    'tenggat' => 'Tenggat SPK',
                     'cashflow' => 'Arus Kas per Bulan',
                     'kategori' => 'Pengeluaran per Kategori',
                 ] as $jenis => $label)
@@ -146,7 +148,7 @@
         <div class="rounded-xl bg-warning-50 p-5 shadow-sm ring-1 ring-warning-200 dark:bg-warning-500/10 dark:ring-warning-500/30">
             <div class="flex items-center justify-between gap-3">
                 <span class="text-xs font-semibold uppercase tracking-wide text-warning-700 dark:text-warning-400">
-                    Total Piutang
+                    Piutang Lancar
                 </span>
                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning-100 dark:bg-warning-500/20">
                     <x-filament::icon icon="heroicon-m-clock" class="h-4 w-4 text-warning-700 dark:text-warning-400" />
@@ -156,14 +158,127 @@
                 {{ number_format($totalPiutang, 0, ',', '.') }}
             </div>
             <div class="mt-1 text-xs text-warning-700 dark:text-warning-400">Rupiah</div>
-            <div class="mt-3 border-t border-warning-200/60 pt-3 text-xs dark:border-warning-500/20">
+            <div class="mt-3 space-y-1 border-t border-warning-200/60 pt-3 text-xs dark:border-warning-500/20">
                 <div class="flex items-center justify-between">
                     <span class="text-warning-700 dark:text-warning-400">SPK belum lunas</span>
                     <span class="font-semibold text-warning-900 dark:text-warning-300">{{ $piutang->count() }}</span>
                 </div>
+                @if ($totalRetensiDitahan > 0)
+                    <div class="flex items-center justify-between">
+                        <span class="text-warning-700 dark:text-warning-400">Retensi ditahan</span>
+                        <span class="font-semibold text-warning-900 dark:text-warning-300">
+                            {{ number_format($totalRetensiDitahan, 0, ',', '.') }}
+                        </span>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
+
+    {{-- =========================================================
+         PERINGATAN TENGGAT SPK
+         ========================================================= --}}
+    @if ($spkLewatTenggat->isNotEmpty() || $spkMendekatiTenggat->isNotEmpty())
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            @if ($spkLewatTenggat->isNotEmpty())
+                <div class="rounded-xl border border-danger-200 bg-danger-50 p-4 dark:border-danger-500/30 dark:bg-danger-500/10">
+                    <div class="flex items-start gap-3">
+                        <x-filament::icon icon="heroicon-m-exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-danger-600 dark:text-danger-400" />
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-sm font-semibold text-danger-900 dark:text-danger-300">
+                                {{ $spkLewatTenggat->count() }} SPK Lewat Tenggat
+                            </h3>
+                            <ul class="mt-2 space-y-1 text-xs text-danger-800 dark:text-danger-400">
+                                @foreach ($spkLewatTenggat->take(5) as $s)
+                                    <li class="flex items-center justify-between gap-2">
+                                        <span class="truncate font-mono">{{ $s->nomor_spk }}</span>
+                                        <span class="shrink-0 font-medium">{{ $s->labelTenggat() }}</span>
+                                    </li>
+                                @endforeach
+                                @if ($spkLewatTenggat->count() > 5)
+                                    <li class="pt-1 font-medium">+{{ $spkLewatTenggat->count() - 5 }} lainnya…</li>
+                                @endif
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if ($spkMendekatiTenggat->isNotEmpty())
+                <div class="rounded-xl border border-warning-200 bg-warning-50 p-4 dark:border-warning-500/30 dark:bg-warning-500/10">
+                    <div class="flex items-start gap-3">
+                        <x-filament::icon icon="heroicon-m-clock" class="mt-0.5 h-5 w-5 shrink-0 text-warning-600 dark:text-warning-400" />
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-sm font-semibold text-warning-900 dark:text-warning-300">
+                                {{ $spkMendekatiTenggat->count() }} SPK Mendekati Tenggat
+                            </h3>
+                            <ul class="mt-2 space-y-1 text-xs text-warning-800 dark:text-warning-400">
+                                @foreach ($spkMendekatiTenggat->take(5) as $s)
+                                    <li class="flex items-center justify-between gap-2">
+                                        <span class="truncate font-mono">{{ $s->nomor_spk }}</span>
+                                        <span class="shrink-0 font-medium">{{ $s->labelTenggat() }}</span>
+                                    </li>
+                                @endforeach
+                                @if ($spkMendekatiTenggat->count() > 5)
+                                    <li class="pt-1 font-medium">+{{ $spkMendekatiTenggat->count() - 5 }} lainnya…</li>
+                                @endif
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+    @endif
+
+    {{-- =========================================================
+         UMUR PIUTANG (AGING)
+         ========================================================= --}}
+    <x-filament::section
+        icon="heroicon-o-calendar-days"
+        collapsible
+    >
+        <x-slot name="heading">Umur Piutang (Aging)</x-slot>
+        <x-slot name="description">Berapa lama piutang sudah tertunggak, dihitung dari tanggal SPK</x-slot>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            @foreach ($aging as $a)
+                <div @class([
+                    'rounded-lg border p-3',
+                    'border-danger-300 bg-danger-50 dark:border-danger-500/40 dark:bg-danger-500/10' => $a['bahaya'] && $a['total'] > 0,
+                    'border-warning-300 bg-warning-50 dark:border-warning-500/40 dark:bg-warning-500/10' => $a['peringatan'] && $a['total'] > 0,
+                    'border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5' => ! ($a['total'] > 0) || (! $a['bahaya'] && ! $a['peringatan']),
+                ])>
+                    <div @class([
+                        'text-xs font-semibold uppercase tracking-wide',
+                        'text-danger-700 dark:text-danger-400' => $a['bahaya'] && $a['total'] > 0,
+                        'text-warning-700 dark:text-warning-400' => $a['peringatan'] && $a['total'] > 0,
+                        'text-gray-500 dark:text-gray-400' => ! ($a['total'] > 0) || (! $a['bahaya'] && ! $a['peringatan']),
+                    ])>
+                        {{ $a['label'] }}
+                    </div>
+                    <div @class([
+                        'mt-2 text-lg font-bold tabular-nums tracking-tight',
+                        'text-danger-900 dark:text-danger-300' => $a['bahaya'] && $a['total'] > 0,
+                        'text-warning-900 dark:text-warning-300' => $a['peringatan'] && $a['total'] > 0,
+                        'text-gray-900 dark:text-white' => ! ($a['total'] > 0) || (! $a['bahaya'] && ! $a['peringatan']),
+                    ])>
+                        {{ number_format($a['total'], 0, ',', '.') }}
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ $a['jumlah_spk'] }} SPK
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        @if ($totalRetensiDitahan > 0)
+            <p class="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-white/5 dark:text-gray-400">
+                <x-filament::icon icon="heroicon-m-information-circle" class="inline h-3.5 w-3.5" />
+                Total <strong>Rp {{ number_format($totalRetensiDitahan, 0, ',', '.') }}</strong> retensi sedang ditahan pemberi kerja.
+                Jumlah ini <strong>tidak</strong> dihitung sebagai piutang lancar karena belum boleh ditagih sampai masa pemeliharaan selesai.
+            </p>
+        @endif
+    </x-filament::section>
 
     {{-- =========================================================
          ARUS KAS PER BULAN
@@ -436,8 +551,9 @@
                             <th class="py-3 pr-3 font-semibold">SPK</th>
                             <th class="py-3 pr-3 font-semibold">Status Tagihan</th>
                             <th class="py-3 pr-3 text-right font-semibold">Nilai SPK</th>
+                            <th class="py-3 pr-3 text-right font-semibold">Retensi</th>
                             <th class="py-3 pr-3 text-right font-semibold">Diterima</th>
-                            <th class="py-3 text-right font-semibold">Sisa</th>
+                            <th class="py-3 text-right font-semibold">Piutang</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-white/5">
@@ -449,9 +565,26 @@
                                 </td>
                                 <td class="py-3 pr-3">
                                     <x-filament::badge color="gray" size="sm">{{ $r['status_tagihan'] }}</x-filament::badge>
+                                    @if (($r['umur_hari'] ?? null) !== null)
+                                        <div @class([
+                                            'mt-1 text-xs font-medium',
+                                            'text-danger-600 dark:text-danger-400' => $r['umur_hari'] > 90,
+                                            'text-warning-600 dark:text-warning-400' => $r['umur_hari'] > 60 && $r['umur_hari'] <= 90,
+                                            'text-gray-500 dark:text-gray-400' => $r['umur_hari'] <= 60,
+                                        ])>
+                                            {{ $r['umur_hari'] }} hari
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="py-3 pr-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
                                     {{ number_format($r['nilai_spk'], 0, ',', '.') }}
+                                </td>
+                                <td class="py-3 pr-3 text-right tabular-nums text-gray-500 dark:text-gray-400">
+                                    @if ($r['retensi_ditahan'] > 0)
+                                        <span class="text-gray-700 dark:text-gray-300">{{ number_format($r['retensi_ditahan'], 0, ',', '.') }}</span>
+                                    @else
+                                        —
+                                    @endif
                                 </td>
                                 <td class="py-3 pr-3 text-right tabular-nums text-success-600 dark:text-success-400">
                                     {{ number_format($r['diterima'], 0, ',', '.') }}
@@ -459,11 +592,11 @@
                                 <td class="py-3 text-right font-semibold tabular-nums text-warning-700 dark:text-warning-400">
                                     {{ number_format($r['sisa'], 0, ',', '.') }}
                                 </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                                </tr>
+                                @endforeach
+                                </tbody>
+                                </table>
+                                </div>
 
             {{-- Kartu untuk layar kecil --}}
             <div class="space-y-3 sm:hidden">
