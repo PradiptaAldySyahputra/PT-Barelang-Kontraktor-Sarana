@@ -62,13 +62,7 @@ class TagihanSpkResource extends MonitoringSpkResource
                     ->label('Status Tagihan')
                     ->badge()
                     ->formatStateUsing(fn (?StatusTagihan $state): string => $state?->label() ?? 'Belum Ditagihkan')
-                    ->color(fn (?StatusTagihan $state): string => match ($state) {
-                        StatusTagihan::Dibayar => 'success',
-                        StatusTagihan::MenungguPembayaran => 'warning',
-                        StatusTagihan::RevisiDokumen => 'danger',
-                        StatusTagihan::SudahDitagihkan => 'info',
-                        default => 'gray',
-                    }),
+                    ->color(fn (?StatusTagihan $state): string => $state?->warnaBadge() ?? 'gray'),
 
                 TextColumn::make('nomor_spk')
                     ->label('Nomor SPK')

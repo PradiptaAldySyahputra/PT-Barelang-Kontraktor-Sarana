@@ -155,4 +155,55 @@ class SinkronStatusTagihanTest extends TestCase
         UangMasuk::factory()->create(['spk_id' => $spk->id, 'jumlah' => 70_000_000, 'mitra_id' => null]);
         $this->assertSame(StatusTagihan::Dibayar, $spk->fresh()->status_tagihan);
     }
+
+    // =========================================================
+    // BUG: SPK NILAI 0 TIDAK BOLEH OTOMATIS "DIBAYAR"
+    // =========================================================
+
+    /**
+     * ⚠️ BUG YANG PERNAH TERJADI:
+     * SPK dengan nilai_spk = 0 punya piutang 0 − 0 = 0, sehingga dianggap
+     * LUNAS dan langsung berstatus "Dibayar" begitu ada transaksi apa pun.
+     * Itu salah — nilai 0 berarti data belum diisi, bukan sudah dibayar.
+     */
+    public function test_spk_nilai_nol_tidak_otomatis_dibayar(): void
+    {
+        $spk = Spk::factory()->pln()->create([
+            'nomor_spk' => 'NOL-001',
+            'nilai_spk' => 0,
+            'status_tagihan' => StatusTagihan::BelumDitagihkan,
+            'dibuat_oleh' => $this->admin->id,
+        ]);
+
+        UangMasuk::factory()->create([
+            'spk_id' => $spk->id,
+            'tanggal' => now(),
+            'jumlah' => 0.01,
+        ]);
+
+        $this->assertNotSame(
+            StatusTagihan::Dibayar,
+            $spk->fresh()->status_tagihan,
+            'SPK nilai 0 tidak boleh dianggap lunas'
+        );
+    }
+
+    public function test_spk_nilai_nol_status_tagihan_tidak_disentuh(): void
+    {
+        $spk = Spk::factory()->pln()->create([
+            'nomor_spk' => 'NOL-002',
+            'nilai_spk' => 0,
+            'status_tagihan' => StatusTagihan::RevisiDokumen,
+            'dibuat_oleh' => $this->admin->id,
+        ]);
+
+        UangMasuk::factory()->create([
+            'spk_id' => $spk->id,
+            'tanggal' => now(),
+            'jumlah' => 1_000_000,
+        ]);
+
+        // Status manual Admin tidak boleh ditimpa sistem untuk SPK nilai 0.
+        $this->assertSame(StatusTagihan::RevisiDokumen, $spk->fresh()->status_tagihan);
+    }
 }

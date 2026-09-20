@@ -59,7 +59,7 @@ class TagihanSelesaiSpkResource extends MonitoringSpkResource
                     ->label('Status')
                     ->badge()
                     ->formatStateUsing(fn (?StatusTagihan $state): string => $state?->label() ?? 'Dibayar')
-                    ->color('success'),
+                    ->color(fn (?StatusTagihan $state): string => $state?->warnaBadge() ?? 'success'),
 
                 TextColumn::make('nomor_spk')
                     ->label('Nomor SPK')

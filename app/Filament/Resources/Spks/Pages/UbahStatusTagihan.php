@@ -9,7 +9,7 @@ use App\Filament\Resources\MonitoringSpk\StatusSpkResource;
 use App\Filament\Resources\MonitoringSpk\TagihanSelesaiSpkResource;
 use App\Filament\Resources\MonitoringSpk\TagihanSpkResource;
 use App\Filament\Resources\Spks\SpkResource;
-use App\Models\Spk;
+use App\Support\Format;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -62,7 +62,7 @@ class UbahStatusTagihan extends EditRecord
 
                         Placeholder::make('info_nilai')
                             ->label('Nilai SPK')
-                            ->content('Rp '.number_format((float) $r->nilai_spk, 0, ',', '.')),
+                            ->content(Format::rupiah((float) $r->nilai_spk)),
 
                         Placeholder::make('info_status_spk')
                             ->label('Status Pekerjaan (sekarang)')
@@ -70,7 +70,7 @@ class UbahStatusTagihan extends EditRecord
 
                         Placeholder::make('info_diterima')
                             ->label('Sudah Diterima')
-                            ->content('Rp '.number_format($r->totalPenerimaan(), 0, ',', '.')),
+                            ->content(Format::rupiah($r->totalPenerimaan())),
                     ])
                     ->columns(2),
 

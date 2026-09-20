@@ -101,28 +101,13 @@ class SpksTable
                     ->label('Status SPK')
                     ->badge()
                     ->formatStateUsing(fn (?StatusSpk $state): string => $state?->label() ?? '—')
-                    ->color(fn (?StatusSpk $state): string => match ($state) {
-                        StatusSpk::Draft => 'gray',
-                        StatusSpk::Terbit => 'info',
-                        StatusSpk::Berjalan => 'warning',
-                        StatusSpk::Selesai => 'success',
-                        StatusSpk::SudahDitagihkan => 'primary',
-                        StatusSpk::Dibatalkan => 'danger',
-                        default => 'gray',
-                    }),
+                    ->color(fn (?StatusSpk $state): string => $state?->warnaBadge() ?? 'gray'),
 
                 TextColumn::make('status_tagihan')
                     ->label('Status Tagihan')
                     ->badge()
                     ->formatStateUsing(fn (?StatusTagihan $state): string => $state?->label() ?? '—')
-                    ->color(fn (?StatusTagihan $state): string => match ($state) {
-                        StatusTagihan::BelumDitagihkan => 'gray',
-                        StatusTagihan::SudahDitagihkan => 'info',
-                        StatusTagihan::RevisiDokumen => 'danger',
-                        StatusTagihan::MenungguPembayaran => 'warning',
-                        StatusTagihan::Dibayar => 'success',
-                        default => 'gray',
-                    })
+                    ->color(fn (?StatusTagihan $state): string => $state?->warnaBadge() ?? 'gray')
                     ->toggleable(),
             ])
             ->filters([

@@ -16,10 +16,6 @@
     terlihat berantakan").
 --}}
 <x-filament-panels::page>
-    @php
-        $rp = fn (float $n): string => 'Rp '.number_format($n, 0, ',', '.');
-    @endphp
-
     {{-- ============================================================
          PEMILIH PERIODE + EKSPOR
          ============================================================ --}}
@@ -76,10 +72,10 @@
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ([
-                ['Nilai SPK', $rp($nilaiSpk), $jumlahSpk.' SPK tercatat', 'gray'],
-                ['Uang Masuk', $rp($totalMasuk), $rp($masukDariSpk).' dari SPK · '.$rp($masukLuarSpk).' luar SPK', 'success'],
-                ['Uang Keluar', $rp($totalKeluar), 'Pengeluaran periode ini', 'danger'],
-                ['Belum Diterima', $rp($belumDiterima), 'Nilai SPK − sudah diterima', 'warning'],
+                ['Nilai SPK', \App\Support\Format::rupiah($nilaiSpk), $jumlahSpk.' SPK tercatat', 'gray'],
+                ['Uang Masuk', \App\Support\Format::rupiah($totalMasuk), \App\Support\Format::rupiah($masukDariSpk).' dari SPK · '.\App\Support\Format::rupiah($masukLuarSpk).' luar SPK', 'success'],
+                ['Uang Keluar', \App\Support\Format::rupiah($totalKeluar), 'Pengeluaran periode ini', 'danger'],
+                ['Belum Diterima', \App\Support\Format::rupiah($belumDiterima), 'Nilai SPK − sudah diterima', 'warning'],
             ] as [$judul, $angka, $ket, $warna])
                 <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
                     <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $judul }}</p>
@@ -96,7 +92,7 @@
                 'text-emerald-600 dark:text-emerald-400' => $selisih >= 0,
                 'text-rose-600 dark:text-rose-400' => $selisih < 0,
             ])>
-                {{ $rp($selisih) }}
+                {{ \App\Support\Format::rupiah($selisih) }}
             </span>
         </div>
     </x-filament::section>
@@ -135,17 +131,17 @@
                                     </span>
                                 </td>
                                 <td class="py-2 pr-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                                    {{ $rp($r['masuk']) }}
+                                    {{ \App\Support\Format::rupiah($r['masuk']) }}
                                 </td>
                                 <td class="py-2 pr-3 text-right tabular-nums text-rose-600 dark:text-rose-400">
-                                    {{ $rp($r['keluar']) }}
+                                    {{ \App\Support\Format::rupiah($r['keluar']) }}
                                 </td>
                                 <td @class([
                                     'py-2 pr-3 text-right font-medium tabular-nums',
                                     'text-emerald-600 dark:text-emerald-400' => $r['selisih'] >= 0,
                                     'text-rose-600 dark:text-rose-400' => $r['selisih'] < 0,
                                 ])>
-                                    {{ $rp($r['selisih']) }}
+                                    {{ \App\Support\Format::rupiah($r['selisih']) }}
                                 </td>
                             </tr>
                         @endforeach
@@ -176,7 +172,7 @@
                         <div class="flex items-baseline justify-between gap-3">
                             <span class="text-sm font-medium">{{ $r['label'] }}</span>
                             <span class="text-sm tabular-nums">
-                                {{ $rp($r['total']) }}
+                                {{ \App\Support\Format::rupiah($r['total']) }}
                                 <span class="text-xs text-gray-500 dark:text-gray-400">
                                     ({{ $r['jumlah_transaksi'] }}x)
                                 </span>
@@ -228,12 +224,12 @@
                                         {{ $r['mitra'] ?? '—' }}
                                     </span>
                                 </td>
-                                <td class="py-2 pr-3 text-right tabular-nums">{{ $rp($r['nilai_spk']) }}</td>
+                                <td class="py-2 pr-3 text-right tabular-nums">{{ \App\Support\Format::rupiah($r['nilai_spk']) }}</td>
                                 <td class="py-2 pr-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                                    {{ $rp($r['diterima']) }}
+                                    {{ \App\Support\Format::rupiah($r['diterima']) }}
                                 </td>
                                 <td class="py-2 pr-3 text-right font-medium tabular-nums text-amber-600 dark:text-amber-400">
-                                    {{ $rp($r['belum_diterima']) }}
+                                    {{ \App\Support\Format::rupiah($r['belum_diterima']) }}
                                 </td>
                                 <td class="py-2 pr-3">
                                     <x-filament::badge color="gray" size="sm">{{ $r['status_spk'] }}</x-filament::badge>
@@ -296,7 +292,7 @@
                                     </x-filament::badge>
                                 </td>
                                 <td class="py-2 pr-3 text-right tabular-nums">
-                                    {{ $rp((float) $s->nilai_spk) }}
+                                    {{ \App\Support\Format::rupiah((float) $s->nilai_spk) }}
                                 </td>
                             </tr>
                         @endforeach

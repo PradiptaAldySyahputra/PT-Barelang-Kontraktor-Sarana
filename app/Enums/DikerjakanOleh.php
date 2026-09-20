@@ -44,14 +44,6 @@ enum DikerjakanOleh: string
         };
     }
 
-    public function keterangan(): string
-    {
-        return match ($this) {
-            self::Sendiri => 'Dikerjakan tim kita sendiri',
-            self::Subkon => 'Diserahkan ke pihak lain — kita bayar mereka',
-        };
-    }
-
     /**
      * @return array<string, string>
      */

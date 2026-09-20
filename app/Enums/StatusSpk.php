@@ -34,17 +34,21 @@ enum StatusSpk: string
     }
 
     /**
-     * Kelas warna Tailwind untuk badge.
+     * Warna badge Filament.
+     *
+     * Ditaruh di Enum (bukan di tiap tabel) supaya warna status SPK
+     * KONSISTEN di seluruh halaman — sebelumnya logika yang sama disalin
+     * ke beberapa file dan bisa berbeda tanpa disadari.
      */
-    public function warna(): string
+    public function warnaBadge(): string
     {
         return match ($this) {
-            self::Draft => 'bg-slate-100 text-slate-700',
-            self::Terbit => 'bg-blue-100 text-blue-700',
-            self::Berjalan => 'bg-amber-100 text-amber-700',
-            self::Selesai => 'bg-emerald-100 text-emerald-700',
-            self::SudahDitagihkan => 'bg-violet-100 text-violet-700',
-            self::Dibatalkan => 'bg-rose-100 text-rose-700',
+            self::Draft => 'gray',
+            self::Terbit => 'info',
+            self::Berjalan => 'warning',
+            self::Selesai => 'success',
+            self::SudahDitagihkan => 'primary',
+            self::Dibatalkan => 'danger',
         };
     }
 

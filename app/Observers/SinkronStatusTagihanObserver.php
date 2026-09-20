@@ -45,6 +45,17 @@ class SinkronStatusTagihanObserver
 
         $diterima = (float) $spk->uangMasuk()->sum('jumlah');
         $piutang = $spk->piutangDari($diterima);
+        $nilaiSpk = (float) $spk->nilai_spk;
+
+        // ⚠️ BUG YANG PERNAH TERJADI:
+        // SPK dengan nilai_spk = 0 (mis. data belum lengkap) punya piutang
+        // 0 − 0 = 0, sehingga dianggap LUNAS dan langsung berstatus "Dibayar"
+        // begitu ada transaksi apa pun. Itu salah: nilai 0 berarti data belum
+        // diisi, bukan sudah dibayar. Untuk SPK seperti itu, status tagihan
+        // TIDAK disentuh sama sekali — biar Admin yang menentukan.
+        if ($nilaiSpk <= 0) {
+            return;
+        }
 
         // Status yang DI-SET SISTEM (bukan diisi manual Admin).
         $statusSistem = [StatusTagihan::Dibayar, StatusTagihan::MenungguPembayaran];

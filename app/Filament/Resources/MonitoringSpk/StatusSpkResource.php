@@ -52,15 +52,7 @@ class StatusSpkResource extends MonitoringSpkResource
                     ->label('Status Pekerjaan')
                     ->badge()
                     ->formatStateUsing(fn (?StatusSpk $state): string => $state?->label() ?? '—')
-                    ->color(fn (?StatusSpk $state): string => match ($state) {
-                        StatusSpk::Draft => 'gray',
-                        StatusSpk::Terbit => 'info',
-                        StatusSpk::Berjalan => 'warning',
-                        StatusSpk::Selesai => 'success',
-                        StatusSpk::SudahDitagihkan => 'primary',
-                        StatusSpk::Dibatalkan => 'danger',
-                        default => 'gray',
-                    })
+                    ->color(fn (?StatusSpk $state): string => $state?->warnaBadge() ?? 'gray')
                     ->sortable(),
 
                 TextColumn::make('tenggat')

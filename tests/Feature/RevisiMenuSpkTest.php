@@ -151,8 +151,10 @@ class RevisiMenuSpkTest extends TestCase
         $this->assertMatchesRegularExpression('/<select[^>]*fi-select-input|fi-select-input/', $html);
     }
 
-    public function test_form_ringkas_hanya_menampilkan_status(): void
+    public function test_form_ubah_status_hanya_berisi_status(): void
     {
+        // Form terpisah: konteks read-only + SATU field status.
+        // Data lain (nomor, nilai, pekerjaan) hanya ditampilkan.
         $spk = Spk::factory()->pln()->create([
             'nomor_spk' => 'RINGKAS-1',
             'nama_pekerjaan' => 'Pekerjaan Uji Ringkas',
@@ -160,25 +162,14 @@ class RevisiMenuSpkTest extends TestCase
         ]);
 
         $html = $this->actingAs($this->admin)
-            ->get('/admin/spks/'.$spk->id.'/edit?ringkas=1')
+            ->get('/admin/spks/'.$spk->id.'/status-pekerjaan')
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Ubah Status SPK', $html);
-        // Form lengkap TIDAK boleh muncul di mode ringkas
-        $this->assertStringNotContainsString('Nama Pekerjaan', $html);
-    }
-
-    public function test_form_lengkap_tetap_ada_tanpa_ringkas(): void
-    {
-        $spk = Spk::factory()->pln()->create(['dibuat_oleh' => $this->admin->id]);
-
-        $html = $this->actingAs($this->admin)
-            ->get('/admin/spks/'.$spk->id.'/edit')
-            ->assertOk()
-            ->getContent();
-
-        $this->assertStringContainsString('Nama Pekerjaan', $html);
+        $this->assertStringContainsString('Ubah Status Pekerjaan', $html);
+        // Field data SPK tidak boleh bisa diisi dari sini
+        $this->assertStringNotContainsString('name="data[nama_pekerjaan]"', $html);
+        $this->assertStringNotContainsString('name="data[nilai_spk]"', $html);
     }
 
     // =========================================================

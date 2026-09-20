@@ -10,6 +10,7 @@ use App\Models\Mitra;
 use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
+use App\Support\Format;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -77,26 +78,26 @@ class RingkasanKeuangan extends StatsOverviewWidget
 
         return [
             // ============ BARIS 1 — UANG ============
-            Stat::make('Nilai SPK', $this->rupiah($nilaiSpk))
+            Stat::make('Nilai SPK', Format::rupiah($nilaiSpk))
                 ->description($totalSpk.' SPK tercatat')
                 ->descriptionIcon('heroicon-m-document-text')
                 ->color('primary'),
 
-            Stat::make('Sudah Diterima', $this->rupiah($masuk))
+            Stat::make('Sudah Diterima', Format::rupiah($masuk))
                 ->description($masuk > 0
-                    ? number_format($masuk / max($nilaiSpk, 1) * 100, 1).'% dari nilai SPK · '.$this->rupiah($masukBulanIni).' bulan ini'
+                    ? number_format($masuk / max($nilaiSpk, 1) * 100, 1).'% dari nilai SPK · '.Format::rupiah($masukBulanIni).' bulan ini'
                     : 'Belum ada penerimaan')
                 ->descriptionIcon('heroicon-m-arrow-down-tray')
                 ->color('success'),
 
-            Stat::make('Uang Keluar', $this->rupiah($keluar))
+            Stat::make('Uang Keluar', Format::rupiah($keluar))
                 ->description($keluar > 0
-                    ? $this->rupiah($keluarBulanIni).' bulan ini'
+                    ? Format::rupiah($keluarBulanIni).' bulan ini'
                     : 'Belum ada pengeluaran')
                 ->descriptionIcon('heroicon-m-arrow-up-tray')
                 ->color('danger'),
 
-            Stat::make('Belum Diterima', $this->rupiah(max(0, $sisa)))
+            Stat::make('Belum Diterima', Format::rupiah(max(0, $sisa)))
                 ->description('Nilai SPK − sudah diterima')
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color($sisa > 0 ? 'warning' : 'success'),
@@ -148,10 +149,5 @@ class RingkasanKeuangan extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('gray'),
         ];
-    }
-
-    protected function rupiah(float $nilai): string
-    {
-        return 'Rp '.number_format($nilai, 0, ',', '.');
     }
 }
