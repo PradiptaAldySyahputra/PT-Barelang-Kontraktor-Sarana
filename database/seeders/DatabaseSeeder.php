@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
             'alamat' => 'Jl. Contoh No. 1, Batam',
         ]);
 
-        $pelanggan = Mitra::factory()->pelanggan()->create([
+        $pelanggan = Mitra::factory()->mitra()->create([
             'nama' => 'PT Contoh Pelanggan',
             'alamat' => 'Kawasan Industri Contoh, Batam',
         ]);
@@ -199,19 +199,22 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // Tabel ringkasan per SPK — hanya angka yang BENAR-BENAR dipakai.
+        // ⚠️ Kolom Laba/Rugi & Biaya DIHAPUS: fitur itu sudah dibuang dari
+        // sistem (keputusan user, v4.3). Menampilkannya di sini hanya
+        // menyesatkan orang yang membaca output seeder.
         $this->command->newLine();
-        $this->command->info('=== LABA-RUGI PER SPK (hasil hitung otomatis) ===');
+        $this->command->info('=== RINGKASAN PER SPK ===');
+
         $rows = Spk::all()->map(fn (Spk $s): array => [
             $s->nomor_spk,
             number_format((float) $s->nilai_spk, 0, ',', '.'),
             number_format($s->totalPenerimaan(), 0, ',', '.'),
-            number_format($s->totalBiaya(), 0, ',', '.'),
-            number_format($s->labaRugi(), 0, ',', '.'),
             number_format($s->piutang(), 0, ',', '.'),
         ])->all();
 
         $this->command->table(
-            ['Nomor SPK', 'Nilai SPK', 'Penerimaan', 'Biaya', 'Laba/Rugi', 'Piutang'],
+            ['Nomor SPK', 'Nilai SPK', 'Sudah Diterima', 'Belum Diterima'],
             $rows
         );
     }

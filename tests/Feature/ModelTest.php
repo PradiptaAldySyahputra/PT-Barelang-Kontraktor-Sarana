@@ -19,7 +19,7 @@ use Tests\TestCase;
 /**
  * Uji model Eloquent: relasi, cast Enum, dan kolom turunan.
  *
- * Kolom turunan (totalPenerimaan, totalBiaya, labaRugi, piutang) dihitung
+ * Kolom turunan (totalPenerimaan, piutang) dihitung
  * on-the-fly — lihat Schema.md §6.
  */
 class ModelTest extends TestCase
@@ -161,8 +161,6 @@ class ModelTest extends TestCase
         UangKeluar::factory()->create(['spk_id' => $spk->id, 'jumlah' => 25_000_000]);
 
         $this->assertEquals(120_000_000, $spk->totalPenerimaan());
-        $this->assertEquals(65_000_000, $spk->totalBiaya());
-        $this->assertEquals(55_000_000, $spk->labaRugi());
         $this->assertEquals(80_000_000, $spk->piutang());
     }
 

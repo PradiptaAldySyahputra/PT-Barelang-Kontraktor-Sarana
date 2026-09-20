@@ -154,22 +154,6 @@ class Spk extends Model
         return (float) $this->uangMasuk()->sum('jumlah');
     }
 
-    /**
-     * Total biaya untuk SPK ini.
-     */
-    public function totalBiaya(): float
-    {
-        return (float) $this->uangKeluar()->sum('jumlah');
-    }
-
-    /**
-     * Estimasi laba/rugi = penerimaan - biaya.
-     */
-    public function labaRugi(): float
-    {
-        return $this->totalPenerimaan() - $this->totalBiaya();
-    }
-
     // ---------------------------------------------------------
     // SISA & PIUTANG (SEDERHANA)
     // ---------------------------------------------------------
@@ -178,6 +162,9 @@ class Spk extends Model
     // Retensi, laba/rugi, dan aging piutang DIHAPUS. Sistem murni mencatat
     // data yang diinput — tanpa perhitungan pajak/biaya/laba yang tidak
     // dipakai perusahaan.
+    //
+    // Karena itu `totalBiaya()` dan `labaRugi()` IKUT DIHAPUS: keduanya
+    // tidak pernah dipakai di antarmuka, hanya tertinggal di test & seeder.
     //
     // Yang tersisa hanya dua angka yang benar-benar dipakai monitoring:
     //   piutang = nilai_spk − sudah_diterima

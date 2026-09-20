@@ -478,8 +478,6 @@ class FilamentResourceTest extends TestCase
         $spk->refresh();
 
         $this->assertEquals(120_000_000, $spk->totalPenerimaan());
-        $this->assertEquals(65_000_000, $spk->totalBiaya());
-        $this->assertEquals(55_000_000, $spk->labaRugi());
         $this->assertEquals(80_000_000, $spk->piutang());
     }
 }
