@@ -3,6 +3,167 @@
 
 ---
 
+## [4.4] — Data Dummy, Uji Visual Browser & Perbaikan Bug — 20 September 2026
+
+### Ringkasan
+
+| # | Pekerjaan | Hasil |
+|---|---|---|
+| 1 | Data dummy transaksi | ✅ 83 uang masuk + 209 uang keluar |
+| 2 | Pengujian lewat browser sungguhan | ✅ 7 halaman diperiksa visual |
+| 3 | Perbaikan bug hasil uji visual | ✅ 2 bug nyata |
+| 4 | Dokumentasi | ✅ CHANGELOG, README |
+
+---
+
+### 1. DATA DUMMY TRANSAKSI
+
+**Masalah:** 90 SPK hasil impor Excel hanya memuat daftar SPK — **tidak ada
+uang masuk maupun uang keluar**. Akibatnya banyak bagian tidak bisa diuji:
+
+- Kartu dashboard "Sudah Diterima", "Uang Keluar", "Belum Diterima" → Rp 0
+- Grafik arus kas → kosong (hanya garis nol)
+- Laporan arus uang & pengeluaran per kategori → kosong
+- Menu **Tagihan Selesai SPK** → tidak pernah terisi
+- Peringatan biaya melebihi nilai SPK → tidak pernah terpicu
+
+**Solusi:** `database/seeders/DataDummyTransaksiSeeder.php`
+
+```
+php artisan db:seed --class=DataDummyTransaksiSeeder
+```
+
+**Angka dibuat WAJAR, bukan asal** — supaya peringatan validasi tidak
+terpicu palsu:
+
+| Pola SPK | Perlakuan | Status tagihan |
+|---|---|---|
+| 40% | belum ada pembayaran | Belum Ditagihkan |
+| 30% | dibayar sebagian (1–2 termin) | Menunggu Pembayaran |
+| 30% | dibayar lunas | Dibayar → pindah ke Tagihan Selesai |
+| Sebagian | dokumen perlu diperbaiki | Revisi Dokumen |
+
+Biaya per SPK = **38% material + 22% upah + 5% transportasi** (SPK sendiri),
+atau **72% upah** (SPK subkon) — selalu di bawah nilai SPK.
+
+**Hasil terverifikasi:**
+
+| Angka | Nilai |
+|---|---|
+| Nilai SPK | Rp ██.███.███.███ |
+| Uang Masuk | Rp 5.901.716.250 (83 transaksi) |
+| Uang Keluar | Rp 7.960.270.472 (209 transaksi) |
+| Belum Diterima | Rp 5.714.541.604 |
+| SPK biaya > nilai | **0** ✓ wajar |
+| Semua status tagihan terisi | ✓ 5 dari 5 |
+
+**File bukti dibuat nyata** (bukan file kosong):
+- PDF valid yang bisa dibuka
+- JPEG dibuat via GD
+
+---
+
+### 2. PENGUJIAN LEWAT BROWSER SUNGGUHAN
+
+Sebelumnya pengujian hanya lewat HTTP status & HTML — **tampilan visual tidak
+pernah diperiksa**. Sekarang bisa memakai **Chrome + CDP + Playwright**.
+
+**Cara mengaktifkan (di lingkungan ini):**
+
+```bash
+# 1. Aktifkan toggle remote debugging di profil Chrome
+#    (devtools.remote_debugging.user-enabled = true pada Local State)
+
+# 2. Jalankan Chrome dengan CDP
+google-chrome-stable --headless=new --no-sandbox \
+  --remote-debugging-port=9222 --remote-allow-origins=* \
+  --user-data-dir=/tmp/chrome-agent --window-size=1600,1000 about:blank
+
+# 3. Skrip tangkap layar
+/tmp/pwvenv/bin/python /tmp/tangkap.py <nama-halaman>
+```
+
+**Yang diperiksa (7 halaman):** Dashboard, Laporan, Status SPK, Tagihan SPK,
+Tambah Uang Keluar, Mitra, List SPK.
+
+**Manfaat nyata:** pengujian ini **menemukan 2 bug yang tidak terdeteksi**
+oleh 281 test sebelumnya.
+
+---
+
+### 3. 🔴 BUG YANG DITEMUKAN LEWAT UJI VISUAL
+
+#### Bug 1: Nama bulan tampil BAHASA INGGRIS
+
+**Gejala:** Laporan menampilkan "August 2026", "July 2026", "December 2025" —
+padahal seluruh antarmuka berbahasa Indonesia.
+
+**Penyebab:** `.env` berisi `APP_LOCALE=en`.
+
+**Perbaikan:** `APP_LOCALE=id` di `.env` & `.env.example`
+(fallback tetap `en` supaya terjemahan yang tidak ada tidak tampil kosong).
+
+**Sesudah:** "Agustus 2026", "Juli 2026", "Desember 2025".
+
+#### Bug 2: Form Tambah Uang Keluar tampil BERDAMPINGAN
+
+**Gejala:** Bagian "1. Unggah Nota" dan "2. Isi Rincian" tampil **kiri-kanan**,
+padahal permintaan user adalah **atas-bawah memakai lebar penuh**:
+
+> *"gunakan space semuanya, jadi form upload diatas dan form input dibawah"*
+
+Akibatnya ruang di bawah area unggah **kosong besar** dan form sempit.
+
+**Penyebab:** Grid pada Schema form mewarisi **2 kolom**. Memberi
+`columnSpanFull()` pada tiap Section **tidak cukup** — grid induknya sendiri
+harus 1 kolom.
+
+**Perbaikan:** `->columns(1)` pada Schema, di kedua bentuk form.
+
+**Bukti perbaikan** (diukur dari DOM, bukan perkiraan):
+
+```
+SEBELUM:  x=272 y=211 lebar=629   "1. Unggah Nota"
+          x=925 y=211 lebar=629   "2. Isi Rincian"   ← Y SAMA = berdampingan
+
+SESUDAH:  x=272 y=211 lebar=1281  "1. Unggah Nota"
+          x=272 y=483 lebar=1281  "2. Isi Rincian"   ← Y beda = bertumpuk
+```
+
+---
+
+### 4. PELAJARAN PENTING
+
+> **Unit test TIDAK menangkap masalah tata letak.**
+
+281 test lulus, tapi dua bug di atas tetap lolos — karena keduanya hanya
+terlihat saat halaman benar-benar **dirender dan diukur**.
+
+Karena itu ditambahkan `tests/Feature/TataLetakUangKeluarTest.php` yang
+memeriksa **struktur HTML** (mis. memastikan tidak ada `fi-grid-cols-2`
+yang membuat section berdampingan).
+
+**Urutan pengujian yang disarankan:**
+
+1. `php artisan test` — logika & otorisasi
+2. Cek HTTP status semua halaman — route & error 500
+3. **Tangkap layar + ukur posisi elemen** — tata letak ← sering terlewat
+
+---
+
+### Verifikasi
+
+| Uji | Hasil |
+|---|---|
+| Test suite | ✅ **285 test, 809 assertion** — semua lulus |
+| Pint (PSR-12) | ✅ lolos |
+| Uji visual browser | ✅ 7 halaman |
+| Bulan berbahasa Indonesia | ✅ terverifikasi |
+| Form uang keluar atas-bawah | ✅ terverifikasi dari DOM |
+| Data dummy semua status terisi | ✅ 5 dari 5 |
+
+---
+
 ## [4.3] — Penyederhanaan Sistem & Penataan UI — 19 September 2026
 
 ### Ringkasan: 10 permintaan user

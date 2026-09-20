@@ -306,14 +306,17 @@ class UangKeluarForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('Nota')
                     ->description('Pratinjau nota. Klik "Buka di tab baru" untuk melihat ukuran penuh.')
-                    ->schema([self::pratinjauNota()]),
+                    ->schema([self::pratinjauNota()])
+                    ->columnSpanFull(),
 
                 Section::make('Detail Pengeluaran')
                     ->schema(self::fieldInti(true))
-                    ->columns(2),
+                    ->columns(2)
+                    ->columnSpanFull(),
 
                 Section::make('Bukti Pengeluaran')
                     ->description('Jumlah file bebas — nota, kuitansi, transfer, foto.')
@@ -329,7 +332,8 @@ class UangKeluarForm
                             ->maxSize(self::MAKS_UKURAN_KB)
                             ->helperText('JPG, PNG, WEBP, atau PDF. Maks 10 MB per file.')
                             ->columnSpanFull(),
-                    ]),
+                    ])
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -339,10 +343,12 @@ class UangKeluarForm
     public static function configureSekaligus(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('1. Unggah Nota')
                     ->description('Pilih banyak nota sekaligus. Jumlah baris form di bawah otomatis mengikuti jumlah nota.')
-                    ->schema([self::unggahNota()]),
+                    ->schema([self::unggahNota()])
+                    ->columnSpanFull(),
 
                 Section::make('2. Isi Rincian')
                     ->description('Satu baris untuk tiap nota — nota tampil di atas, isi angkanya di bawah. Baris kosong tidak tersimpan.')
@@ -360,7 +366,8 @@ class UangKeluarForm
                             ->deletable(false)
                             ->reorderable(false)
                             ->columnSpanFull(),
-                    ]),
+                    ])
+                    ->columnSpanFull(),
             ]);
     }
 }

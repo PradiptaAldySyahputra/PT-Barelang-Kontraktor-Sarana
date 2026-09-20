@@ -32,10 +32,12 @@ serta memantau laba-rugi per SPK.
 | **⭐ Backup otomatis** | ✅ `php artisan bks:backup` + jadwal harian 23:00 |
 | **Tema UI** | ✅ Clean Minimalist Enterprise (Vercel/Linear) |
 | **⭐ Data asli terimpor** | ✅ **90 SPK** dari `file-Excel-perusahaan.xlsx` (Rp 11,6 M) |
-| **⭐ Setup server lokal** | ✅ Panduan `docs/SETUP-SERVER.md` (1 PC server + akses LAN) |
+| **⭐ Data dummy transaksi** | ✅ **83 uang masuk + 209 uang keluar** — untuk uji semua bagian |
+| **⭐ Uji visual browser** | ✅ Chrome + CDP + Playwright (7 halaman) |
+| **⭐ Setup server lokal** | ✅ Panduan `docs/SETUP-SERVER.md` |
 | **⭐ Audit keamanan** | ✅ 3 celah diperbaiki + 22 test keamanan |
-| **Test** | ✅ **294 test, 850 assertion** — semua lulus |
-| Uang masuk/keluar | ⏳ Masih kosong (Excel hanya berisi daftar SPK) |
+| **Test** | ✅ **285 test, 809 assertion** — semua lulus |
+| Uang masuk/keluar | ✅ Terisi data dummy (83 masuk · 209 keluar) |
 | Retensi per SPK | ⏳ Belum diisi (Excel tidak menyebutkan) |
 
 ---
@@ -271,10 +273,24 @@ Langkah penting:
 | 2 | **Tinjau pemetaan status** | `tanggal_akhir` = tanggal + 90 hari (asumsi), status dari tahun |
 | 3 | **Set IP static + cron backup** | Ikuti `docs/SETUP-SERVER.md` |
 | 4 | **Ganti password default** | `admin@bks.test` / `password` — WAJIB sebelum dipakai kerja |
-| 5 | **Isi uang masuk & keluar** | Excel hanya berisi daftar SPK (90 SPK, belum ada transaksi) |
-| 6 | **Retensi per SPK** | Belum diisi (Excel tidak menyebutkan) |
-| 7 | Dokumen SPK (BAST, kuitansi) | Masih ditunda |
-| 8 | Pajak (PPN/PPh) | Belum diputuskan |
+| 5 | **Ganti data dummy dengan data asli** | Data dummy hanya untuk uji coba. Jalankan `php artisan db:seed --class=DataDummyTransaksiSeeder` untuk mengisi ulang |
+| 6 | Dokumen SPK (BAST, kuitansi) | Masih ditunda |
+| 7 | Pajak (PPN/PPh) | Belum diputuskan |
+
+### Data Dummy untuk Pengujian
+
+Karena data Excel hanya berisi daftar SPK (tanpa transaksi), tersedia seeder
+data dummy supaya **semua bagian bisa diuji**:
+
+```bash
+php artisan db:seed --class=DataDummyTransaksiSeeder
+```
+
+Menghasilkan 83 uang masuk + 209 uang keluar dengan angka **wajar** terhadap
+nilai SPK (biaya selalu di bawah nilai SPK, tidak memicu peringatan palsu).
+
+> ⚠️ Seeder ini **menghapus seluruh uang masuk & uang keluar** lebih dulu.
+> Jangan dijalankan kalau sudah ada data asli.
 
 ### Keputusan yang Masih Menggantung
 
