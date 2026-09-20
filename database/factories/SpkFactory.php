@@ -27,7 +27,7 @@ class SpkFactory extends Factory
         $nilai = fake()->randomFloat(2, 10_000_000, 500_000_000);
 
         return [
-            'nomor_spk' => fake()->unique()->numerify('####').'.SPK/DAN.01.03/PLNCONTOH',
+            'nomor_spk' => 'SPK-'.fake()->unique()->numerify('######'),
             'tanggal_spk' => fake()->dateTimeBetween('-1 year', 'now'),
             'tanggal_akhir' => fake()->dateTimeBetween('now', '+6 months'),
             'nama_pekerjaan' => fake()->randomElement([

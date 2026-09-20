@@ -25,7 +25,7 @@ sheet, catatan terpisah, dan arsip bukti transaksi. Kondisi tersebut menimbulkan
 4. Bukti nota, invoice, dan dokumen pendukung sulit ditelusuri saat pemeriksaan.
 5. Sulit mengetahui laba-rugi per pekerjaan.
 
-> **Catatan penting:** file Excel SPK yang diberikan (mis. `file-Excel-perusahaan.xlsx`) diposisikan
+> **Catatan penting:** file Excel SPK milik perusahaan (tidak disertakan di repo) diposisikan
 > sebagai **bahan analisis kebutuhan dan referensi desain**, **bukan** database operasional
 > final. Tujuannya memahami pola input SPK, banyaknya sheet, kolom yang berulang, alur tagihan,
 > dan kebutuhan tampilan/form.

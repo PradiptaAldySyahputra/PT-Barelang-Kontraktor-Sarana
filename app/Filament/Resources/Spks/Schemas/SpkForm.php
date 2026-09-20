@@ -46,7 +46,7 @@ class SpkForm
                             ->required()
                             ->maxLength(150)
                             ->unique(ignoreRecord: true)
-                            ->placeholder('SPK-CONTOH-D'),
+                            ->placeholder('mis. 0123/SPK/DAN.01.03/2026'),
 
                         DatePicker::make('tanggal_spk')
                             ->label('Tanggal SPK')

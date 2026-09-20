@@ -50,7 +50,7 @@ atau **72% upah** (SPK subkon) — selalu di bawah nilai SPK.
 
 | Angka | Nilai |
 |---|---|
-| Nilai SPK | Rp ██.███.███.███ |
+| Nilai SPK | Rp ██.███.███.███ *(data perusahaan — tidak disertakan)* |
 | Uang Masuk | Rp 5.901.716.250 (83 transaksi) |
 | Uang Keluar | Rp 7.960.270.472 (209 transaksi) |
 | Belum Diterima | Rp 5.714.541.604 |
@@ -448,12 +448,12 @@ rumus DDE bahkan bisa menjalankan perintah.
 
 ### Bagian 2 — Impor Data Asli dari Excel
 
-Sumber: `docs/file-Excel-perusahaan.xlsx` (11 sheet: "Tagihan BKS" + 10 sheet per-nama).
+Sumber: file Excel perusahaan (11 sheet: "Tagihan BKS" + 10 sheet per-nama).
 
 | Aspek | Hasil |
 |---|---|
 | SPK terimpor | **90** (dari 91 baris valid; 1 duplikat digabung) |
-| Total nilai | **Rp ██.███.███.███** |
+| Total nilai | **Rp ██.███.███.███ *(data perusahaan — tidak disertakan)*** |
 | Mitra | 1 pemberi kerja (PT PLN Batam) + **10 subkon** (per sheet) |
 | Sheet per-nama | Otomatis ditandai **disubkonkan** (32 SPK) |
 | Sheet "Tagihan BKS" | Dikerjakan sendiri (58 SPK) |
@@ -567,7 +567,7 @@ internal perusahaan"*.
 | Akses via IP LAN | ✅ HTTP 200 |
 | `composer audit` | ✅ 0 kerentanan |
 | `npm audit` | ✅ 0 kerentanan |
-| Data asli terimpor | ✅ 90 SPK, Rp ██.███.███.███ |
+| Data asli terimpor | ✅ 90 SPK, Rp ██.███.███.███ *(data perusahaan — tidak disertakan)* |
 | Scope tenggat | ✅ 46 lewat (dari 69 berjalan), bukan 67 dari 90 |
 
 ---
@@ -1401,7 +1401,7 @@ bb0a500 feat: autentikasi, middleware peran, dan dashboard
 | # | Item |
 |---|---|
 | 1 | Perbarui `Architecture.md` & `Design.md` agar konsisten dengan Filament |
-| 2 | Impor data lama 2024–2026 dari Excel `file-Excel-perusahaan.xlsx` |
+| 2 | Impor data lama 2024–2026 dari Excel file Excel perusahaan |
 | 3 | Deployment lokal 2 PC (static IP, auto-start, backup, UPS) |
 
 ---
@@ -2030,7 +2030,7 @@ bukan sistem jangka panjang.
 **Revisi besar pertama.** Sumber:
 1. `Project Hub Pengembangan Sistem SPK & Kontrol Keuangan` (PDF, 41 halaman — SRS + WBS + laporan)
 2. `db.txt` (ERD konseptual + revisi dari user)
-3. Analisis `file-Excel-perusahaan.xlsx` (sistem manual yang dimodernisasi)
+3. Analisis file Excel perusahaan (sistem manual yang dimodernisasi)
 
 ### 🔴 Perubahan Besar dari v1.0
 

@@ -234,15 +234,15 @@ $spk->totalPenerimaan();   // SUM(uang_masuk.jumlah) untuk SPK ini
 $spk->totalBiaya();        // SUM(uang_keluar.jumlah) untuk SPK ini
 $spk->labaRugi();          // penerimaan - biaya
 $spk->piutang();           // nilai_spk - penerimaan
-$spk->nilaiBersih();       // nilai_spk - nilai_retensi
+$spk->sisaTagih();         // sama, tapi tidak pernah negatif
 ```
 
-Contoh hasil dari seeder:
+Contoh hasil dari seeder (data contoh, bukan data perusahaan):
 
-| Nomor SPK | Nilai SPK | Penerimaan | Biaya | Laba/Rugi | Piutang |
-|---|---|---|---|---|---|
-| SPK-CONTOH-D | 200.000.000 | 120.000.000 | 65.000.000 | **55.000.000** | 80.000.000 |
-| SUBKON-001 | 100.000.000 | 45.000.000 | 0 | **45.000.000** | 55.000.000 |
+| Nomor SPK | Nilai SPK | Sudah Diterima | Belum Diterima |
+|---|---|---|---|
+| SPK-CONTOH-001 | 200.000.000 | 120.000.000 | 80.000.000 |
+| SUBKON-001 | 100.000.000 | 45.000.000 | 55.000.000 |
 
 ---
 
