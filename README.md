@@ -246,7 +246,37 @@ Contoh hasil dari seeder (data contoh, bukan data perusahaan):
 
 ---
 
-## 9. Deployment Lokal (PC Kantor)
+## 9. Repositori
+
+| | |
+|---|---|
+| **Repo** | https://github.com/PradiptaAldySyahputra/PT-Barelang-Kontraktor-Sarana |
+| **Visibility** | Private |
+| **Commit** | 36 |
+| **Berkas** | 245 |
+
+```bash
+git add -A && git commit -m "pesan" && git push
+```
+
+### ⚠️ Data perusahaan TIDAK disertakan
+
+Demi keamanan, hal berikut **sengaja dihapus** dari repo dan riwayat Git:
+
+| Item | Isi |
+|---|---|
+| `docs/LIST SPK 2026.xlsx` | 90 SPK asli + nilai kontrak |
+| `database/seeders/DataSpkAsliSeeder.php` | nomor SPK & nilai perusahaan |
+| `docs/Project Hub ... (PDF)` | dokumen internal |
+
+**Simpan salinan ketiganya di luar repo** (flashdisk / Drive kantor).
+Kalau hilang, data 90 SPK harus dimasukkan ulang secara manual.
+
+Data contoh di repo sudah dianonimkan — aman dibagikan.
+
+---
+
+## 10. Deployment Lokal (PC Kantor)
 
 Ringkasan dari `docs/Architecture.md` §7:
 
@@ -265,7 +295,7 @@ Langkah penting:
 
 ---
 
-## 10. Yang Belum Dikerjakan
+## 11. Yang Belum Dikerjakan
 
 | # | Item | Catatan |
 |---|---|---|
@@ -303,7 +333,7 @@ nilai SPK (biaya selalu di bawah nilai SPK, tidak memicu peringatan palsu).
 
 ---
 
-## 11. Dokumentasi Terkait
+## 12. Dokumentasi Terkait
 
 | File | Isi |
 |---|---|
