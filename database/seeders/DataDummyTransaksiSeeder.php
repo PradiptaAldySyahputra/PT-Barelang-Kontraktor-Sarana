@@ -65,7 +65,7 @@ class DataDummyTransaksiSeeder extends Seeder
         $spks = Spk::orderBy('id')->get();
 
         if ($spks->isEmpty()) {
-            $this->command?->warn('Tidak ada SPK — jalankan DataSpkAsliSeeder dulu.');
+            $this->command?->warn('Tidak ada SPK — jalankan DatabaseSeeder dulu.');
 
             return;
         }

@@ -17,8 +17,8 @@ use Illuminate\Database\Seeder;
  *
  * Membuat:
  *   1. Akun Admin & Direktur
- *   2. Mitra (PLN, pelanggan, subkon)
- *   3. Contoh SPK (PLN & subkon dengan retensi 5%)
+ *   2. Mitra (pemberi kerja, pelanggan, subkon)
+ *   3. Contoh SPK
  *   4. Contoh uang masuk (dari SPK & luar SPK)
  *   5. Contoh uang keluar (terkait SPK & umum)
  */
@@ -47,7 +47,7 @@ class DatabaseSeeder extends Seeder
         // 2. Mitra
         // ---------------------------------------------------------
         $pln = Mitra::factory()->pln()->create([
-            'nama' => 'PT PLN Batam',
+            'nama' => 'PT Contoh Pemberi Kerja',
             'kontak' => '0778-000000',
             'alamat' => 'Jl. Contoh No. 1, Batam',
         ]);
@@ -60,10 +60,10 @@ class DatabaseSeeder extends Seeder
         $subkon = Mitra::factory()->subkon()->create([
             'nama' => 'CV Contoh Subkon',
             'kontak' => '0812-0000-0000',
-            'alamat' => 'Batam Center',
+            'alamat' => 'Batam',
         ]);
 
-        $this->command->info('✓ Mitra: PLN, pelanggan, subkon');
+        $this->command->info('✓ Mitra: pemberi kerja, pelanggan, subkon');
 
         // ---------------------------------------------------------
         // 3. SPK
@@ -71,10 +71,10 @@ class DatabaseSeeder extends Seeder
 
         // SPK dari PLN — pekerjaan utama
         $spkPln = Spk::factory()->pln()->berjalan()->create([
-            'nomor_spk' => 'SPK-CONTOH-D',
+            'nomor_spk' => 'SPK-CONTOH-001',
             'tanggal_spk' => '2026-06-29',
             'tanggal_akhir' => '2026-09-30',
-            'nama_pekerjaan' => 'Pengadaan Pembangunan Shelter',
+            'nama_pekerjaan' => 'Contoh Pekerjaan Pembangunan Shelter',
             'lokasi' => 'Lokasi Contoh',
             'nilai_spk' => 200_000_000,
             'mitra_id' => $pln->id,
@@ -96,7 +96,7 @@ class DatabaseSeeder extends Seeder
         // SPK tanpa nomor resmi (kasus "TANPA SPK" di Excel)
         Spk::factory()->tanpaSpk()->berjalan()->create([
             'nama_pekerjaan' => 'Bahan Bakar Genset 420 Liter',
-            'lokasi' => 'Kantor Korporat',
+            'lokasi' => 'Kantor',
             'nilai_spk' => 5_565_000,
             'mitra_id' => $pelanggan->id,
             'dibuat_oleh' => $admin->id,
@@ -104,16 +104,16 @@ class DatabaseSeeder extends Seeder
 
         // SPK yang sudah lunas
         Spk::factory()->pln()->lunas()->create([
-            'nomor_spk' => 'SPK-CONTOH-C',
+            'nomor_spk' => 'SPK-CONTOH-002',
             'tanggal_spk' => '2026-04-23',
-            'nama_pekerjaan' => 'Pembuatan Ruang Rapat Lokasi Contoh 2',
+            'nama_pekerjaan' => 'Contoh Pekerjaan Renovasi Ruang Rapat',
             'lokasi' => 'Lokasi Contoh 2',
             'nilai_spk' => 371_746_922,
             'mitra_id' => $pln->id,
             'dibuat_oleh' => $admin->id,
         ]);
 
-        $this->command->info('✓ SPK: 4 contoh (PLN, subkon, tanpa SPK, lunas)');
+        $this->command->info('✓ SPK: 4 contoh (reguler, subkon, tanpa SPK, lunas)');
 
         // ---------------------------------------------------------
         // 4. Uang masuk
@@ -127,7 +127,7 @@ class DatabaseSeeder extends Seeder
             'tanggal' => '2026-08-11',
             'jumlah' => 120_000_000,
             'mitra_id' => $pln->id,
-            'keterangan' => 'Termin 1 sudah diantar ke imperium',
+            'keterangan' => 'Termin 1 diterima',
         ]);
 
         // Dari SPK subkon
@@ -144,7 +144,7 @@ class DatabaseSeeder extends Seeder
         UangMasuk::factory()->dariLuarSpk()->denganBukti(1)->create([
             'tanggal' => '2026-08-25',
             'jumlah' => 5_000_000,
-            'keterangan' => 'Penjualan material sisa proyek',
+            'keterangan' => 'Penerimaan di luar SPK',
         ]);
 
         $this->command->info('✓ Uang masuk: 3 contoh (2 dari SPK, 1 luar SPK)');
@@ -160,7 +160,7 @@ class DatabaseSeeder extends Seeder
             'jumlah' => 40_000_000,
             'kategori' => KategoriPengeluaran::Material,
             'penerima' => 'Toko Material Contoh',
-            'keterangan' => 'Pembelian besi dan semen',
+            'keterangan' => 'Pembelian material',
         ]);
 
         UangKeluar::factory()->terkaitSpk()->denganBukti(1)->create([
@@ -178,7 +178,7 @@ class DatabaseSeeder extends Seeder
             'jumlah' => 3_000_000,
             'kategori' => KategoriPengeluaran::Operasional,
             'penerima' => 'Kantor',
-            'keterangan' => 'Biaya operasional bulanan',
+            'keterangan' => 'Biaya operasional',
         ]);
 
         $this->command->info('✓ Uang keluar: 3 contoh (2 terkait SPK, 1 umum)');

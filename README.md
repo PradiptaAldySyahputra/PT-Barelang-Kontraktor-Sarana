@@ -31,8 +31,8 @@ serta memantau laba-rugi per SPK.
 | **⭐ Status tagihan otomatis** | ✅ Disinkronkan dari pembayaran nyata |
 | **⭐ Backup otomatis** | ✅ `php artisan bks:backup` + jadwal harian 23:00 |
 | **Tema UI** | ✅ Clean Minimalist Enterprise (Vercel/Linear) |
-| **⭐ Data asli terimpor** | ✅ **90 SPK** dari `file-Excel-perusahaan.xlsx` (Rp 11,6 M) |
-| **⭐ Data dummy transaksi** | ✅ **83 uang masuk + 209 uang keluar** — untuk uji semua bagian |
+| **⭐ Data SPK** | ✅ 90 SPK (data perusahaan — **tidak disertakan di repo**) |
+| **⭐ Data dummy transaksi** | ✅ 83 uang masuk + 209 uang keluar — untuk uji semua bagian |
 | **⭐ Uji visual browser** | ✅ Chrome + CDP + Playwright (7 halaman) |
 | **⭐ Setup server lokal** | ✅ Panduan `docs/SETUP-SERVER.md` |
 | **⭐ Audit keamanan** | ✅ 3 celah diperbaiki + 22 test keamanan |
