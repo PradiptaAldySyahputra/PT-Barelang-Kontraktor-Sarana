@@ -53,7 +53,7 @@ class PenggunaResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'nama';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 22;
 
     public static function form(Schema $schema): Schema
     {

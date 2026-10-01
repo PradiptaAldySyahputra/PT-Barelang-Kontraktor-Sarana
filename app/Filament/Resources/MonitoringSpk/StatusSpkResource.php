@@ -6,10 +6,14 @@ namespace App\Filament\Resources\MonitoringSpk;
 
 use App\Enums\DikerjakanOleh;
 use App\Enums\StatusSpk;
+use App\Filament\Actions\CatatPembayaran;
+use App\Filament\Exports\SpkExporter;
 use App\Filament\Resources\MonitoringSpk\Pages\ListStatusSpk;
 use App\Filament\Resources\Spks\Pages\UbahStatusSpk;
 use App\Models\Spk;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\ExportAction;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -143,17 +147,38 @@ class StatusSpkResource extends MonitoringSpkResource
                     ->toggle(),
             ])
             ->recordActions([
-                // Form TERPISAH, hanya status pekerjaan.
-                // `asal` dipakai supaya setelah simpan kembali ke sini.
-                Action::make('ubahStatus')
-                    ->label('Ubah Status')
-                    ->icon('heroicon-m-pencil-square')
+                /*
+                 * ⚠️ PERBAIKAN UI (29 Sep 2026): "Catat Pembayaran" dan
+                 * "Ubah Status" digabung jadi SATU menu — keduanya mengurus
+                 * kondisi SPK yang sama. Dua tombol berdampingan membuat admin
+                 * bingung mana yang harus diklik.
+                 */
+                ActionGroup::make([
+                    // Catat pembayaran (termasuk sebagian) dari menu Status SPK.
+                    CatatPembayaran::make(),
+
+                    // Form TERPISAH, hanya status pekerjaan.
+                    // `asal` dipakai supaya setelah simpan kembali ke sini.
+                    Action::make('ubahStatus')
+                        ->label('Ubah Status Pekerjaan')
+                        ->icon('heroicon-m-pencil-square')
+                        ->color('primary')
+                        ->visible(fn (): bool => static::bolehUbahData())
+                        ->url(fn (Spk $r): string => UbahStatusSpk::getUrl([
+                            'record' => $r,
+                            'asal' => 'status-spk',
+                        ])),
+                ])
+                    ->label('Kelola SPK')
+                    ->icon('heroicon-m-ellipsis-vertical')
                     ->color('primary')
-                    ->visible(fn (): bool => static::bolehUbahData())
-                    ->url(fn (Spk $r): string => UbahStatusSpk::getUrl([
-                        'record' => $r,
-                        'asal' => 'status-spk',
-                    ])),
+                    ->button(),
+            ])
+            ->toolbarActions([
+                ExportAction::make()
+                    ->label('Ekspor Excel')
+                    ->icon('heroicon-m-table-cells')
+                    ->exporter(SpkExporter::class),
             ]);
     }
 

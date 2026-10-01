@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Mitras\Tables;
 
 use App\Enums\KategoriMitra;
+use App\Filament\Exports\MitraExporter;
 use App\Filament\Resources\Mitras\MitraResource;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ExportAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 /**
@@ -75,23 +75,31 @@ class MitrasTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                // Filter mitra — 3 pilihan saja (permintaan user):
-                // Aktif · Mitra · Subkon
-                TernaryFilter::make('is_aktif')
-                    ->label('Aktif')
-                    ->placeholder('Semua')
-                    ->trueLabel('Aktif')
-                    ->falseLabel('Nonaktif'),
-
-                SelectFilter::make('kategori')
-                    ->label('Kategori')
-                    ->options(KategoriMitra::opsi()),
+                /*
+                 * ⚠️ FILTER DIHAPUS — sudah diwakili TAB (permintaan pengguna:
+                 * "filter dropdown terlalu banyak dan panjang susah user").
+                 *
+                 * Dulu di sini ada TernaryFilter 'Aktif' + SelectFilter
+                 * 'Kategori'. Keduanya DUPLIKAT dengan tab di atas halaman
+                 * (Aktif / Mitra / Subkon) → membingungkan: admin bisa
+                 * memilih tab "Subkon" TAPI filter "Kategori = Mitra"
+                 * sekaligus, hasilnya kosong tanpa penjelasan.
+                 *
+                 * Sekarang cukup satu tempat: TAB.
+                 *
+                 * Filter yang TETAP dipertahankan: pencarian (search) — itu
+                 * tidak duplikat dengan tab dan justru cara tercepat mencari.
+                 */
             ])
             ->recordActions([
                 EditAction::make()->visible(fn (): bool => MitraResource::bolehUbahData()),
                 DeleteAction::make()->visible(fn (): bool => MitraResource::bolehUbahData()),
             ])
             ->toolbarActions([
+                ExportAction::make()
+                    ->label('Ekspor Excel')
+                    ->icon('heroicon-m-table-cells')
+                    ->exporter(MitraExporter::class),
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ])->visible(fn (): bool => MitraResource::bolehUbahData()),

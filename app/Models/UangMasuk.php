@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\AkunKas;
 use App\Observers\SinkronStatusTagihanObserver;
 use Database\Factories\UangMasukFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -26,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $nomor_spk
  * @property string|null $nama_pekerjaan
  * @property Carbon $tanggal
+ * @property AkunKas|null $akun
  * @property string $jumlah
  * @property int|null $mitra_id
  * @property string|null $keterangan
@@ -49,6 +51,7 @@ class UangMasuk extends Model
         'nomor_spk',
         'nama_pekerjaan',
         'tanggal',
+        'akun',
         'jumlah',
         'mitra_id',
         'keterangan',
@@ -63,6 +66,7 @@ class UangMasuk extends Model
         return [
             'tanggal' => 'date',
             'jumlah' => 'decimal:2',
+            'akun' => AkunKas::class,
             'bukti' => 'array', // JSON array, jumlah file bebas
         ];
     }

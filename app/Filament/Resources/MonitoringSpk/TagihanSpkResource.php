@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MonitoringSpk;
 
 use App\Enums\StatusTagihan;
+use App\Filament\Actions\CatatPembayaran;
+use App\Filament\Exports\SpkExporter;
 use App\Filament\Resources\MonitoringSpk\Pages\ListTagihanSpk;
 use App\Filament\Resources\Spks\Pages\UbahStatusTagihan;
 use App\Models\Spk;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\ExportAction;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -117,16 +121,48 @@ class TagihanSpkResource extends MonitoringSpkResource
                     ->preload(),
             ])
             ->recordActions([
-                // Form TERPISAH, hanya status tagihan.
-                Action::make('ubahStatusTagihan')
-                    ->label('Ubah Status')
-                    ->icon('heroicon-m-pencil-square')
+                /*
+                 * ⚠️ PERBAIKAN UI (29 Sep 2026) — keluhan pengguna:
+                 *   "contoh lagi bug atau kesalahan pada menu status tagihan itu
+                 *    kenapa ada dua button edit atau pembaruan kenapa tidak
+                 *    disatukan saja"
+                 *
+                 * Sebelumnya ada DUA tombol berdampingan: "Catat Pembayaran" dan
+                 * "Ubah Status". Keduanya mengurus hal yang sama — kondisi
+                 * tagihan SPK — sehingga membingungkan: mana yang harus diklik?
+                 *
+                 * Sekarang keduanya berada dalam SATU menu "Kelola Tagihan",
+                 * dengan keterangan singkat agar admin tahu bedanya.
+                 */
+                ActionGroup::make([
+                    CatatPembayaran::make(),
+
+                    // Form TERPISAH, hanya status tagihan.
+                    Action::make('ubahStatusTagihan')
+                        ->label('Ubah Status Tagihan')
+                        ->icon('heroicon-m-pencil-square')
+                        ->color('primary')
+                        ->visible(fn (): bool => static::bolehUbahData())
+                        ->url(fn (Spk $r): string => UbahStatusTagihan::getUrl([
+                            'record' => $r,
+                            'asal' => 'tagihan-spk',
+                        ])),
+                ])
+                    ->label('Kelola Tagihan')
+                    ->icon('heroicon-m-ellipsis-vertical')
                     ->color('primary')
-                    ->visible(fn (): bool => static::bolehUbahData())
-                    ->url(fn (Spk $r): string => UbahStatusTagihan::getUrl([
-                        'record' => $r,
-                        'asal' => 'tagihan-spk',
-                    ])),
+                    ->button(),
+            ])
+            ->toolbarActions([
+                /*
+                 * ⚠️ PERBAIKAN (29 Sep 2026): label diberi keterangan format &
+                 * tujuan, supaya admin tahu berkas apa yang akan diunduh —
+                 * sebelumnya hanya "Ekspor" tanpa penjelasan.
+                 */
+                ExportAction::make()
+                    ->label('Ekspor Excel')
+                    ->icon('heroicon-m-table-cells')
+                    ->exporter(SpkExporter::class),
             ]);
     }
 

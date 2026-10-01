@@ -15,6 +15,13 @@ class SpkPerStatus extends ChartWidget
 {
     protected static ?int $sort = 3;
 
+    /**
+     * Lebar 1 kolom — dipasangkan dengan StatusTagihanChart dalam grid
+     * 2 kolom dashboard, supaya KEDUA donut sejajar dalam satu baris dan
+     * tidak ada slot kosong (keluhan pengguna: "chart sejajar").
+     */
+    protected int|string|array $columnSpan = 1;
+
     protected ?string $heading = 'SPK per Status';
 
     protected ?string $description = 'Sebaran SPK berdasarkan tahapan';

@@ -82,7 +82,7 @@ class TataLetakUangKeluarTest extends TestCase
 
         $html = Livewire::test(CreateUangKeluar::class)->html();
 
-        foreach (['pengeluaran', 'nota_sekaligus'] as $field) {
+        foreach (['pengeluaran', 'berkas_nota'] as $field) {
             $this->assertStringContainsString(
                 $field,
                 $html,

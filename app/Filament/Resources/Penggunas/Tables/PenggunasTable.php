@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Penggunas\Tables;
 
 use App\Enums\Peran;
+use App\Filament\Exports\PenggunaExporter;
 use App\Filament\Resources\Penggunas\PenggunaResource;
 use App\Models\Pengguna;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ExportAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -88,6 +90,10 @@ class PenggunasTable
                     ->visible(fn (Pengguna $record): bool => PenggunaResource::canDelete($record)),
             ])
             ->toolbarActions([
+                ExportAction::make()
+                    ->label('Ekspor Excel')
+                    ->icon('heroicon-m-table-cells')
+                    ->exporter(PenggunaExporter::class),
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

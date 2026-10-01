@@ -41,7 +41,7 @@ class UangKeluarResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Uang Keluar';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 12;
 
     public static function form(Schema $schema): Schema
     {

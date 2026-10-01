@@ -6,11 +6,14 @@ namespace App\Filament\Resources\Spks\Schemas;
 
 use App\Enums\DikerjakanOleh;
 use App\Enums\KategoriMitra;
+use App\Enums\StatusAntar;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use App\Models\Mitra;
 use App\Models\Spk;
+use App\Services\PenyimpanBerkas;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
@@ -82,6 +85,69 @@ class SpkForm
                             ->preload(),
                     ])
                     ->columns(2),
+
+                // ---------------------------------------------------------
+                // PENGANTARAN DOKUMEN
+                // ---------------------------------------------------------
+                //
+                // ⚠️ PERMINTAAN PENGGUNA (26 Sep 2026): Excel "LIST SPK 2026"
+                // punya kolom Keterangan (mis. "diantar ke imperium", "sudah
+                // masuk rek BKS"). Admin perlu tahu mana dokumen yang BELUM
+                // diantar — dulu tidak ada tempatnya sama sekali.
+                Section::make('Pengantaran Dokumen')
+                    ->description('Catat apakah dokumen SPK sudah diantar ke pihak terkait.')
+                    ->schema([
+                        Select::make('status_antar')
+                            ->label('Status Pengantaran')
+                            ->options(StatusAntar::opsi())
+                            ->default(StatusAntar::Belum->value)
+                            ->native(false)
+                            ->helperText('Pilih "Belum Diantar" bila dokumen masih di kantor.'),
+
+                        DatePicker::make('tanggal_antar')
+                            ->label('Tanggal Diantar')
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->maxDate(now())
+                            ->helperText('Isi bila sudah diantar.'),
+
+                        TextInput::make('keterangan')
+                            ->label('Keterangan')
+                            ->maxLength(255)
+                            ->placeholder('mis. diantar ke imperium / sudah masuk rek BKS')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+
+                // ---------------------------------------------------------
+                // DOKUMEN SPK (BAST, scan SPK, kuitansi)
+                // ---------------------------------------------------------
+                //
+                // ⚠️ PRD FR-SPK-007 + PRD §9 no.2: dokumen SPK tidak punya
+                // tempat karena tabel lampiran dihapus. Sekarang disimpan di
+                // kolom JSON `dokumen` — banyak berkas per SPK.
+                Section::make('Dokumen SPK')
+                    ->description('Unggah scan SPK, BAST, atau kuitansi. Boleh lebih dari satu berkas.')
+                    ->schema([
+                        FileUpload::make('dokumen')
+                            ->label('Berkas')
+                            ->multiple()
+                            ->reorderable()
+                            ->disk('nota')
+                            ->directory('spk')
+                            ->visibility('private')
+                            ->acceptedFileTypes([
+                                'application/pdf',
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                            ])
+                            ->maxSize(PenyimpanBerkas::maksUkuranKb())
+                            ->maxFiles(10)
+                            ->fetchFileInformation(false)
+                            ->helperText('PDF, JPG, PNG, atau WEBP. Maks '.round(PenyimpanBerkas::maksUkuranKb() / 1024).' MB per berkas.')
+                            ->columnSpanFull(),
+                    ]),
 
                 Section::make('Nilai SPK')
                     ->schema([

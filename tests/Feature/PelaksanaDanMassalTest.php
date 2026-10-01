@@ -176,8 +176,8 @@ class PelaksanaDanMassalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('nota_sekaligus', $html);
-        $this->assertStringContainsString('Unggah Nota', $html);
+        $this->assertStringContainsString('berkas_nota', $html);
+        $this->assertStringContainsString('Unggah Berkas Nota', $html);
     }
 
     public function test_simpan_4_pengeluaran_sekaligus(): void

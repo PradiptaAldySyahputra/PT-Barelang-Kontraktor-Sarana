@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\HeaderKeamanan;
 use App\Http\Middleware\PastikanPeran;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -24,6 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // ke halaman login Filament — bukan lewat /login dulu (2 hop).
         // Ini berlaku untuk rute biasa seperti /admin/laporan/ekspor/{jenis}.
         $middleware->redirectGuestsTo(fn () => '/admin/login');
+
+        // Header keamanan dasar (X-Frame-Options, nosniff, Referrer-Policy).
+        // ⚠️ Ditambahkan setelah audit 26 Sep 2026 — sebelumnya aplikasi tidak
+        // mengirim satu pun header keamanan (rawan clickjacking).
+        $middleware->append(HeaderKeamanan::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

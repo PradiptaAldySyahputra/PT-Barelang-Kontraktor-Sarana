@@ -180,14 +180,38 @@ class TampilanPanelTest extends TestCase
     // Laporan — ekspor berupa dropdown, bukan 5 tombol berjajar
     // ---------------------------------------------------------
 
-    public function test_ekspor_laporan_berupa_dropdown(): void
+    /**
+     * ⚠️ DIPERBARUI 29 Sep 2026 — permintaan pengguna:
+     *   "kenapa double ada pdf sama excel dan disamping ada ekspor csv, kenapa
+     *    tidak digabung untuk pdf sama excel dan dibedakan saja"
+     *
+     * Sebelumnya: TIGA tombol terpisah ("Ekspor PDF", "Ekspor Excel",
+     * "Ekspor CSV") — memakan ruang dan membingungkan.
+     *
+     * Sekarang: SATU tombol "Ekspor" berisi daftar laporan, dan tiap laporan
+     * menawarkan 3 format (xlsx / pdf / csv) dalam satu baris.
+     */
+    public function test_ekspor_laporan_berupa_satu_dropdown(): void
     {
         $this->actingAs($this->admin);
 
         $html = Livewire::test(Laporan::class)->html();
 
-        $this->assertStringContainsString('Ekspor CSV', $html);
         $this->assertStringContainsString('fi-dropdown', $html, 'Ekspor harus berupa dropdown');
+
+        // TIDAK boleh ada lagi tiga tombol ekspor terpisah.
+        $this->assertStringNotContainsString('Ekspor PDF', $html, 'Tombol "Ekspor PDF" terpisah harus dihapus.');
+        $this->assertStringNotContainsString('Ekspor Excel', $html, 'Tombol "Ekspor Excel" terpisah harus dihapus.');
+        $this->assertStringNotContainsString('Ekspor CSV', $html, 'Tombol "Ekspor CSV" terpisah harus dihapus.');
+
+        // Ketiga format harus tetap tersedia DI DALAM dropdown.
+        foreach (['xlsx', 'pdf', 'csv'] as $format) {
+            $this->assertStringContainsString(
+                'format='.$format,
+                $html,
+                "Format {$format} harus tetap bisa dipilih dari dalam dropdown Ekspor.",
+            );
+        }
     }
 
     public function test_section_laporan_bisa_dilipat(): void

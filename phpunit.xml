@@ -19,6 +19,17 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!--
+            ⚠️ LOCALE INDONESIA WAJIB DI TES.
+            Tanpa ini, `translatedFormat('F Y')` menghasilkan nama bulan
+            INGGRIS ("AUGUST 2026"), sedangkan aplikasi memakai "AGUSTUS 2026"
+            (APP_LOCALE=id di .env). Tes yang memeriksa label bulan akan gagal
+            walau aplikasinya benar — dan sebaliknya, tes bisa "lolos" padahal
+            produksi menampilkan bahasa yang salah.
+        -->
+        <env name="APP_LOCALE" value="id"/>
+        <env name="APP_FALLBACK_LOCALE" value="id"/>
+        <env name="APP_FAKER_LOCALE" value="id_ID"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

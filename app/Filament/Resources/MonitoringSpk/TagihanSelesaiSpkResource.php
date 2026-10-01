@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MonitoringSpk;
 
 use App\Enums\StatusTagihan;
+use App\Filament\Exports\SpkExporter;
 use App\Filament\Resources\MonitoringSpk\Pages\ListTagihanSelesaiSpk;
 use App\Filament\Resources\Spks\Pages\UbahStatusTagihan;
 use App\Models\Spk;
 use Filament\Actions\Action;
+use Filament\Actions\ExportAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -134,6 +136,12 @@ class TagihanSelesaiSpkResource extends MonitoringSpkResource
                         'record' => $r,
                         'asal' => 'tagihan-selesai',
                     ])),
+            ])
+            ->toolbarActions([
+                ExportAction::make()
+                    ->label('Ekspor Excel')
+                    ->icon('heroicon-m-table-cells')
+                    ->exporter(SpkExporter::class),
             ]);
     }
 

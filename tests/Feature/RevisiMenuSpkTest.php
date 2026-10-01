@@ -82,8 +82,15 @@ class RevisiMenuSpkTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Edit', $html);
-        $this->assertStringContainsString('Delete', $html);
+        /*
+         * ⚠️ CATATAN (audit 26 Sep 2026): dulu tes ini memeriksa kata INGGRIS
+         * ('Edit'/'Delete') dan LOLOS hanya karena locale tes masih Inggris.
+         * Aplikasi sebenarnya memakai APP_LOCALE=id, jadi label yang dilihat
+         * admin adalah 'Ubah'/'Hapus'. Setelah locale tes diselaraskan ke `id`,
+         * ketidaksesuaian itu ketahuan. Sekarang diperiksa label yang BENAR.
+         */
+        $this->assertStringContainsString('Ubah', $html);
+        $this->assertStringContainsString('Hapus', $html);
     }
 
     public function test_list_spk_tidak_punya_restore_dan_force_delete(): void
@@ -191,8 +198,8 @@ class RevisiMenuSpkTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Unggah Nota', $html);
-        $this->assertStringContainsString('nota_sekaligus', $html);
+        $this->assertStringContainsString('Unggah Berkas Nota', $html);
+        $this->assertStringContainsString('berkas_nota', $html);
         $this->assertStringContainsString('Isi Rincian', $html);
     }
 

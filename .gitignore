@@ -29,3 +29,6 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Virtualenv OCR — jangan ikut Git
+/ocr-venv

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
 use Database\Factories\UangKeluarFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,6 +44,7 @@ class UangKeluar extends Model
     protected $fillable = [
         'spk_id',
         'tanggal',
+        'akun',
         'jumlah',
         'kategori',
         'penerima',
@@ -58,6 +60,7 @@ class UangKeluar extends Model
         return [
             'tanggal' => 'date',
             'jumlah' => 'decimal:2',
+            'akun' => AkunKas::class,
             'kategori' => KategoriPengeluaran::class,
             'bukti' => 'array',
         ];

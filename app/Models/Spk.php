@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\DikerjakanOleh;
+use App\Enums\StatusAntar;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use Database\Factories\SpkFactory;
@@ -54,14 +55,19 @@ class Spk extends Model
         'nomor_spk',
         'tanggal_spk',
         'tanggal_akhir',
+        'perpanjangan',
         'nama_pekerjaan',
         'lokasi',
+        'keterangan',
+        'dokumen',
         'nilai_spk',
         'jenis_sumber',
         'sheet_lama',
         'mitra_id',
         'status_spk',
         'status_tagihan',
+        'status_antar',
+        'tanggal_antar',
         'dikerjakan_oleh',
         'subkon_id',
         'dibuat_oleh',
@@ -75,10 +81,16 @@ class Spk extends Model
         return [
             'tanggal_spk' => 'date',
             'tanggal_akhir' => 'date',
+            'tanggal_antar' => 'date',
             'nilai_spk' => 'decimal:2',
             'status_spk' => StatusSpk::class,
             'status_tagihan' => StatusTagihan::class,
+            'status_antar' => StatusAntar::class,
             'dikerjakan_oleh' => DikerjakanOleh::class,
+            // Riwayat perpanjangan tenggat (adendum) — lihat §perpanjangan.
+            'perpanjangan' => 'array',
+            // Berkas SPK (BAST, scan SPK) — banyak berkas per SPK.
+            'dokumen' => 'array',
         ];
     }
 
@@ -208,11 +220,84 @@ class Spk extends Model
     }
 
     // ---------------------------------------------------------
-    // TENGGAT (tanggal_akhir)
+    // TENGGAT (tanggal_akhir) & PERPANJANGAN
     // ---------------------------------------------------------
 
     /**
+     * Tenggat EFEKTIF — tanggal_akhir terbaru setelah semua perpanjangan.
+     *
+     * ⚠️ KENAPA INI ADA (permintaan pengguna 26 Sep 2026):
+     * "perpanjangan tenggat SPK tidak bergantung tenggat waktu awal, bisa
+     *  diperpanjang sesuai kesepakatan (berapa bulan / perjanjian)"
+     *
+     * Karena `catatPerpanjangan()` SELALU memperbarui `tanggal_akhir`, maka
+     * nilai itu sendiri sudah menjadi tenggat efektif. Method ini disediakan
+     * supaya maksudnya jelas di kode pemanggil (tidak perlu tahu detailnya).
+     */
+    public function tenggatEfektif(): ?Carbon
+    {
+        return $this->tanggal_akhir;
+    }
+
+    /**
+     * Berapa kali SPK ini diperpanjang.
+     */
+    public function jumlahPerpanjangan(): int
+    {
+        return count($this->perpanjangan ?? []);
+    }
+
+    /**
+     * Apakah SPK ini pernah diperpanjang?
+     */
+    public function pernahDiperpanjang(): bool
+    {
+        return $this->jumlahPerpanjangan() > 0;
+    }
+
+    /**
+     * Catat perpanjangan tenggat (adendum).
+     *
+     * ⚠️ JEJAK TENGGAT AWAL TIDAK HILANG: tanggal lama disimpan di riwayat
+     * JSON sebelum `tanggal_akhir` diperbarui. Ini penting karena pengguna
+     * memakai Excel yang mencatat perjanjian perpanjangan, dan perlu tahu
+     * berapa kali & sejak kapan SPK diperpanjang.
+     *
+     * @param  string  $tanggalBaru  format Y-m-d
+     * @param  string|null  $alasan  mis. "kesepakatan adendum"
+     */
+    public function catatPerpanjangan(string $tanggalBaru, ?string $alasan = null): void
+    {
+        $riwayat = $this->perpanjangan ?? [];
+
+        $riwayat[] = [
+            'dari' => $this->tanggal_akhir?->toDateString(),
+            'ke' => $tanggalBaru,
+            'alasan' => $alasan,
+            'dicatat' => now()->toDateString(),
+        ];
+
+        $this->perpanjangan = $riwayat;
+        $this->tanggal_akhir = $tanggalBaru;
+        $this->save();
+    }
+
+    /**
+     * Berapa berkas dokumen yang tersimpan untuk SPK ini.
+     *
+     * Dipakai tabel supaya admin langsung tahu mana SPK yang dokumennya
+     * belum diunggah (0 berkas) — kebutuhan dari PRD FR-SPK-007.
+     */
+    public function jumlahDokumen(): int
+    {
+        return count($this->dokumen ?? []);
+    }
+
+    /**
      * Sisa hari sampai tenggat. Negatif = sudah lewat.
+     *
+     * Memakai `tanggal_akhir` yang sudah mencerminkan perpanjangan terbaru,
+     * jadi alarm tenggat otomatis mengikuti tanggal hasil perpanjangan.
      */
     public function sisaTenggatHari(): ?int
     {

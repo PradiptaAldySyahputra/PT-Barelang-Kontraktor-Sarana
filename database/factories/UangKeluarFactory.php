@@ -24,6 +24,7 @@ class UangKeluarFactory extends Factory
         return [
             'spk_id' => Spk::factory(),
             'tanggal' => fake()->dateTimeBetween('-6 months', 'now'),
+            'akun' => 'kas',
             'jumlah' => fake()->randomFloat(2, 500_000, 50_000_000),
             'kategori' => fake()->randomElement(KategoriPengeluaran::cases()),
             'penerima' => fake()->randomElement([
@@ -33,6 +34,14 @@ class UangKeluarFactory extends Factory
             'keterangan' => fake()->optional()->sentence(),
             'bukti' => null,
         ];
+    }
+
+    /**
+     * Transaksi pada buku BANK.
+     */
+    public function bank(): static
+    {
+        return $this->state(fn (array $attributes): array => ['akun' => 'bank']);
     }
 
     /**

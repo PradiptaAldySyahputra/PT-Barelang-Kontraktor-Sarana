@@ -20,7 +20,7 @@ class GrafikArusKas extends ChartWidget
 
     protected ?string $description = 'Uang masuk dan keluar, 6 bulan terakhir';
 
-    protected int|string|array $columnSpan = 1;
+    protected int|string|array $columnSpan = 'full';
 
     protected ?string $maxHeight = '260px';
 

@@ -26,11 +26,20 @@ class UangMasukFactory extends Factory
             'nomor_spk' => null,
             'nama_pekerjaan' => null,
             'tanggal' => fake()->dateTimeBetween('-6 months', 'now'),
+            'akun' => 'kas',
             'jumlah' => fake()->randomFloat(2, 1_000_000, 100_000_000),
             'mitra_id' => Mitra::factory(),
             'keterangan' => fake()->optional()->sentence(),
             'bukti' => null,
         ];
+    }
+
+    /**
+     * Transaksi pada buku BANK.
+     */
+    public function bank(): static
+    {
+        return $this->state(fn (array $attributes): array => ['akun' => 'bank']);
     }
 
     /**
