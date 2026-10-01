@@ -39,40 +39,47 @@ Sistem ini **HANYA** untuk pengelolaan **SPK, uang masuk, uang keluar**, dan kon
 ## 2. Aturan Bisnis (Business Rules)
 
 1. **SPK adalah entitas inti.** Tidak ada entitas PROYEK.
-2. **Retensi SPK = 5%** dari nilai SPK (untuk SPK subkon/vendor).
-   - `nilai_retensi = nilai_spk × persen_retensi / 100`
-   - Dihitung **otomatis** oleh hook `saving` di model `Spk` — tidak boleh diisi manual.
 
-3. **⭐ RETENSI ADALAH DANA DITAHAN — BUKAN PIUTANG LANCAR.**
-   Retensi adalah bagian nilai SPK yang **ditahan pemberi kerja** sampai masa
-   pemeliharaan selesai. Karena itu retensi **belum boleh ditagih**.
+2. **❌ RETENSI TIDAK DIPAKAI** — keputusan pengguna 19 Sep 2026, dikonfirmasi
+   26 Sep 2026 lewat pemeriksaan data nyata.
+
+   > **Bukti dari data perusahaan:** seluruh SPK yang sudah berstatus `Dibayar`
+   > diterima **100%** dari nilai SPK — tidak ada satu pun yang ditahan 5%.
+   > Contoh: `0094.SPK/DAN.01.03/PLNBATAM020400/2026` nilai Rp 461.700.000
+   > diterima Rp 461.700.000 (100%).
+
+   **Konsekuensinya (WAJIB dipatuhi saat coding):**
 
    ```
-   nilai_tagih  = nilai_spk − retensi_ditahan      (yang boleh ditagih sekarang)
-   piutang      = nilai_tagih − sudah_diterima      (piutang LANCAR)
-   sisa_hak_penuh = nilai_spk − sudah_diterima      (termasuk retensi)
+   piutang = nilai_spk − sudah_diterima      ← rumus yang DIPAKAI
    ```
 
-   **Kapan retensi dilepas?** Saat `status_tagihan = Dibayar` (pekerjaan selesai
-   & masa pemeliharaan berjalan/selesai). Setelah itu nilai penuh boleh ditagih.
+   - **DILARANG** memakai `persen_retensi` / `nilai_retensi` — kolomnya sudah
+     **dihapus** dari tabel `spk` (lihat `Schema.md`).
+   - **DILARANG** mengurangi piutang dengan retensi 5%. Melakukan itu akan
+     membuat piutang **lebih kecil dari kenyataan** sebesar 5% — padahal klien
+     membayar penuh.
+   - Tidak ada konsep "dana ditahan" maupun "masa pemeliharaan" di sistem ini.
 
-   > ⚠️ **Konsekuensi penting:** laporan piutang & laba-rugi **wajib** memakai
-   > piutang lancar (retensi dikurangi). Kalau tidak, piutang akan **lebih besar
-   > dari kenyataan** sebesar nilai retensi.
-   >
-   > Contoh nyata: SPK Rp 100 jt, retensi 5% (Rp 5 jt), sudah diterima Rp 45 jt.
-   > - ❌ Salah: piutang = 100 − 45 = **Rp 55 jt**
-   > - ✅ Benar: piutang = (100 − 5) − 45 = **Rp 50 jt**
-   >
-   > Implementasi: `Spk::retensiDitahan()`, `Spk::nilaiTagih()`,
-   > `Spk::piutangDari()`. Diuji di `tests/Feature/RetensiTest.php`.
+   **Riwayat:** aturan retensi 5% pernah ada di dokumen versi lama. Sudah
+   dihapus dari sistem, dan dokumen ini diselaraskan 26 Sep 2026.
+
+3. **❌ LABA-RUGI PER SPK TIDAK DIHITUNG** — keputusan pengguna 19 Sep 2026.
+
+   Sistem **murni mencatat** data yang diinput. Tidak menghitung pajak, biaya,
+   laba/rugi, maupun margin. Alasannya: perusahaan belum memakai perhitungan
+   tersebut, dan angka yang tidak dipakai justru berisiko menyesatkan.
+
+   Yang tetap disajikan: **nilai SPK**, **sudah diterima**, **belum diterima**
+   (piutang), dan **arus kas** dari transaksi nyata.
 
 4. **Tidak ada approval.** Admin langsung mencatat transaksi; Direktur hanya memantau.
 5. **Sumber uang masuk disimpulkan dari `spk_id`:**
    - `spk_id` **terisi** → uang masuk dari SPK
    - `spk_id` **NULL** → uang masuk dari luar SPK
 6. **Uang keluar boleh memiliki `spk_id = NULL`** untuk pengeluaran umum.
-   Untuk biaya langsung pekerjaan, `spk_id` diisi agar laba-rugi per SPK dapat dihitung.
+   Untuk biaya langsung pekerjaan, `spk_id` diisi agar pengeluaran bisa
+t   dikaitkan ke SPK tertentu (laba-rugi TIDAK dihitung — lihat §2).
 7. **Jumlah transaksi harus > 0.** Arah transaksi ditentukan oleh **tabel**
    (`uang_masuk`/`uang_keluar`), **bukan** tanda minus.
 8. **Nominal rupiah disimpan `DECIMAL(18,2)` — DILARANG `FLOAT`/`DOUBLE`.**
@@ -195,7 +202,7 @@ Sistem hanya memiliki **2 role**:
 1. **Foreign key constraint** pada semua relasi.
 2. **Unique constraint** pada `spk_number` dan `email`.
 3. **Nominal rupiah `DECIMAL(18,2)`** — dilarang `FLOAT`.
-4. **Retensi dihitung 5%** secara konsisten.
+4. **Retensi TIDAK dihitung** (lihat §2) — kolomnya sudah dihapus dari tabel `spk`.
 5. **Gunakan transaction** untuk operasi yang mengubah beberapa tabel.
 6. **Jangan menghapus histori keuangan** — gunakan soft delete.
 7. **Index** pada kolom yang sering difilter: `spk_number`, status, tanggal, foreign key.
@@ -254,7 +261,8 @@ Karena sistem berjalan **lokal** di jaringan kantor (lihat `Architecture.md` §7
 1. **Data Mitra** (PLN, pelanggan, vendor, subkon) + **PHP Enum** (Status SPK, Status Tagihan, Kategori Pengeluaran).
 2. **Modul SPK** — entitas inti.
 3. **Modul Transaksi** (Uang Masuk 2 mode, Uang Keluar).
-4. **Laporan** (SPK, Uang Masuk, Uang Keluar, Cashflow, Piutang, Laba-Rugi per SPK).
+4. **Laporan** (SPK, Uang Masuk, Uang Keluar, Cashflow, Piutang).
+   Laba-Rugi per SPK TIDAK dipakai — lihat §2.
 5. **Dashboard** — bergantung pada data transaksi & laporan.
 
 > Urutan dependensi: **scope → SRS → ERD → flowchart → layout → implementation**.
@@ -264,12 +272,12 @@ Karena sistem berjalan **lokal** di jaringan kantor (lihat `Architecture.md` §7
 | No | Hal | Status |
 |---|---|---|
 | 1 | **Pilihan deployment:** lokal | ✅ **Lokal** — PC Direktur server, PC Admin client. **PC boleh dipakai kerja lain** |
-| 2 | **Formula** retensi & estimasi profit | ✅ Retensi 5%; profit = penerimaan − biaya |
+| 2 | **Formula** retensi & estimasi profit | ❌ **Tidak dipakai** — retensi & laba-rugi dihapus (lihat §2). Sistem murni mencatat |
 | 3 | **Status kanonis** SPK & tagihan | ✅ Sudah dikunci (§3) |
 | 4 | **Kolom `keterangan` pada SPK** | ✅ **Dihapus** |
 | 5 | **Audit log** | ✅ **Dihapus** (menyimpang dari SRS NFR-SEC-004) |
 | 6 | **Jumlah file bukti** | ✅ **Bebas** (JSON array) |
-| 7 | **Upload dokumen SPK** (BAST, kuitansi, scan) | ⏳ **Belum** — lihat `Schema.md` §9 |
+| 7 | **Upload dokumen SPK** (BAST, kuitansi, scan) | ✅ **SELESAI** 29 Sep 2026 — kolom `spk.dokumen` (JSON), banyak berkas per SPK |
 | 8 | **Data keuangan final dari Admin** | ⏳ Belum diterima |
 | 9 | **Rekening koran:** format & peran | ⏳ Belum |
 | 10 | **Data lama 2024–2026:** import atau mulai dari nol | ⏳ Belum |

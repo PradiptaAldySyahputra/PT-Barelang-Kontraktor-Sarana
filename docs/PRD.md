@@ -33,9 +33,10 @@ sheet, catatan terpisah, dan arsip bukti transaksi. Kondisi tersebut menimbulkan
 ## 2. Tujuan Produk
 
 1. Memusatkan data SPK dalam satu sistem web internal.
-2. Menyimpan SPK subkon/vendor beserta nilai borongan dan retensi 5%.
+2. Menyimpan SPK subkon/vendor beserta nilai borongan (retensi 5% TIDAK dipakai — lihat `Rules.md` §2).
 3. Mencatat uang masuk dan uang keluar beserta bukti pendukungnya.
-4. Menghitung **laba-rugi per SPK** secara otomatis.
+4. ~~Menghitung laba-rugi per SPK~~ — ❌ **TIDAK DIPAKAI** (keputusan user 19 Sep 2026;
+   sistem murni mencatat data yang diinput, lihat `Rules.md` §2).
 5. Menyajikan dashboard dan laporan keuangan yang akurat.
 6. Menjaga jejak audit atas perubahan data.
 
@@ -75,11 +76,11 @@ Sistem ini **hanya memiliki 2 role**:
 |---|---|---|
 | **Autentikasi & Hak Akses** | Login, logout, session, pembatasan akses role Admin/Direktur | User hanya mengakses fitur sesuai haknya |
 | **Data Mitra** | CRUD mitra: PLN, pelanggan, vendor, subkon | Fondasi data referensi |
-| **SPK** ⭐ | CRUD SPK (PLN & subkon/vendor), nilai borongan, **retensi 5%**, status SPK, status tagihan | Entitas inti sistem |
+| **SPK** ⭐ | CRUD SPK (PLN & subkon/vendor), nilai borongan, status SPK, status tagihan (retensi TIDAK dipakai) | Entitas inti sistem |
 | **Uang Masuk** | Pencatatan penerimaan dari SPK atau luar SPK, upload bukti | Penerimaan terekam, terelasi ke SPK bila relevan |
 | **Uang Keluar** | Pencatatan pengeluaran per kategori, relasi ke SPK (opsional), upload bukti | Pengeluaran terekam |
-| **Dashboard** | Ringkasan nilai SPK, uang masuk, uang keluar, saldo, piutang, estimasi laba-rugi | Pemantauan kondisi keuangan |
-| **Laporan** | Laporan SPK, Uang Masuk, Uang Keluar, Cashflow, SPK Belum Dibayar, Laba-Rugi per SPK | Laporan + export PDF/Excel |
+| **Dashboard** | Ringkasan nilai SPK, uang masuk, uang keluar, saldo, piutang | Pemantauan kondisi keuangan |
+| **Laporan** | Laporan SPK, Uang Masuk, Uang Keluar, Cashflow, SPK Belum Dibayar | Laporan + export CSV/Excel |
 
 > 📌 **Audit log dihapus** (keputusan user 19 Sep 2026). Konsekuensinya: tidak ada jejak
 > siapa mengubah nominal. Ini **menyimpang dari SRS NFR-SEC-004** — lihat `Schema.md` §8.
@@ -117,7 +118,7 @@ Sistem ini **hanya memiliki 2 role**:
 
 | Kode | Kebutuhan | Prioritas |
 |---|---|---|
-| FR-MST-001 | Kelola Mitra: PLN, pelanggan, vendor, subkon | High |
+| FR-MST-001 | Kelola Mitra: **PLN (pemberi kerja)** & **Subkon/Vendor** — 2 kategori sesuai keputusan pengguna 19 Sep 2026 | High |
 | FR-MST-002 | Daftar Status SPK (Enum): Draft, Terbit, Berjalan, Selesai, Sudah Ditagihkan, Dibatalkan | High |
 | FR-MST-003 | Daftar Status Tagihan (Enum): Belum Ditagihkan, Sudah Ditagihkan, Revisi Dokumen, Menunggu Pembayaran, Dibayar | High |
 | FR-MST-004 | Daftar Kategori Pengeluaran (Enum): material, upah, operasional, gaji, nota, transportasi, lainnya | High |
@@ -133,11 +134,11 @@ Sistem ini **hanya memiliki 2 role**:
 |---|---|---|
 | FR-SPK-001 | Admin membuat SPK baru (nomor, tanggal, tanggal akhir, nama pekerjaan, lokasi, nilai, status) | High |
 | FR-SPK-002 | Admin mengubah data SPK | High |
-| FR-SPK-003 | Sistem menghitung **retensi 5%** dari nilai SPK | High |
+| FR-SPK-003 | ~~Sistem menghitung retensi 5%~~ — ❌ **TIDAK DIPAKAI** (kolom retensi sudah dihapus; bukti: seluruh SPK Dibayar diterima 100%) | — |
 | FR-SPK-004 | Admin mengubah status SPK & status tagihan | High |
 | FR-SPK-005 | Sistem menampilkan detail SPK: data lengkap, uang masuk terkait, pengeluaran terkait | High |
 | FR-SPK-006 | Filter SPK: nomor, tanggal, lokasi, nilai, status, sumber/sheet lama | Medium |
-| FR-SPK-007 | Upload dokumen SPK | ⚠️ Menunggu keputusan (lihat §9) |
+| FR-SPK-007 | Upload dokumen SPK | ✅ **SELESAI** (29 Sep 2026) — kolom `spk.dokumen` (JSON), banyak berkas per SPK |
 
 ### 5.3 Uang Masuk
 
@@ -163,15 +164,15 @@ Sistem ini **hanya memiliki 2 role**:
 |---|---|---|
 | FR-DASH-001 | Kartu ringkasan: total nilai SPK, total uang masuk, total uang keluar, saldo bersih | High |
 | FR-DASH-002 | Grafik uang masuk vs uang keluar per bulan | High |
-| FR-DASH-003 | Grafik perbandingan nilai SPK, penerimaan, biaya, estimasi margin | Medium |
+| FR-DASH-003 | Grafik perbandingan nilai SPK, penerimaan, dan biaya | Medium |
 | FR-DASH-004 | Tabel SPK berjalan beserta status tagihan | High |
 | FR-RPT-001 | Laporan SPK | High |
 | FR-RPT-002 | Laporan Uang Masuk | High |
 | FR-RPT-003 | Laporan Uang Keluar | High |
 | FR-RPT-004 | Laporan Cashflow (masuk vs keluar per periode) | High |
 | FR-RPT-005 | Laporan SPK Belum Dibayar (piutang) | High |
-| FR-RPT-006 | **Laporan Laba-Rugi per SPK** ⭐ | High |
-| FR-RPT-007 | Export PDF & Excel di setiap laporan | Medium |
+| FR-RPT-006 | ~~Laporan Laba-Rugi per SPK~~ — ❌ **TIDAK DIPAKAI** (tidak ada data biaya & laba di sistem) | — |
+| FR-RPT-007 | Export **Excel (XLSX)**, **PDF**, & CSV di setiap laporan | ✅ **SELESAI** (29 Sep 2026) — `?format=xlsx` / `?format=pdf` / CSV |
 
 ## 6. Kebutuhan Non-Fungsional
 
@@ -196,7 +197,7 @@ Sistem ini **hanya memiliki 2 role**:
 1. Admin login ke sistem.
 2. Admin mengelola master data (partner, status, kategori).
 3. Admin membuat data SPK (nomor, tanggal, pekerjaan, nilai, status).
-   → Sistem menghitung retensi 5% jika SPK subkon/vendor.
+   → (Retensi TIDAK dihitung — lihat `Rules.md` §2.)
 4. Admin mencatat UANG MASUK:
    - Mode 1: pilih SPK dari dropdown → isi tanggal & nominal
    - Mode 2: input manual (nama pekerjaan + nomor SPK bebas)
@@ -206,7 +207,7 @@ Sistem ini **hanya memiliki 2 role**:
    - Relasi ke SPK (opsional)
    - Isi nominal, penerima, keterangan
    - Upload bukti
-6. Sistem menghitung otomatis: saldo, piutang, laba-rugi per SPK.
+6. Sistem menghitung otomatis: saldo & piutang per SPK (laba-rugi tidak dihitung — lihat `Rules.md` §2).
 7. Direktur membuka dashboard & laporan untuk memantau.
 ```
 
@@ -236,9 +237,10 @@ Draft ──► Terbit ──► Berjalan ──► Selesai ──► Sudah Dita
 ## 8. Kriteria Sukses
 
 1. Sistem mencatat seluruh SPK secara terpusat.
-2. Sistem menyimpan SPK subkon/vendor beserta retensi 5%.
+2. ~~Sistem menyimpan SPK subkon/vendor beserta retensi 5%~~ — ❌ Tidak dipakai.
 3. Sistem mencatat uang masuk dan uang keluar beserta bukti.
-4. Sistem menghitung **laba-rugi per SPK** tanpa rekap manual tambahan.
+4. ~~Sistem menghitung laba-rugi per SPK~~ — ❌ Tidak dipakai. Sistem menyajikan
+   nilai SPK, sudah diterima, dan belum diterima (piutang) secara otomatis.
 5. Saldo dan piutang dihitung otomatis dari akumulasi transaksi.
 6. Dashboard menampilkan ringkasan keuangan yang akurat.
 7. Laporan dapat diekspor ke PDF/Excel.

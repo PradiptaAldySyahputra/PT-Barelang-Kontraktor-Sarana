@@ -97,7 +97,7 @@ app/
      ├──► Master Data ──► partner, status, kategori
      │
      ├──► SPK ──► validasi ──► simpan
-     │             └──► hitung retensi 5% (jika subkon/vendor)
+     │             └──► (retensi TIDAK dihitung — lihat Rules.md §2)
      │
      ├──► Uang Masuk
      │      ├── Mode 1: pilih SPK  ──► spk_id terisi
@@ -349,17 +349,17 @@ flowchart LR
 - [ ] Repository GitHub sudah final
 - [ ] File `.env` lokal dikonfigurasi untuk jaringan kantor
 - [ ] Database lokal sudah dibuat di PC Direktur
-- [ ] Migration berhasil dijalankan
+- [x] Migration berhasil dijalankan
 - [ ] Storage link & permission folder upload benar
-- [ ] Akun Admin dan Direktur sudah dibuat
-- [ ] Role middleware sudah diuji
-- [ ] Form SPK berjalan
-- [ ] Retensi 5% dihitung dengan benar
-- [ ] Form uang masuk (2 mode) berjalan
-- [ ] Form uang keluar berjalan
-- [ ] Upload bukti berjalan
-- [ ] Perhitungan saldo, piutang, laba-rugi akurat
-- [ ] Dashboard menampilkan data yang benar
+- [x] Akun Admin dan Direktur sudah dibuat
+- [x] Role middleware sudah diuji
+- [x] Form SPK berjalan
+- [x] ~~Retensi 5%~~ — TIDAK dipakai (dihapus 19 Sep 2026, dokumen diselaraskan 26 Sep 2026)
+- [x] Form uang masuk (2 mode) berjalan
+- [x] Form uang keluar berjalan
+- [x] Upload bukti berjalan
+- [x] Perhitungan saldo & piutang akurat — **laba-rugi TIDAK dihitung** (Rules §2)
+- [x] Dashboard menampilkan data yang benar
 - [ ] Black-box testing selesai
 - [ ] Bug prioritas tinggi sudah diperbaiki
 - [ ] Manual book Admin dan Direktur tersedia
