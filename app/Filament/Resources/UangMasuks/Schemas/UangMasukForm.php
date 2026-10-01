@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UangMasuks\Schemas;
 
+use App\Enums\AkunKas;
 use App\Models\Spk;
+use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
@@ -56,6 +58,13 @@ class UangMasukForm
                                     $component->state($record->spk_id !== null ? 'spk' : 'manual');
                                 }
                             }),
+
+                        Select::make('akun')
+                            ->label('Kas/Bank')
+                            ->options(AkunKas::opsi())
+                            ->default(AkunKas::Kas->value)
+                            ->native(false)
+                            ->helperText('Boleh dikosongkan — kalau kosong dianggap Kas. Isi hanya kalau perlu memisahkan buku Kas & Bank.'),
                     ]),
 
                 Section::make('Data SPK')
@@ -85,6 +94,28 @@ class UangMasukForm
                                     $set('mitra_id', $spk->mitra_id);
                                 }
                             })
+                            /*
+                             * ⚠️ RULES.md §5 butir 3:
+                             * "SPK berstatus `Dibatalkan` TIDAK menerima transaksi
+                             *  baru kecuali ada override khusus oleh Admin."
+                             *
+                             * SPK dibatalkan = pekerjaan tidak dilanjutkan. Kalau
+                             * penerimaan masih bisa masuk, laporan piutang jadi
+                             * salah: perusahaan terlihat masih punya piutang atas
+                             * pekerjaan yang sudah batal.
+                             *
+                             * Logikanya memakai `StatusSpk::bolehTransaksiBaru()`
+                             * supaya aturan hidup di SATU tempat saja.
+                             */
+                            ->rules([
+                                fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                                    $spk = $value ? Spk::find($value) : null;
+
+                                    if ($spk !== null && ! $spk->status_spk->bolehTransaksiBaru()) {
+                                        $fail('SPK ini berstatus Dibatalkan — tidak bisa menerima transaksi baru.');
+                                    }
+                                },
+                            ])
                             ->helperText('Nomor SPK & nama pekerjaan akan terisi otomatis.')
                             ->columnSpanFull(),
 
@@ -124,6 +155,16 @@ class UangMasukForm
                             ->required()
                             ->native(false)
                             ->displayFormat('d/m/Y')
+                            /*
+                             * ⚠️ Rules.md §5 butir 1: "Tanggal transaksi tidak
+                             * boleh lebih dari hari ini". Tanpa batas ini, salah
+                             * ketik tahun (2062 alih-alih 2026) membuat transaksi
+                             * tidak muncul di filter bulan mana pun yang wajar —
+                             * saldo & laporan pajak jadi salah.
+                             *
+                             * Tanggal LAMPAU tetap boleh (input transaksi terlambat).
+                             */
+                            ->maxDate(now())
                             ->default(now()),
 
                         TextInput::make('jumlah')
@@ -143,7 +184,7 @@ class UangMasukForm
                             // Rp 500 juta dan angka laba-rugi langsung rusak.
                             // -------------------------------------------------
                             ->rules([
-                                fn (Get $get, ?object $record): \Closure => function (string $attribute, $value, \Closure $fail) use ($get, $record): void {
+                                fn (Get $get, ?object $record): Closure => function (string $attribute, $value, Closure $fail) use ($get, $record): void {
                                     $spkId = $get('spk_id');
 
                                     if (blank($spkId)) {

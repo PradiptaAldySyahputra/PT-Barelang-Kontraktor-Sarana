@@ -7,6 +7,7 @@ namespace App\Filament\Resources\UangKeluars\Pages;
 use App\Filament\Resources\UangKeluars\Schemas\UangKeluarForm;
 use App\Filament\Resources\UangKeluars\UangKeluarResource;
 use App\Models\UangKeluar;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Schema;
@@ -47,7 +48,7 @@ class CreateUangKeluar extends CreateRecord
 
     public function getSubheading(): ?string
     {
-        return 'Bisa mengisi 4 pengeluaran sekaligus — unggah beberapa nota dalam satu kali pilih, lalu isi angkanya.';
+        return 'Unggah berkas notanya, isi ada berapa nota di dalam berkas itu — baris rincian dibuat otomatis.';
     }
 
     /**
@@ -62,23 +63,33 @@ class CreateUangKeluar extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $this->barisPengeluaran = collect($data['pengeluaran'] ?? [])
-            ->filter(fn (array $r): bool => filled($r['jumlah'] ?? null) || filled($r['kategori'] ?? null))
+            ->filter(fn ($r): bool => is_array($r) && (filled($r['jumlah'] ?? null) || filled($r['kategori'] ?? null)))
             ->values()
             ->all();
 
-        unset($data['pengeluaran'], $data['nota_sekaligus']);
+        unset($data['pengeluaran'], $data['berkas_nota'], $data['potongan_ocr'], $data['jumlah_nota_ocr']);
 
         return $data;
     }
 
     /**
      * Validasi baris: yang terisi harus lengkap.
+     *
+     * ⚠️ BUG YANG DICEGAH (penting):
+     * Sebelumnya method ini membaca `$this->data['pengeluaran']` — yaitu state
+     * form MENTAH. Padahal `$this->data` diisi saat validasi form, dan isinya
+     * bisa BERBEDA dari data yang sudah diolah `mutateFormDataBeforeCreate()`
+     * (yang menambahkan `jumlah`, `kategori`, dll).
+     *
+     * Akibatnya validasi melihat baris "kosong" padahal sudah diisi → `halt()`
+     * terpanggil → SEMUA baris tidak tersimpan tanpa pesan error apa pun.
+     *
+     * Perbaikan: validasi memakai `$this->barisPengeluaran`, yaitu data yang
+     * SUDAH diolah dan memang akan disimpan.
      */
     protected function beforeCreate(): void
     {
-        $semua = collect($this->data['pengeluaran'] ?? []);
-
-        $terisi = $semua->filter(fn (array $r): bool => filled($r['jumlah'] ?? null) || filled($r['kategori'] ?? null));
+        $terisi = collect($this->barisPengeluaran);
 
         if ($terisi->isEmpty()) {
             Notification::make()
@@ -172,10 +183,40 @@ class CreateUangKeluar extends CreateRecord
     protected function getCreatedNotificationTitle(): ?string
     {
         $jumlah = count($this->barisPengeluaran);
+        $total = collect($this->barisPengeluaran)->sum(fn ($r): float => (float) ($r['jumlah'] ?? 0));
 
         return $jumlah > 1
-            ? $jumlah.' pengeluaran berhasil dicatat'
-            : 'Uang keluar berhasil dicatat';
+            ? $jumlah.' pengeluaran dicatat — Rp '.number_format($total, 0, ',', '.')
+            : 'Uang keluar dicatat — Rp '.number_format($total, 0, ',', '.');
+    }
+
+    /**
+     * Teks tombol Simpan dibuat jelas.
+     *
+     * Permintaan user: "diperbarui dengan navigasi yang jelas juga, di button,
+     * alert, icon". Tombol "Create" (bahasa Inggris, umum) tidak menjelaskan
+     * apa yang akan terjadi. Diganti supaya admin tahu persis aksinya.
+     */
+    protected function getCreateFormAction(): Action
+    {
+        return parent::getCreateFormAction()
+            ->label('Simpan Pengeluaran');
+    }
+
+    protected function getCreateAnotherFormAction(): Action
+    {
+        return parent::getCreateAnotherFormAction()
+            ->label('Simpan & Tambah Lagi');
+    }
+
+    /**
+     * Tombol Batal juga diterjemahkan, supaya seluruh aksi konsisten
+     * berbahasa Indonesia (tidak campur "Cancel").
+     */
+    protected function getCancelFormAction(): Action
+    {
+        return parent::getCancelFormAction()
+            ->label('Batal');
     }
 
     protected function getRedirectUrl(): string

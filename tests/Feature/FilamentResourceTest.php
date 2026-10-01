@@ -241,7 +241,14 @@ class FilamentResourceTest extends TestCase
 
     public function test_admin_bisa_membuat_uang_keluar_terkait_spk(): void
     {
-        $spk = Spk::factory()->create([
+        /*
+         * ⚠️ `berjalan()` WAJIB: factory Spk memakai status ACAK
+         * (`fake()->randomElement(StatusSpk::cases())`). Tanpa state ini, tes
+         * kadang mendapat SPK `Dibatalkan` — dan validasi Rules §5 butir 3
+         * (SPK Dibatalkan tidak menerima transaksi) menolaknya. Itu membuat
+         * tes ini FLAKY: lulus/gagal tanpa perubahan kode.
+         */
+        $spk = Spk::factory()->berjalan()->create([
             'nomor_spk' => 'KELUAR-SPK-001',
             'mitra_id' => Mitra::factory(),
             'dibuat_oleh' => $this->admin->id,

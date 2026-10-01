@@ -37,7 +37,7 @@ class BatasUangMasukTest extends TestCase
             'email' => 'admin-batas@bks.test',
         ]);
 
-        $this->spk = Spk::factory()->pln()->create([
+        $this->spk = Spk::factory()->pln()->berjalan()->create([
             'nomor_spk' => 'BATAS-001',
             'nilai_spk' => 100_000_000,
             'status_tagihan' => StatusTagihan::BelumDitagihkan,

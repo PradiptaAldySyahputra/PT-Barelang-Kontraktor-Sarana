@@ -46,8 +46,22 @@ class SpkFactory extends Factory
             'jenis_sumber' => fake()->randomElement(['pln', 'luar']),
             'sheet_lama' => null,
             'mitra_id' => Mitra::factory(),
-            'status_spk' => fake()->randomElement(StatusSpk::cases()),
-            'status_tagihan' => fake()->randomElement(StatusTagihan::cases()),
+            /*
+             * ⚠️ STATUS DEFAULT DIBUAT DETERMINISTIK (bukan acak).
+             *
+             * Sebelumnya: `fake()->randomElement(StatusSpk::cases())`.
+             * Akibatnya setiap tes bisa mendapat SPK `Dibatalkan` secara acak —
+             * dan sejak `Rules.md` §5 butir 3 ditegakkan (SPK Dibatalkan tidak
+             * menerima transaksi), tes menjadi FLAKY: lulus/gagal tanpa ada
+             * perubahan kode sama sekali.
+             *
+             * `Berjalan` adalah status paling netral untuk SPK yang sedang
+             * dikerjakan, dan itu memang kasus yang paling sering diuji.
+             * Tes yang butuh status lain memakai state: `berjalan()`,
+             * `lunas()`, `tanpaSpk()`, atau mengisi `status_spk` eksplisit.
+             */
+            'status_spk' => StatusSpk::Berjalan,
+            'status_tagihan' => StatusTagihan::BelumDitagihkan,
             'dikerjakan_oleh' => DikerjakanOleh::Sendiri,
             'subkon_id' => null,
             'dibuat_oleh' => Pengguna::factory(),
