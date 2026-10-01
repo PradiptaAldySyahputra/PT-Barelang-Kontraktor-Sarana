@@ -36,26 +36,65 @@
             @endforeach
         </div>
 
+        {{-- ============================================================
+             EKSPOR LAPORAN — SATU tombol, format dipilih di dalam
+             ============================================================
+             ⚠️ PERBAIKAN UI (29 Sep 2026) — keluhan pengguna:
+               "kenapa double ada pdf sama excel dan disamping ada ekspor csv,
+                kenapa tidak digabung untuk pdf sama excel dan dibedakan saja"
+
+             Sebelumnya ada TIGA dropdown berdampingan (PDF, Excel, CSV) —
+             memakan ruang dan membingungkan: admin harus memilih dropdown
+             dulu, baru memilih laporan.
+
+             Sekarang: SATU tombol "Ekspor" berisi daftar laporan, dan tiap
+             laporan menawarkan 3 format sekaligus. Lebih sedikit klik, dan
+             jelas bedanya:
+               • Excel → untuk MENGOLAH angka (nominal tersimpan sebagai angka)
+               • PDF   → untuk MENYERAHKAN / mengarsipkan (ada kop & tanda tangan)
+               • CSV   → untuk pertukaran data antar sistem
+             ============================================================ --}}
+        @php
+            $jenisLaporan = [
+                'spk' => 'Daftar SPK',
+                'piutang' => 'Piutang (Belum Diterima)',
+                'masuk' => 'Uang Masuk per Bulan',
+                'keluar' => 'Pengeluaran per Kategori',
+                'tenggat' => 'Tenggat SPK',
+            ];
+
+            $formatEkspor = [
+                'xlsx' => ['label' => 'Excel (.xlsx)', 'ket' => 'diolah', 'ikon' => 'heroicon-m-table-cells'],
+                'pdf' => ['label' => 'PDF (.pdf)', 'ket' => 'arsip', 'ikon' => 'heroicon-m-document-text'],
+                'csv' => ['label' => 'CSV (.csv)', 'ket' => 'tukar data', 'ikon' => 'heroicon-m-document-arrow-down'],
+            ];
+        @endphp
+
         <x-filament::dropdown>
             <x-slot name="trigger">
-                <x-filament::button color="gray" size="sm" icon="heroicon-m-arrow-down-tray">
-                    Ekspor CSV
+                <x-filament::button color="primary" size="sm" icon="heroicon-m-arrow-down-tray">
+                    Ekspor
                 </x-filament::button>
             </x-slot>
 
             <x-filament::dropdown.list>
-                @foreach ([
-                    'spk' => 'Daftar SPK',
-                    'masuk' => 'Uang Masuk per Bulan',
-                    'keluar' => 'Pengeluaran per Kategori',
-                    'tenggat' => 'Tenggat SPK',
-                ] as $jenis => $label)
-                    <x-filament::dropdown.list.item
-                        tag="a"
-                        href="{{ route('laporan.ekspor', $jenis) }}"
-                    >
+                @foreach ($jenisLaporan as $jenis => $label)
+                    {{-- Judul laporan (header, bukan link) --}}
+                    <x-filament::dropdown.header>
                         {{ $label }}
-                    </x-filament::dropdown.list.item>
+                    </x-filament::dropdown.header>
+
+                    {{-- Tiga format untuk laporan ini --}}
+                    @foreach ($formatEkspor as $format => $info)
+                        <x-filament::dropdown.list.item
+                            tag="a"
+                            :href="route('laporan.ekspor', ['jenis' => $jenis, 'format' => $format])"
+                            :icon="$info['ikon']"
+                        >
+                            {{ $info['label'] }}
+                            <span class="text-xs text-gray-500">— {{ $info['ket'] }}</span>
+                        </x-filament::dropdown.list.item>
+                    @endforeach
                 @endforeach
             </x-filament::dropdown.list>
         </x-filament::dropdown>

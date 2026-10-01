@@ -10,10 +10,14 @@ use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
 use BackedEnum;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Response;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -54,7 +58,7 @@ class Laporan extends Page
 
     protected static ?string $title = 'Laporan';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 31;
 
     /** Periode laporan: 1 = bulan ini, 3 = 3 bulan, 12 = 1 tahun, 0 = semua */
     public int $periode = 12;
@@ -190,9 +194,22 @@ class Laporan extends Page
             ->orderBy('tanggal_akhir')
             ->get();
 
+        // ---------------------------------------------------------
+        // DAFTAR PIUTANG — SPK yang belum diterima penuh (PRD FR-RPT-005).
+        //
+        // Diurutkan piutang TERBESAR lebih dulu supaya admin langsung tahu
+        // mana yang paling perlu ditagih. SPK lunas tidak masuk daftar.
+        // ---------------------------------------------------------
+        $daftarPiutang = Spk::query()
+            ->with('mitra')
+            ->withSum('uangMasuk as total_masuk', 'jumlah')
+            ->get()
+            ->filter(fn (Spk $s): bool => $s->piutangDari((float) ($s->total_masuk ?? 0)) > 0)
+            ->sortByDesc(fn (Spk $s): float => $s->piutangDari((float) ($s->total_masuk ?? 0)))
+            ->values();
+
         return [
             'periode' => $this->periode,
-
             // Ringkasan
             'totalMasuk' => $totalMasuk,
             'totalKeluar' => $totalKeluar,
@@ -208,6 +225,7 @@ class Laporan extends Page
             'daftarSpk' => $daftarSpk,
             'spkLewatTenggat' => $spkLewatTenggat,
             'spkMendekatiTenggat' => $spkMendekatiTenggat,
+            'daftarPiutang' => $daftarPiutang,
 
             // Jumlah
             'jumlahSpk' => Spk::count(),
@@ -220,7 +238,7 @@ class Laporan extends Page
     /**
      * Ekspor data laporan ke CSV.
      */
-    public function ekspor(string $jenis): StreamedResponse
+    public function ekspor(string $jenis, string $format = 'csv'): StreamedResponse|HttpResponse
     {
         $data = $this->getViewData();
 
@@ -271,6 +289,28 @@ class Laporan extends Page
                     )
                     ->all(),
             ],
+
+            /*
+             * LAPORAN PIUTANG — PRD FR-RPT-005 (prioritas High).
+             *
+             * Daftar SPK yang uangnya BELUM diterima penuh, diurutkan dari
+             * piutang TERBESAR supaya admin langsung tahu mana yang paling
+             * perlu ditagih. SPK yang sudah lunas TIDAK muncul.
+             */
+            'piutang' => [
+                'Laporan Piutang (SPK Belum Diterima Penuh)',
+                ['Nomor SPK', 'Pekerjaan', 'Mitra', 'Nilai SPK', 'Sudah Diterima', 'Belum Diterima', 'Status Tagihan', 'Tenggat'],
+                $data['daftarPiutang']->map(fn (Spk $s): array => [
+                    $s->nomor_spk,
+                    $s->nama_pekerjaan,
+                    $s->mitra?->nama ?? '—',
+                    (float) $s->nilai_spk,
+                    $s->totalPenerimaan(),
+                    $s->sisaTagih(),
+                    $s->status_tagihan?->label() ?? 'Belum Ditagihkan',
+                    $s->tanggal_akhir?->format('d/m/Y') ?? '—',
+                ])->all(),
+            ],
             default => [
                 'Laporan Daftar SPK',
                 ['Nomor SPK', 'Pekerjaan', 'Mitra', 'Tanggal', 'Nilai SPK', 'Sudah Diterima', 'Belum Diterima', 'Status SPK', 'Status Tagihan'],
@@ -288,7 +328,70 @@ class Laporan extends Page
             ],
         };
 
-        $namaFile = str($judul)->slug().'-'.now()->format('Y-m-d').'.csv';
+        $namaFile = str($judul)->slug().'-'.now()->format('Y-m-d');
+
+        /*
+         * ============================================================
+         * EKSPOR EXCEL (XLSX) — PRD FR-RPT-007
+         * ============================================================
+         *
+         * Keputusan pengguna (29 Sep 2026): "ekspor pdf dan excel, sebaiknya
+         * kearah excel". Perusahaan memang bekerja dengan Excel.
+         *
+         * ⚠️ KENAPA XLSX, BUKAN CUKUP CSV:
+         * Di CSV semua nilai berupa TEKS — admin tidak bisa langsung
+         * menjumlahkan kolom nominal di Excel. Di XLSX nominal disimpan sebagai
+         * ANGKA, jadi bisa langsung di-SUM. Itu inti manfaatnya.
+         *
+         * CSV tetap dipertahankan (tidak dihapus) karena sudah dipakai.
+         */
+        /*
+         * ============================================================
+         * EKSPOR PDF — PRD FR-RPT-007
+         * ============================================================
+         *
+         * Excel dipakai untuk MENGOLAH angka; PDF untuk MENYERAHKAN &
+         * MENGARSIPKAN (mis. lampiran ke bagian pajak, bukti pemeriksaan).
+         * Angka di PDF tidak mudah diubah tanpa jejak — lebih aman sebagai
+         * dokumen resmi.
+         */
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('filament.pages.laporan-pdf', [
+                'judul' => $judul,
+                'header' => $header,
+                'baris' => $baris,
+                'periode' => $this->labelPeriode(),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download($namaFile.'.pdf');
+        }
+
+        if ($format === 'xlsx') {
+            $path = tempnam(sys_get_temp_dir(), 'laporan').'.xlsx';
+
+            $writer = new XlsxWriter;
+            $writer->openToFile($path);
+
+            $writer->addRow(Row::fromValues([$judul]));
+            $writer->addRow(Row::fromValues(['Dicetak: '.now()->format('d/m/Y H:i')]));
+            $writer->addRow(Row::fromValues([]));
+            $writer->addRow(Row::fromValues($header));
+
+            foreach ($baris as $r) {
+                $writer->addRow(Row::fromValues(array_values((array) $r)));
+            }
+
+            $writer->close();
+
+            return Response::streamDownload(function () use ($path): void {
+                readfile($path);
+                @unlink($path);
+            }, $namaFile.'.xlsx', [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+        }
+
+        $namaFile .= '.csv';
 
         return Response::streamDownload(function () use ($judul, $header, $baris): void {
             $out = fopen('php://output', 'w');
@@ -341,11 +444,19 @@ class Laporan extends Page
 
     public function getSubheading(): ?string
     {
+        return 'Periode: '.$this->labelPeriode();
+    }
+
+    /**
+     * Label periode dalam bahasa manusia — dipakai subjudul & kop PDF.
+     */
+    private function labelPeriode(): string
+    {
         return match ($this->periode) {
-            1 => 'Periode: bulan ini',
-            3 => 'Periode: 3 bulan terakhir',
-            12 => 'Periode: 12 bulan terakhir',
-            default => 'Periode: semua data',
+            1 => 'bulan ini',
+            3 => '3 bulan terakhir',
+            12 => '12 bulan terakhir',
+            default => 'semua data',
         };
     }
 }
