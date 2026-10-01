@@ -8,7 +8,7 @@ namespace App\Enums;
  * Kategori pengeluaran (uang keluar).
  *
  * PENTING: enum ini adalah pengganti tabel master `expense_categories`.
- * Karena schema hanya 5 tabel (sesuai db.txt), kolom `uang_keluar.kategori`
+ * Karena schema hanya 5 tabel (sesuai skema awal), kolom `uang_keluar.kategori`
  * berupa teks. WAJIB divalidasi memakai enum ini + dropdown di form,
  * agar laporan tidak terpecah (mis. "Material" vs "Material Bangunan").
  *

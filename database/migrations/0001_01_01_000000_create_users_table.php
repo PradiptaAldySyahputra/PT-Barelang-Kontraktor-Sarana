@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * Tabel bawaan Laravel yang tetap dipakai: password_reset_tokens & sessions.
  *
  * CATATAN: tabel `users` bawaan TIDAK dibuat, karena sistem ini memakai
- * tabel `pengguna` (sesuai db.txt). Lihat migration berikutnya.
+ * tabel `pengguna` (sesuai skema awal). Lihat migration berikutnya.
  */
 return new class extends Migration
 {

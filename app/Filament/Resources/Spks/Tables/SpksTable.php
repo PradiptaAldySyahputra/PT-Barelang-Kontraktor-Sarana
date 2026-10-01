@@ -17,6 +17,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -269,6 +270,12 @@ class SpksTable
             // Restore dan Force Delete dihapus dari baris. Data yang sudah
             // dihapus tetap bisa dilihat lewat filter "Data Terhapus".
             ->recordActions([
+                // Detail SPK (FR-SPK-005) — membuka halaman berisi data lengkap
+                // + daftar uang masuk & uang keluar milik SPK ini.
+                ViewAction::make()
+                    ->label('Detail')
+                    ->visible(fn (): bool => true),
+
                 // Catat pembayaran (termasuk sebagian: 50%, 95%, dst).
                 CatatPembayaran::make(),
 

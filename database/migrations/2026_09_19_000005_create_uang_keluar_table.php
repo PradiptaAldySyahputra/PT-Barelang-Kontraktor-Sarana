@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Tabel `uang_keluar` — pengeluaran dana.
  *
- * Asal: db.txt (`uang_keluar`) + revisi user + keputusan user.
+ * Asal: skema awal (`uang_keluar`) + revisi user + keputusan user.
  *
  * Yang TIDAK digunakan (revisi user + keputusan user):
  *   nomor_transaksi, mitra_id, metode_pembayaran, status, dicatat_oleh,

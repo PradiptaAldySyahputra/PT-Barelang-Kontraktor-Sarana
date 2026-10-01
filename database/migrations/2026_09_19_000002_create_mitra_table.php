@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Tabel `mitra` — pihak terkait (PLN, pelanggan, vendor, subkon).
  *
- * Asal: db.txt (`mitra`) + SRS.
+ * Asal: skema awal (`mitra`) + SRS.
  * Kolom `kategori` divalidasi memakai App\Enums\KategoriMitra.
  */
 return new class extends Migration

@@ -1,12 +1,8 @@
 # PRD — Sistem Informasi SPK & Kontrol Keuangan
 ## PT Barelang Kontraktor Sarana
 
-> **Versi:** 3.1 — **5 tabel** (sesuai `db.txt`)
-> **Tanggal:** 19 September 2026
-> **Menggantikan:** `docs-backup-29agu/PRD.md` (v1.0) dan draf v2.x
-> **Sumber:** `Project Hub...` (SRS) + `db.txt` + keputusan user
-> **Keputusan user:** MySQL + **full Laravel**; **schema 5 tabel**; status & kategori pakai **PHP Enum**
-> **Status:** Siap untuk desain & implementasi
+> **Inti proyek.** Kebutuhan fitur & ruang lingkup.
+> **Keputusan kunci:** MySQL + full Laravel · schema **5 tabel** · status & kategori pakai **PHP Enum**.
 
 ---
 
@@ -113,7 +109,7 @@ Sistem ini **hanya memiliki 2 role**:
 
 ### 5.1 Data Mitra & Master Internal
 
-> 📌 **Catatan:** schema memakai **5 tabel** sesuai `db.txt`. Status & kategori **bukan** tabel
+> 📌 **Catatan:** schema memakai **5 tabel**. Status & kategori **bukan** tabel
 > master — nilainya dikelola lewat **PHP Enum** di aplikasi (lihat `Schema.md` §8).
 
 | Kode | Kebutuhan | Prioritas |
@@ -250,7 +246,7 @@ Draft ──► Terbit ──► Berjalan ──► Selesai ──► Sudah Dita
 
 | No | Hal | Pertanyaan |
 |---|---|---|
-| 1 | **Kolom `keterangan` pada SPK** | `db.txt` bilang tidak digunakan, tetapi SRS bilang wajib ada dan setiap baris Excel punya catatan follow-up. Hapus atau pertahankan? |
+| 1 | **Kolom `keterangan` pada SPK** | ✅ **Dihapus** (keputusan user) |
 | 2 | **Upload dokumen SPK** | Karena tabel bukti dihapus & bukti hanya di uang masuk/keluar, dokumen SPK (BAST, kuitansi, scan SPK) tidak punya tempat. Tambahkan kolom `dokumen` pada `spk`? |
 | 3 | **Format bukti** | Satu file per transaksi, atau banyak file? |
 | 4 | **Rekening Koran** | Format file & perannya (validasi vs pencatatan)? |
@@ -297,9 +293,7 @@ implementasi dapat dimulai pada Bulan 1 Minggu 3.
 - Struktur database: **Schema.md**
 - Tampilan & alur UI: **Design.md**
 - Aturan bisnis & konvensi: **Rules.md**
-- Riwayat perubahan: **CHANGELOG.md**
 
 ---
 
-*PRD v2.1 — keputusan user 19 September 2026 sudah diterapkan.
-Dokumen v1.0 tersimpan di `docs-backup-29agu/PRD.md`.*
+*Keputusan user 19 September 2026 sudah diterapkan.*

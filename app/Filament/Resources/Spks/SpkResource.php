@@ -10,6 +10,9 @@ use App\Filament\Resources\Spks\Pages\EditSpk;
 use App\Filament\Resources\Spks\Pages\ListSpks;
 use App\Filament\Resources\Spks\Pages\UbahStatusSpk;
 use App\Filament\Resources\Spks\Pages\UbahStatusTagihan;
+use App\Filament\Resources\Spks\Pages\ViewSpk;
+use App\Filament\Resources\Spks\RelationManagers\UangKeluarRelationManager;
+use App\Filament\Resources\Spks\RelationManagers\UangMasukRelationManager;
 use App\Filament\Resources\Spks\Schemas\SpkForm;
 use App\Filament\Resources\Spks\Tables\SpksTable;
 use App\Models\Spk;
@@ -73,6 +76,7 @@ class SpkResource extends Resource
         return [
             'index' => ListSpks::route('/'),
             'create' => CreateSpk::route('/create'),
+            'view' => ViewSpk::route('/{record}'),
             'edit' => EditSpk::route('/{record}/edit'),
 
             // Form TERPISAH untuk status (permintaan user):
@@ -80,6 +84,19 @@ class SpkResource extends Resource
             //   - /admin/spks/{record}/status-tagihan
             'status-pekerjaan' => UbahStatusSpk::route('/{record}/status-pekerjaan'),
             'status-tagihan' => UbahStatusTagihan::route('/{record}/status-tagihan'),
+        ];
+    }
+
+    /**
+     * Panel transaksi per SPK di halaman Detail SPK (FR-SPK-005).
+     *
+     * @return array<class-string>
+     */
+    public static function getRelations(): array
+    {
+        return [
+            UangMasukRelationManager::class,
+            UangKeluarRelationManager::class,
         ];
     }
 

@@ -1,14 +1,11 @@
 # Rules — Aturan Bisnis, Konvensi & Guidelines
 ## Sistem Informasi SPK & Kontrol Keuangan — PT Barelang Kontraktor Sarana
 
-> **Versi:** 3.1 — **5 tabel** (sesuai `db.txt`)
-> **Tanggal:** 19 September 2026
-> **Menggantikan:** `docs-backup-29agu/Rules.md` (v1.0) dan draf v2.x
-> **Sifat:** **WAJIB DIPATUHI** oleh AI agent/developer.
+> **WAJIB DIPATUHI** oleh AI agent/developer.
 >
 > ⚠️ **Aturan terpenting:** karena schema hanya 5 tabel, kolom status/kategori berupa **teks**.
 > **WAJIB** divalidasi dengan **PHP Enum + dropdown** — tanpa itu laporan akan terpecah.
-> Lihat §2 butir 10 dan bukti uji di `Schema.md` §8.
+> Lihat §2 butir 11 dan bukti uji di `Schema.md` §7.
 
 ---
 
@@ -87,7 +84,7 @@ t   dikaitkan ke SPK tertentu (laba-rugi TIDAK dihitung — lihat §2).
 10. **Saldo & rekap tidak disimpan sebagai kolom statis** — dihitung dari akumulasi transaksi.
 11. **⭐ WAJIB: `status_spk`, `status_tagihan`, `kategori`, `jenis_sumber`, `peran`, dan
     `mitra.kategori` divalidasi memakai PHP Enum + dropdown.**
-    Karena schema hanya 5 tabel (`db.txt`), kolom-kolom ini berupa teks. Tanpa validasi Enum,
+    Karena schema hanya 5 tabel, kolom-kolom ini berupa teks. Tanpa validasi Enum,
     laporan akan **terpecah** (mis. "Material" vs "Material Bangunan" vs "Material2" jadi
     3 baris terpisah). Risiko ini sudah dibuktikan dengan uji di MariaDB — lihat `Schema.md` §8.
 12. **Setiap transaksi sebaiknya memiliki bukti** — tidak wajib, tapi UI harus mendorong user.
@@ -254,7 +251,7 @@ Karena sistem berjalan **lokal** di jaringan kantor (lihat `Architecture.md` §7
 2. Jalankan **formatter, static analysis, dan test** sebelum merge.
 3. **Pull request wajib menjelaskan** perubahan schema, risiko keamanan, dan cara verifikasi.
 4. **Jangan mencampur refactor besar** dengan fitur tanpa alasan jelas.
-5. Setiap perubahan pada `docs/` wajib dicatat di `CHANGELOG.md`.
+5. Setiap perubahan pada `docs/` mengikuti konvensi commit yang jelas (lihat git log).
 
 ## 13. Prioritas Pengembangan (Sprint)
 
@@ -289,9 +286,7 @@ Karena sistem berjalan **lokal** di jaringan kantor (lihat `Architecture.md` §7
 - Struktur teknis & deployment: **Architecture.md**
 - Struktur database: **Schema.md**
 - Tampilan & alur UI: **Design.md**
-- Riwayat perubahan: **CHANGELOG.md**
 
 ---
 
-*Rules v2.1 — keputusan user 19 September 2026 sudah diterapkan.
-Dokumen v1.0 tersimpan di `docs-backup-29agu/Rules.md`.*
+*Keputusan user 19 September 2026 sudah diterapkan.*

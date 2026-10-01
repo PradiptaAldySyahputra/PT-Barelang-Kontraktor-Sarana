@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Tabel `uang_masuk` — penerimaan dana.
  *
- * Asal: db.txt (`uang_masuk`) + revisi user.
+ * Asal: skema awal (`uang_masuk`) + revisi user.
  *
  * Yang TIDAK digunakan (revisi user):
  *   nomor_transaksi, sumber, metode_pembayaran, status, dicatat_oleh

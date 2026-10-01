@@ -20,8 +20,8 @@
 | PC server (PC Direktur) | `http://localhost:8000/admin` |
 | PC lain di jaringan kantor | `http://<IP-PC-server>:8000/admin` |
 
-> 📌 **Sebelum dipakai kantor**, ikuti `docs/SETUP-SERVER.md` agar aplikasi
-> hidup otomatis saat PC menyala dan alamatnya tidak berubah.
+> 📌 **Sebelum dipakai kantor**, ikuti `docs/Architecture.md` §12 (pemasangan PC
+> server) agar aplikasi hidup otomatis saat PC menyala dan alamatnya tidak berubah.
 
 ### 1.2 Akun
 
@@ -297,10 +297,9 @@ Saat bagian pajak meminta "tanggal sekian, bulan sekian":
 |:-------|:----|
 | `docs/PRD.md` | Kebutuhan fitur & ruang lingkup |
 | `docs/Rules.md` | Aturan bisnis (WAJIB dipatuhi) |
-| `docs/Architecture.md` | Struktur teknis & deployment |
+| `docs/Architecture.md` | Struktur teknis, deployment, backup, pengujian |
 | `docs/Schema.md` | Struktur database |
-| `docs/SETUP-SERVER.md` | Pemasangan di PC server |
-| `docs/STATUS-PENGERJAAN.md` | Status pekerjaan terkini |
+| `docs/Design.md` | UI/UX |
 
 ---
 

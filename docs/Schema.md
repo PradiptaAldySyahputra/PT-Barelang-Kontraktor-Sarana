@@ -1,14 +1,8 @@
 # Schema — Struktur Database (MySQL / MariaDB)
 ## Sistem Informasi SPK & Kontrol Keuangan — PT Barelang Kontraktor Sarana
 
-> **Versi:** 3.1 — **5 TABEL** (sesuai `db.txt`)
-> **Tanggal:** 19 September 2026
-> **Menggantikan:** v3.0 — tersimpan di `docs-backup-29agu/Schema-v3.0.md`
-> **Sumber:** `db.txt` + revisi user + keputusan user
-> **Keputusan user:** MySQL · **full Laravel** · **5 tabel** · **tanpa `keterangan` di SPK** ·
-> **tanpa audit log** · **jumlah file bukti bebas** · **deployment lokal (PC bisa dipakai kerja lain)**
->
-> 📌 **Nama tabel & kolom memakai bahasa Indonesia**, sesuai `Rules.md` §4.
+> **5 TABEL** domain. Nama tabel & kolom memakai bahasa Indonesia.
+> Status & kategori disimpan sebagai teks + divalidasi **PHP Enum** (lihat §7).
 
 ---
 
@@ -22,7 +16,7 @@
 | 4 | **Tidak ada approval Direktur.** | Tidak ada field `disetujui_oleh` / `tanggal_persetujuan` |
 | 5 | **SPK subkon/vendor masuk tabel `spk`** | Tidak ada tabel `subcon_spk` |
 | 6 | **Tidak ada tabel `bukti`.** Bukti jadi kolom `bukti` di `uang_masuk` & `uang_keluar` | Jumlah file **bebas** (JSON array) |
-| 7 | **Ikuti `db.txt` — 5 tabel** | Status & kategori jadi kolom + **PHP Enum** |
+| 7 | **Ikuti skema awal — 5 tabel** | Status & kategori jadi kolom + **PHP Enum** |
 | 8 | **Kolom `keterangan` di `spk` DIHAPUS** | Keputusan user — tidak perlu |
 | 9 | **Audit log DIHAPUS** | Keputusan user — tidak perlu. Menyimpang dari SRS NFR-SEC-004 |
 | 10 | **MySQL + full Laravel** | Migration, Eloquent, validasi di aplikasi |
@@ -90,7 +84,7 @@ CREATE TABLE spk (
     id             BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     nomor_spk      VARCHAR(150) NOT NULL UNIQUE,
     tanggal_spk    DATE NULL,                 -- NULL jika "TANPA SPK"
-    tanggal_akhir  DATE NULL,                 -- 🆕 revisi db.txt: tanggal akhir SPK
+    tanggal_akhir  DATE NULL,                 -- revisi skema awal: tanggal akhir SPK
     nama_pekerjaan VARCHAR(255) NOT NULL,
     lokasi         VARCHAR(255) NULL,
     nilai_spk      DECIMAL(18,2) NOT NULL,
@@ -126,8 +120,8 @@ CREATE INDEX idx_spk_mitra     ON spk(mitra_id);
 CREATE TABLE uang_masuk (
     id             BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     spk_id         BIGINT UNSIGNED NULL,      -- NULL = uang masuk dari LUAR SPK
-    nomor_spk      VARCHAR(150) NULL,         -- 🆕 revisi db.txt
-    nama_pekerjaan VARCHAR(255) NULL,         -- 🆕 revisi db.txt
+    nomor_spk      VARCHAR(150) NULL,         -- revisi skema awal
+    nama_pekerjaan VARCHAR(255) NULL,         -- revisi skema awal
     tanggal        DATE NOT NULL,
     jumlah         DECIMAL(18,2) NOT NULL,
     mitra_id       BIGINT UNSIGNED NULL,
@@ -168,11 +162,11 @@ CREATE INDEX idx_keluar_tanggal  ON uang_keluar(tanggal);
 CREATE INDEX idx_keluar_kategori ON uang_keluar(kategori);
 ```
 
-## 5. Perubahan dari `db.txt` (sesuai revisi & keputusan user)
+## 5. Perubahan dari Skema Awal (sesuai revisi & keputusan user)
 
 ### `spk`
 
-| Field di `db.txt` | Status | Alasan |
+| Field di skema awal | Status | Alasan |
 |---|---|---|
 | `pic` | ❌ **dihapus** | Revisi user: tidak digunakan |
 | `keterangan` | ❌ **dihapus** | ✅ **Keputusan user: tidak perlu** |
@@ -185,7 +179,7 @@ CREATE INDEX idx_keluar_kategori ON uang_keluar(kategori);
 
 ### `uang_masuk`
 
-| Field di `db.txt` | Status | Alasan |
+| Field di skema awal | Status | Alasan |
 |---|---|---|
 | `nomor_transaksi` | ❌ dihapus | Revisi user |
 | `sumber` | ❌ dihapus | Disimpulkan dari `spk_id` (ada = SPK, kosong = luar) |
@@ -205,7 +199,7 @@ CREATE INDEX idx_keluar_kategori ON uang_keluar(kategori);
 
 ### `uang_keluar`
 
-| Field di `db.txt` | Status | Alasan |
+| Field di skema awal | Status | Alasan |
 |---|---|---|
 | `nomor_transaksi` | ❌ dihapus | Revisi user |
 | `mitra_id` | ❌ dihapus | Diganti `penerima` (teks) |
@@ -521,10 +515,8 @@ erDiagram
 | Audit log | Opsi package `spatie` | ❌ **Dihapus** (menyimpang dari SRS) |
 | Jumlah file bukti | JSON array | ✅ **Bebas** (dikonfirmasi) |
 | Deployment | Lokal | ✅ Lokal, **PC boleh dipakai kerja lain** |
-| Kolom `dokumen` di `spk` | — | ⏳ **Menunggu keputusan** (§9) |
+| Kolom `dokumen` di `spk` | JSON | ✅ **Selesai** — `spk.dokumen` (JSON) |
 
 ---
 
-*Schema v3.1 — keputusan user 19 September 2026 sudah diterapkan.
-Versi v3.0 di `docs-backup-29agu/Schema-v3.0.md` · v2.2 (10 tabel) di
-`docs-backup-29agu/Schema-v2.2-10tabel.md` · v1.0 di `docs-backup-29agu/Schema.md`.*
+*Keputusan user 19 September 2026 sudah diterapkan.*

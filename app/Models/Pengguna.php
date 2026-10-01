@@ -18,7 +18,7 @@ use Illuminate\Notifications\Notifiable;
  * Model `pengguna` — akun pengguna sistem.
  *
  * Menggantikan model `User` bawaan Laravel, karena sistem ini memakai
- * tabel `pengguna` sesuai db.txt.
+ * tabel `pengguna` sesuai skema awal.
  *
  * Mengimplementasikan HasName karena Filament mencari atribut `name`,
  * sedangkan tabel ini memakai kolom `nama`. Tanpa HasName, dashboard

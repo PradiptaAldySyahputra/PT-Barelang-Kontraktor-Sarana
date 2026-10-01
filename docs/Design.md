@@ -1,10 +1,8 @@
 # Design — UI/UX & Design Guidelines
 ## Sistem Informasi SPK & Kontrol Keuangan — PT Barelang Kontraktor Sarana
 
-> **Versi:** 3.1 — **5 tabel** (sesuai `db.txt`)
-> **Tanggal:** 19 September 2026
-> **Menggantikan:** `docs-backup-29agu/Design.md` (v1.0) dan draf v2.x
-> **Perubahan utama:** dashboard internal · role 2 · **tanpa halaman approval** · **tanpa menu Proyek/Master Data** · form uang masuk 2 mode
+> Panel admin Filament (`/admin`). Role 2 · tanpa halaman approval · tanpa menu
+> Proyek/Master Data · form uang masuk 2 mode.
 
 ---
 
@@ -110,7 +108,7 @@ Pengaturan
 |---|---|---|---|
 | Nomor SPK | Text | Nomor unik. Jika belum ada, tandai sebagai draft/tanpa SPK | Wajib jika SPK sudah terbit |
 | Tanggal SPK | Date | Tanggal penerbitan | Opsional saat draft, wajib saat terbit |
-| **Tanggal Akhir SPK** | Date | 🆕 Batas akhir pekerjaan (revisi `db.txt`) | Opsional |
+| **Tanggal Akhir SPK** | Date | Batas akhir pekerjaan | Opsional |
 | Nama Pekerjaan | Text | Nama pekerjaan sesuai dokumen SPK | Wajib |
 | Lokasi | Text | Lokasi pekerjaan | Wajib jika tersedia |
 | Nilai SPK | Currency/Decimal | Nilai pekerjaan dalam rupiah | Wajib |
@@ -121,7 +119,7 @@ Pengaturan
 | **Retensi (%)** | Number | Default 5% untuk SPK subkon/vendor | Opsional |
 | **Nilai Retensi** | Currency | Terhitung otomatis dari nilai SPK × persentase | Read-only |
 
-> 📌 **Revisi `db.txt` + keputusan user:** field **PIC** dan **Keterangan** **dihapus** dari form SPK.
+> 📌 **Keputusan user:** field **PIC** dan **Keterangan** **tidak ada** di form SPK.
 >
 > ⚠️ **Konsekuensi:** catatan follow-up dari Excel (`sudah diantar ke imperium`, `ada denda`,
 > `PAKAI PT BKS`) tidak punya tempat di sistem. Lihat `Schema.md` §5.
@@ -140,7 +138,7 @@ Pengaturan
 
 ### 6.1 Form Uang Masuk — 2 Mode ⭐
 
-Sesuai revisi `db.txt`, form memiliki **pilihan mode** di bagian atas:
+Form memiliki **pilihan mode** di bagian atas:
 
 **Mode 1 — Berdasarkan SPK:**
 
@@ -280,18 +278,17 @@ Karena bukti disimpan sebagai kolom di tabel transaksi (bukan tabel terpisah):
 Kartu dengan radius moderat, whitespace cukup, ikon sederhana, hierarki heading konsisten.
 **Hindari dashboard yang padat** atau dekorasi yang mengganggu tugas utama.
 
-> 📌 **Catatan v1.0 yang tidak relevan lagi:** bagian *Website Publik*, *Hero section*,
-> *Peta Leaflet/OpenStreetMap*, dan *PWA* **dihapus** — sistem murni internal.
+> 📌 **Catatan:** bagian *Website Publik*, *Hero section*, *Peta Leaflet/OpenStreetMap*,
+> dan *PWA* **tidak berlaku** — sistem murni internal.
 
-## 13. ⚠️ Item Desain yang Menunggu Keputusan
+## 13. Item Desain yang Menunggu Keputusan
 
 | No | Item | Menunggu |
 |---|---|---|
-| 1 | **Upload dokumen SPK** (BAST, kuitansi, scan) | Tidak punya tempat setelah tabel bukti dihapus — lihat `Schema.md` §9 |
+| 1 | **Upload dokumen SPK** (BAST, kuitansi, scan) | ✅ Selesai — kolom `spk.dokumen` (JSON), lihat `Schema.md` |
 | 2 | **Rekening Koran** sebagai menu tersendiri | Format file belum ada |
 | 3 | **To-Do List** sebagai modul aplikasi | Opsional |
 
 ---
 
-*Design v2.1 — keputusan user 19 September 2026 sudah diterapkan.
-Dokumen v1.0 tersimpan di `docs-backup-29agu/Design.md`.*
+*Keputusan user 19 September 2026 sudah diterapkan.*

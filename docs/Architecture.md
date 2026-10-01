@@ -1,10 +1,9 @@
 # Architecture — Sistem Informasi SPK & Kontrol Keuangan
 ## PT Barelang Kontraktor Sarana
 
-> **Versi:** 3.1 — **5 tabel** (sesuai `db.txt`)
-> **Tanggal:** 19 September 2026
-> **Menggantikan:** `docs-backup-29agu/Architecture.md` (v1.0) dan draf v2.x
-> **Perubahan utama:** **deployment lokal 2 PC** · **Laravel + Blade** · **tanpa approval** · **SPK entitas inti** · **5 tabel + PHP Enum**
+> **Stack:** Laravel 13 · Filament 5 (panel `/admin`) · MySQL/MariaDB · PHP 8.5
+> **Perubahan utama dari draf awal:** deployment lokal 2 PC · **Filament** (bukan Blade) ·
+> tanpa approval · SPK entitas inti · **5 tabel + PHP Enum**.
 
 ---
 
@@ -54,35 +53,36 @@
 > - Model, migration, Enum, dan seluruh logika bisnis **tetap sama** —
 >   Filament bekerja di atas Eloquent yang sudah ada.
 >
-> **Konsekuensi:** dokumen SRS menyebut Blade → **tidak sinkron**. Perubahan ini
-> dicatat di `CHANGELOG.md` v3.3 beserta alasan lengkapnya.
+> **Konsekuensi:** dokumen SRS menyebut Blade → **tidak sinkron** dengan implementasi.
 >
-> **Catatan:** halaman Blade lama (dashboard & login) sudah **dihapus** di v3.5
-> dan digantikan Filament sepenuhnya.
+> **Catatan:** halaman Blade lama (dashboard & login) sudah **dihapus** dan
+> digantikan Filament sepenuhnya.
 
-> ✅ **Perubahan dari v1.0:** *Hosting VPS DigitalOcean/Niagahoster* **dihapus** → **deployment lokal**.
+> ✅ **Perubahan dari draf awal:** *Hosting VPS* **dihapus** → **deployment lokal**.
 
 ## 3. Struktur Modul Aplikasi
 
 ```
 app/
-├── Auth/                  # Login, logout, session, middleware role
-├── Dashboard/             # Ringkasan SPK, cashflow, saldo, laba-rugi
-├── Enums/                 # ⭐ PHP Enum: StatusSpk, StatusTagihan, KategoriPengeluaran, Peran
-├── Mitra/                 # CRUD mitra (PLN, vendor, subkon, pelanggan)
-├── Transaksi/
-│   ├── Spk/               # ⭐ SPK (PLN & subkon/vendor) — entitas inti
-│   ├── UangMasuk/         # Uang masuk (2 mode: dari SPK / manual)
-│   └── UangKeluar/        # Uang keluar
-└── Laporan/
-    ├── LaporanSpk/
-    ├── LaporanCashflow/
-    └── LaporanLabaRugi/   # ⭐ Laba-rugi per SPK
+├── Enums/                 # PHP Enum: Peran, StatusSpk, StatusTagihan,
+│                          #   KategoriPengeluaran, KategoriMitra, AkunKas, StatusAntar, DikerjakanOleh
+├── Models/                # 5 model Eloquent (Pengguna, Mitra, Spk, UangMasuk, UangKeluar)
+├── Filament/              # Panel admin /admin
+│   ├── Resources/         #   Spks · Mitras · Penggunas · UangMasuks · UangKeluars · MonitoringSpk
+│   ├── Pages/             #   Dashboard, Laporan
+│   ├── Widgets/           #   kartu ringkasan & grafik
+│   ├── Exports/           #   ekspor per menu
+│   ├── Actions/           #   CatatPembayaran
+│   └── Concerns/          #   BolehUbahData, FilterPeriodeUang, PratinjauNotaPrivat
+├── Services/              # PembacaNota (OCR), PenyimpanBerkas
+├── Observers/             # SinkronStatusTagihanObserver
+├── Http/Middleware/       # PastikanPeran, HeaderKeamanan
+└── Support/               # Format (rupiah), Nota
 ```
 
-> 📌 **Karena schema hanya 5 tabel** (`db.txt`), status & kategori **tidak** punya tabel master.
-> Nilainya dikelola lewat **PHP Enum** di folder `app/Enums/` dan divalidasi dengan
-> `Rule::enum()`. Ini wajib — lihat `Schema.md` §8 untuk bukti risikonya.
+> 📌 **Karena schema hanya 5 tabel**, status & kategori **tidak** punya tabel master.
+> Nilainya dikelola lewat **PHP Enum** di `app/Enums/` dan divalidasi dengan
+> `Rule::enum()`. Ini wajib — lihat `Schema.md` §7 untuk bukti risikonya.
 
 > ❌ **Modul yang TIDAK ada** (keputusan user):
 > `Proyek/` — tidak ada entitas PROYEK · `PengajuanDana/` — tidak ada pengajuan dana ·
@@ -374,8 +374,8 @@ flowchart LR
 |---|---|---|
 | 1 | **Deployment:** sebagian dokumen menyebut *cloud production*, BAB VI menetapkan *PC Direktur sebagai server lokal* | ⏳ Menunggu keputusan atasan |
 | 2 | **ERD bergambar pada SRS** masih memuat `projects`, `subcon_spks`, `cash_requests`, `attachments` | ⚠️ Gambar perlu diperbarui agar sesuai schema final (**5 tabel**) |
-| 3 | **Kolom `keterangan` pada SPK** — `db.txt` hapus, SRS wajibkan | ⏳ Menunggu keputusan |
-| 4 | **Dokumen SPK** tidak punya tempat penyimpanan setelah tabel bukti dihapus | ⏳ Menunggu keputusan |
+| 3 | **Kolom `keterangan` pada SPK** | ✅ **Dihapus** (keputusan user) |
+| 4 | **Dokumen SPK** | ✅ **Selesai** — kolom `spk.dokumen` (JSON) |
 
 > ✅ **Sudah diselesaikan** (keputusan user 19 Sep 2026): entitas PROYEK dihapus · pengajuan dana
 > & approval dihapus · SPK subkon dilebur ke tabel `spk` · approval uang keluar dihapus ·
@@ -383,5 +383,307 @@ flowchart LR
 
 ---
 
-*Architecture v2.1 — keputusan user 19 September 2026 sudah diterapkan.
-Dokumen v1.0 tersimpan di `docs-backup-29agu/Architecture.md`.*
+## 12. Langkah Pemasangan di PC Server
+
+Ringkasan dari topologi §7. Hanya **PC server** yang menjalankan aplikasi &
+database; PC lain cukup buka browser.
+
+### 12.1 Set IP tetap (STATIC) — WAJIB
+
+Kalau IP berubah, semua PC lain kehilangan akses.
+
+```bash
+ip -4 addr show | grep inet      # catat IP 192.168.x.x
+```
+
+- **Cara A (di PC):** Pengaturan Jaringan → IPv4 → Manual. Isi Address,
+  Netmask `255.255.255.0`, Gateway (IP router), DNS.
+- **Cara B (di router):** DHCP Reservation — kunci MAC PC server ke IP tertentu.
+
+### 12.2 Atur `.env` untuk server
+
+```env
+APP_ENV=production
+APP_DEBUG=false                      # WAJIB false
+APP_URL=http://192.168.100.134       # ganti dengan IP server
+DB_CONNECTION=mysql
+DB_DATABASE=bks
+SESSION_DRIVER=database
+```
+
+> ⚠️ `APP_DEBUG=false` wajib — kalau `true`, error menampilkan isi database &
+> struktur tabel ke siapa pun.
+
+```bash
+php artisan config:clear && php artisan config:cache
+php artisan route:cache && php artisan view:cache
+php artisan storage:link
+```
+
+### 12.3 Cara menjalankan
+
+| Opsi | Perintah | Untuk |
+|:-----|:---------|:------|
+| **A. `artisan serve`** | `php artisan serve --host=0.0.0.0 --port=8000` | Uji coba cepat — **hanya 1 pengguna sekaligus** |
+| **B. Nginx + PHP-FPM** ⭐ | lihat contoh config di bawah | Pemakaian sehari-hari |
+
+> ⚠️ Jangan pakai `artisan serve` untuk pemakaian bersama/harian.
+
+```nginx
+server {
+    listen 80;
+    server_name 192.168.100.134;
+    root /path/ke/proyek/public;
+    index index.php;
+    client_max_body_size 50M;                 # batas upload nota
+    location / { try_files $uri $uri/ /index.php?$query_string; }
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php-fpm/php-fpm.sock;
+        include fastcgi.conf;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+    location ~ /\. { deny all; }               # jangan sajikan file tersembunyi
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/bks.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl enable --now nginx php-fpm
+```
+
+### 12.4 Firewall
+
+```bash
+sudo ufw allow 8000/tcp                    # Opsi A
+sudo ufw allow 80/tcp                      # Opsi B
+sudo ufw allow from 192.168.100.0/24 to any port 80 proto tcp   # hanya jaringan kantor
+```
+
+### 12.5 Backup terjadwal
+
+```bash
+crontab -e
+# tambahkan:
+* * * * * cd "/path/ke/proyek" && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Backup otomatis tiap hari 23:00 ke `storage/app/backup/` (simpan 30 hari).
+Cek: `php artisan schedule:list` · uji: `php artisan bks:backup`.
+**Salin backup keluar dari PC server** minimal seminggu sekali (§7.7).
+
+### 12.6 Auto-start saat PC menyala
+
+- **Nginx/MySQL:** `sudo systemctl enable nginx php-fpm mysqld`
+- **Artisan serve:** buat systemd service (`/etc/systemd/system/bks.service`),
+  `ExecStart=/usr/bin/php artisan serve --host=0.0.0.0 --port=8000`, `Restart=always`.
+- **Windows:** Laragon auto-start, atau NSSM untuk web server & MariaDB.
+
+### 12.7 Dari PC client
+
+Tidak perlu instal apa pun. Pastikan WiFi/LAN sama → buka browser →
+`http://192.168.100.134` (atau `:8000`) → login.
+
+### 12.8 Daftar periksa sebelum dipakai kerja
+
+- [ ] IP server STATIC (tidak berubah setelah restart)
+- [ ] `.env`: `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL` = IP server
+- [ ] `php artisan storage:link` dijalankan
+- [ ] Firewall mengizinkan port (80/8000)
+- [ ] `php artisan schedule:list` menampilkan backup harian 23:00 + cron terdaftar
+- [ ] Password default sudah diganti
+- [ ] Uji akses dari minimal 1 PC lain
+- [ ] Backup pertama dibuat & disalin ke media eksternal
+- [ ] UPS tersambung ke PC server
+
+### 12.9 Kalau ada masalah
+
+| Gejala | Penyebab | Solusi |
+|:-------|:---------|:-------|
+| PC lain tidak bisa buka | IP salah / beda jaringan | Cek `ip addr`, pastikan satu WiFi |
+| Halaman putih / error 500 | `APP_DEBUG=false` menyembunyikan detail | Cek `storage/logs/laravel.log` |
+| Nota tidak bisa dibuka | Symlink belum dibuat | `php artisan storage:link` |
+| Perubahan tidak muncul | Cache lama | `php artisan config:clear && php artisan config:cache` |
+| Backup tidak jalan | Cron belum didaftarkan | `crontab -e`, cek `schedule:list` |
+| Login gagal terus | Akun nonaktif / lupa password | Reset di Master Data → Pengguna |
+
+---
+
+## 13. Pengujian Visual (Browser)
+
+**Unit test tidak menangkap masalah tata letak.** Contoh nyata: 281 test lulus,
+tetapi nama bulan tampil bahasa Inggris dan form uang keluar tampil berdampingan —
+keduanya hanya terlihat saat halaman benar-benar **dirender dan diukur**.
+
+### 13.1 Urutan pengujian
+
+```bash
+php artisan test                                   # 1. logika & otorisasi
+for u in /admin /admin/spks /admin/laporan; do     # 2. route & error 500
+  curl -s -o /dev/null -w "$u -> %{http_code}\n" http://127.0.0.1:8000$u
+done
+# 3. tata letak (browser) — sering terlewat
+```
+
+### 13.2 Menyiapkan browser
+
+```bash
+google-chrome-stable --headless=new --no-sandbox \
+  --remote-debugging-port=9222 --remote-allow-origins=* \
+  --user-data-dir=/tmp/chrome-agent --window-size=1600,1000 about:blank
+curl -s http://127.0.0.1:9222/json/version    # verifikasi
+```
+
+> ⚠️ Kalau dua Chrome berebut port, `/json/version` bisa 404. Pastikan satu saja.
+
+### 13.3 Aturan pengukuran
+
+- **Angka & teks:** selalu ambil dari **DOM** (`page.evaluate`), bukan baca gambar —
+  OCR gambar bisa salah (mis. "90 SPK" terbaca "99 SPK").
+- **Tata letak:** ukur `getBoundingClientRect()`. Y sama = berdampingan,
+  Y beda = bertumpuk.
+- Gambar/screenshot hanya untuk menilai tata letak & keterbacaan.
+
+### 13.4 Yang diperiksa tiap halaman
+
+| Hal | Cara |
+|:----|:-----|
+| Tidak ada error 500 | HTTP status / teks halaman |
+| Tidak ada ruang kosong besar | Screenshot |
+| Grafik terisi (bukan garis nol) | Screenshot |
+| Bahasa konsisten Indonesia | Teks dari DOM |
+| Posisi elemen sesuai maksud | `getBoundingClientRect()` |
+| Teks tidak terpotong | Screenshot |
+
+---
+
+## 14. OCR Nota (Opsional)
+
+Fitur **membantu**: menghitung jumlah nota dalam satu berkas & memotong
+pratinjaunya per nota. **Nominal rupiah tetap diisi admin** — OCR tidak membaca angka.
+
+| Tugas | Dikerjakan OCR? |
+|:------|:----------------|
+| Menghitung jumlah nota | ✅ |
+| Memotong pratinjau per nota | ✅ |
+| Membaca nominal rupiah | ❌ — diisi admin |
+
+> **Alasan:** salah hitung jumlah nota ringan akibatnya (admin tinggal ubah angka);
+> salah baca nominal langsung masuk laporan keuangan.
+
+### 14.1 Pemasangan
+
+```bash
+# Linux/macOS
+python3 -m venv ocr-venv
+./ocr-venv/bin/pip install rapidocr-onnxruntime pymupdf pillow numpy
+./ocr-venv/bin/python python/ocr_nota.py path/berkas.pdf   # uji → harus keluar JSON "ok": true
+```
+
+```powershell
+# Windows
+python -m venv ocr-venv
+.\ocr-venv\Scripts\pip install rapidocr-onnxruntime pymupdf pillow numpy
+```
+
+Di `.env`:
+
+```env
+OCR_NOTA=true
+OCR_NOTA_PYTHON=/path/ke/proyek/ocr-venv/bin/python    # Windows: ...\ocr-venv\Scripts\python.exe
+```
+
+Lalu `php artisan config:clear`. Konfigurasi ada di `config/ocr.php`
+(`OCR_NOTA`, `OCR_NOTA_PYTHON`, `OCR_NOTA_TIMEOUT`).
+
+### 14.2 Kalau OCR belum siap
+
+Sistem tetap jalan normal (OCR default **mati**). Kalau mati/gagal: jumlah nota
+tetap default 4 (bisa diubah manual), pratinjau menampilkan berkas utuh, dan admin
+melihat pesan *"OCR tidak bisa membaca berkas ini — isi jumlah nota manual."*
+**Memasang OCR tidak wajib.**
+
+### 14.3 Batas kemampuan (jujur)
+
+Sudah diuji pada nota template (4 nota terdeteksi): miring 3°/8°, buram, resolusi
+rendah, kontras rendah, abu-abu + noise — semua ✅.
+**Belum diuji:** nota tulisan tangan terisi, susunan tidak beraturan, nota >1 halaman
+(hanya halaman pertama dibaca).
+
+---
+
+## 15. Strategi Pengujian Menuju Produksi
+
+Kondisi pengujian saat ini **sudah kuat** (ratusan tes otomatis + DB test terpisah +
+fixtures nota nyata + uji keamanan). Yang belum, dan menjadi rencana:
+
+| # | Celah | Kelompok |
+|:-:|:------|:---------|
+| 1 | ~~`tests/Unit/` kosong~~ ✅ selesai | A |
+| 2 | Coverage belum terukur (butuh `php-pcov`) | A |
+| 3 | CI (`.github/workflows`) belum ada | B |
+| 4 | Analisis statis (PHPStan/Larastan) belum ada | B |
+| 5 | Mutation testing belum ada | B |
+| 6 | E2E otomatis belum ada | B |
+| 7 | Uji performa/beban belum ada | C |
+| 8 | Uji keamanan terstruktur (sebagian sudah ada) | C |
+| 9 | UAT formal belum ada | D |
+| 10 | ~~Manual book~~ ✅ selesai | D |
+
+**Target realistis:** ≥80% coverage untuk `app/Models`, `app/Enums`, `app/Services`
+(bagian yang menghitung uang) — **bukan** 100%.
+
+**Alur kritis yang wajib E2E:** login→dashboard · buat SPK · input uang masuk
+(status tagihan berubah otomatis) · input uang keluar multi-nota · ekspor laporan ·
+Direktur login (tombol input tidak ada).
+
+**Yang paling sering dilewati:** uji **restore backup**. Backup yang belum pernah
+diuji restore belum terbukti bisa dipulihkan (`Rules.md` §11). Uji ke **database lain**,
+bukan `bks`.
+
+---
+
+## 16. Lampiran: Rancangan Buku Kas & Bank (B1, menunggu keputusan)
+
+Ringkasan spec 26 Sep 2026. **Halaman ini pernah dibuat & berfungsi, lalu dihapus**
+saat pengguna meminta melebur menu Kas/Bank ke Uang Masuk/Keluar (kode belum
+di-commit sehingga hilang). Bagian ini menyimpan rancangannya.
+
+**Masalah:** saldo berjalan butuh uang masuk & uang keluar digabung dalam satu
+urutan tanggal — tidak bisa hanya di salah satu menu.
+
+**Data nyata** (`BKS - Format Kas & Bank 2026 (AGUSTUS).xlsx`): dua sheet KAS &
+BANK, kolom `TANGGAL | REF | KETERANGAN | PEMASUKAN | PENGELUARAN | SALDO`,
+saldo berjalan. Kolom `REF` **kosong seluruhnya** → tidak dibuat sebagai kolom DB,
+tetapi tetap dicetak kosong di ekspor agar bentuknya sama.
+
+**Rancangan:**
+
+- Filter **Akun (Kas/Bank)** + **Bulan** (atau semua bulan).
+- Tabel: `TANGGAL | KETERANGAN | PEMASUKAN | PENGELUARAN | SALDO`.
+- **Saldo berjalan** = saldo awal periode + akumulasi transaksi urut tanggal.
+  Saldo awal periode = seluruh transaksi akun tsb sebelum tanggal awal periode
+  (pemasukan − pengeluaran). Tidak diinput manual.
+- Ringkasan atas: total pemasukan, total pengeluaran, saldo akhir.
+- Ekspor Excel menyerupai berkas perusahaan:
+
+```
+PT. BARELANG KONTRAKTOR SARANA
+ACCOUNT : KAS              Periode: AGUSTUS 2026
+TANGGAL | REF | KETERANGAN | PEMASUKAN | PENGELUARAN | SALDO
+...
+T O T A L | <total masuk> | <total keluar> | <saldo akhir>
+```
+
+- Kolom `akun` (string, nullable, default `kas`) + `App\Enums\AkunKas` sudah ada di
+  kedua tabel. Data lama default `kas`.
+
+**Tiga opsi B1 (butuh keputusan pengguna):**
+(a) buat ulang halaman "Buku Kas & Bank" sesuai rancangan ini · (b) tab
+"Buku Kas"/"Buku Bank" di menu Keuangan · (c) cukup ringkasan total tanpa saldo per baris.
+
+**B4 (ekspor format perusahaan) terikat ke keputusan ini** — formatnya adalah
+halaman Buku Kas & Bank.
+
+---
+
+*Keputusan user 19 September 2026 sudah diterapkan.*

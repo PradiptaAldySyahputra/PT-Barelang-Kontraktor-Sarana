@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Tabel `spk` — ENTITAS INTI sistem.
  *
- * Asal: db.txt (`spk`) + revisi user + keputusan user.
+ * Asal: skema awal (`spk`) + revisi user + keputusan user.
  *
  * Yang TIDAK ada (sesuai revisi & keputusan user):
  *   - `pic`        -> dihapus

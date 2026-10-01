@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\Storage;
 | Seluruh antarmuka aplikasi memakai panel Filament di /admin
 | (login, dashboard, CRUD, dan laporan).
 |
-| Halaman Blade lama sudah dihapus — lihat docs/CHANGELOG.md v3.5.
+| Halaman Blade lama sudah dihapus — seluruh antarmuka memakai Filament.
 |
 | ⚠️ Rute lama TETAP disediakan sebagai PENGALIHAN (redirect) supaya
-| bookmark/link lama tidak menghasilkan 404. Lihat v3.7.
+| bookmark/link lama tidak menghasilkan 404.
 |
 */
 
