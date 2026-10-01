@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UangKeluars\Tables;
 
+use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
+use App\Filament\Concerns\FilterPeriodeUang;
+use App\Filament\Exports\UangKeluarExporter;
 use App\Filament\Resources\UangKeluars\UangKeluarResource;
+use App\Models\UangKeluar;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ExportAction;
 use Filament\Actions\RestoreAction;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -21,6 +28,8 @@ use Filament\Tables\Table;
  */
 class UangKeluarsTable
 {
+    use FilterPeriodeUang;
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -30,6 +39,12 @@ class UangKeluarsTable
                     ->label('Tanggal')
                     ->date('d/m/Y')
                     ->sortable(),
+
+                TextColumn::make('akun')
+                    ->label('Kas/Bank')
+                    ->badge()
+                    ->formatStateUsing(fn (?AkunKas $state): string => ($state ?? AkunKas::Kas)->label())
+                    ->color(fn (?AkunKas $state): string => ($state ?? AkunKas::Kas)->warnaBadge()),
 
                 TextColumn::make('kategori')
                     ->label('Kategori')
@@ -67,7 +82,18 @@ class UangKeluarsTable
                     ->sortable()
                     ->weight('medium')
                     ->color('danger')
-                    ->alignEnd(),
+                    ->alignEnd()
+                    /*
+                     * ⚠️ RINGKASAN TOTAL — keluhan pengguna 29 Sep 2026:
+                     *   "admin perlu itu kemudahan untuk mengelolanya"
+                     *
+                     * Sebelumnya admin harus menjumlahkan sendiri atau membuka
+                     * Excel untuk tahu total pengeluaran periode terpilih.
+                     *
+                     * `Sum` dihitung oleh DATABASE dan MENGHORMATI FILTER aktif:
+                     * menyaring "Kas" → totalnya hanya Kas.
+                     */
+                    ->summarize(Sum::make()->label('Total')),
 
                 TextColumn::make('jumlah_bukti')
                     ->label('Bukti')
@@ -92,38 +118,66 @@ class UangKeluarsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                // SATU filter periode (Tahun/Bulan/Tanggal) — bukan tiga
+                // terpisah, supaya panel filter pendek & tidak ribet.
+                self::filterPeriode(),
+
+                SelectFilter::make('akun')
+                    ->label('Kas/Bank')
+                    ->options(AkunKas::opsi()),
+
                 SelectFilter::make('kategori')
                     ->label('Kategori')
                     ->options(KategoriPengeluaran::opsi()),
 
+                /*
+                 * FILTER SPK — PRD FR-OUT-004 ("Filter & pencarian uang keluar
+                 * per periode/kategori/SPK").
+                 *
+                 * Biaya langsung pekerjaan dikaitkan ke SPK (Rules §2 butir 6).
+                 * Saat ada selisih atau bagian pajak meminta rincian satu
+                 * pekerjaan, admin harus bisa menyaring HANYA SPK itu.
+                 */
                 SelectFilter::make('spk_id')
                     ->label('SPK')
                     ->relationship('spk', 'nomor_spk')
+                    ->getOptionLabelFromRecordUsing(fn ($record): string => $record->nomor_spk.' — '.$record->nama_pekerjaan)
                     ->searchable()
                     ->preload(),
-
-                SelectFilter::make('kaitan_spk')
-                    ->label('Kaitan SPK')
-                    ->options([
-                        'terkait' => 'Terkait SPK',
-                        'umum' => 'Umum / Operasional',
-                    ])
-                    ->query(function ($query, array $data) {
-                        return match ($data['value'] ?? null) {
-                            'terkait' => $query->whereNotNull('spk_id'),
-                            'umum' => $query->whereNull('spk_id'),
-                            default => $query,
-                        };
-                    }),
 
                 TrashedFilter::make()->label('Data Terhapus'),
             ])
             ->recordActions([
+                /*
+                 * ⚠️ LIHAT BUKTI — keluhan pengguna 29 Sep 2026:
+                 *   "admin perlu itu kemudahan untuk mengelolanya, mencari
+                 *    bukti dari uang tersebut"
+                 *
+                 * Uang keluar paling butuh ini: satu transaksi bisa punya
+                 * beberapa nota (nota digabung jadi 1 PDF/bulan), dan admin
+                 * sering harus menunjukkan buktinya.
+                 */
+                Action::make('lihatBukti')
+                    ->label('Lihat Bukti')
+                    ->icon('heroicon-m-paper-clip')
+                    ->color('info')
+                    ->visible(fn (UangKeluar $r): bool => $r->jumlahFileBukti() > 0)
+                    ->modalHeading('Bukti Transaksi')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalContent(fn (UangKeluar $r) => view('filament.components.daftar-bukti', [
+                        'berkas' => $r->bukti ?? [],
+                    ])),
+
                 EditAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
                 DeleteAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
                 RestoreAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
             ])
             ->toolbarActions([
+                ExportAction::make()
+                    ->label('Ekspor Excel')
+                    ->icon('heroicon-m-table-cells')
+                    ->exporter(UangKeluarExporter::class),
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ])->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
