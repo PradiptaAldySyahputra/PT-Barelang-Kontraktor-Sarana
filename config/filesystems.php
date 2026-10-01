@@ -38,10 +38,49 @@ return [
             'report' => false,
         ],
 
+        /*
+        |----------------------------------------------------------------------
+        | DISK `nota` — PRIVAT, khusus berkas nota & bukti keuangan
+        |----------------------------------------------------------------------
+        |
+        | ⚠️ TEMUAN AUDIT KEAMANAN (26 Sep 2026) — JANGAN digabung ke `public`:
+        | Sebelumnya nota disimpan di disk `public` (storage/app/public) yang
+        | disajikan langsung lewat symlink `public/storage`. Akibatnya SEMUA
+        | nota (175 berkas, 536 MB) bisa diunduh SIAPA PUN TANPA LOGIN:
+        |
+        |     GET /storage/uang_keluar/xxx.pdf  ->  200
+        |
+        | Nota memuat harga material, pembayaran subkon, dan gaji karyawan.
+        | Sekarang disimpan di luar `public` dan hanya bisa dibaca lewat rute
+        | ber-otentikasi `/admin/nota/{path}` (lihat routes/web.php).
+        |
+        | Disk ini TIDAK punya 'url' — memang tidak boleh diakses langsung.
+        */
+        'nota' => [
+            'driver' => 'local',
+            'root' => storage_path('app/nota'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            /*
+            | URL RELATIF — SENGAJA, JANGAN diganti jadi absolut.
+            |
+            | Kalau diisi absolut (mis. APP_URL + '/storage'), maka SEMUA tautan
+            | gambar & PDF nota akan menunjuk ke host itu saja. Aplikasi ini
+            | diakses dari DUA alamat: ngrok (saat pengembangan) dan IP LAN
+            | server kantor (saat dipakai admin). Satu URL absolut pasti salah
+            | di salah satu tempat → gambar nota RUSAK.
+            |
+            | URL relatif '/storage/...' otomatis mengikuti alamat yang sedang
+            | dibuka admin, jadi benar di ngrok, LAN, maupun localhost.
+            | Diubah hanya kalau aset memang dilayani dari domain lain (CDN):
+            | isi FILESYSTEM_PUBLIC_URL di .env.
+            */
+            'url' => env('FILESYSTEM_PUBLIC_URL', '/storage'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

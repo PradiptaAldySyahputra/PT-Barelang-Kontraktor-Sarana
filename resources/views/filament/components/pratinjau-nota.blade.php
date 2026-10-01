@@ -6,33 +6,44 @@
             view('filament.components.pratinjau-nota', ['files' => $get('bukti')]))
 
     Variabel:
-        $files : array path file (relatif terhadap disk Filament)
+        $files    : array path file (relatif terhadap disk Filament)
+        $potongan : path potongan nota hasil OCR (opsional). Kalau ada, ini yang
+                    ditampilkan — supaya tiap baris menampilkan NOTANYA SENDIRI,
+                    bukan gambar penuh yang sama berulang-ulang.
 --}}
 @php
+    use App\Support\Nota;
     use Illuminate\Support\Facades\Storage;
 
-    $disk = config('filament.default_filesystem_disk', 'public');
+    $disk = 'nota';
 
-    $daftar = collect(is_array($files ?? null) ? $files : [])
-        ->filter()
-        ->map(function ($f): ?string {
-            // FileUpload bisa mengembalikan string path atau objek file.
-            if (is_string($f)) {
-                return $f;
-            }
+    // Kalau OCR berhasil memotong nota, PAKAI POTONGANNYA.
+    // Ini menyelesaikan masalah "1 PDF 4 nota -> 4 baris menampilkan gambar
+    // yang sama". Sekarang tiap baris menampilkan potongan notanya sendiri.
+    $potonganBersih = is_string($potongan ?? null) && filled($potongan) ? $potongan : null;
 
-            if (is_object($f) && method_exists($f, 'getStatePath')) {
-                return $f->getStatePath();
-            }
+    $daftar = $potonganBersih !== null
+        ? collect([$potonganBersih])
+        : collect(is_array($files ?? null) ? $files : [])
+            ->filter()
+            ->map(function ($f): ?string {
+                // FileUpload bisa mengembalikan string path atau objek file.
+                if (is_string($f)) {
+                    return $f;
+                }
 
-            if (is_object($f) && method_exists($f, 'store')) {
-                // File sementara (belum tersimpan) — simpan ke disk publik.
-                return $f->store(config('filament.default_filesystem_disk', 'public'));
-            }
+                if (is_object($f) && method_exists($f, 'getStatePath')) {
+                    return $f->getStatePath();
+                }
 
-            return null;
-        })
-        ->values();
+                if (is_object($f) && method_exists($f, 'store')) {
+                    // File sementara (belum tersimpan) — simpan ke disk privat nota.
+                    return $f->store('nota');
+                }
+
+                return null;
+            })
+            ->values();
 
     $ekstensiGambar = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
 @endphp
@@ -61,7 +72,8 @@
                     $ada = Storage::disk($disk)->exists($path);
 
                     if ($ada) {
-                        $url = Storage::disk($disk)->url($path);
+                        // URL ber-otentikasi (disk nota PRIVAT) — bukan /storage.
+                        $url = Nota::url($path);
                     }
                 } catch (\Throwable $e) {
                     $ada = false;
@@ -79,24 +91,36 @@
                         </p>
                     </div>
                 @elseif (in_array($ekstensi, $ekstensiGambar, true))
-                    {{-- LEBAR PENUH agar nota jelas terbaca --}}
-                    <a href="{{ $url }}" target="_blank" rel="noopener" title="Klik untuk perbesar">
+                    {{--
+                        Nota SELALU tampil UTUH — tidak terpotong.
+
+                        Caranya: kotak dengan tinggi tetap + gambar
+                        `object-contain` (dikecilkan agar muat seluruhnya,
+                        TIDAK dipotong). Sebelumnya memakai `w-full` sehingga
+                        nota yang tinggi/panjang ikut terpotong.
+
+                        Klik gambar untuk membuka ukuran penuh di tab baru.
+                    --}}
+                    <a href="{{ $url }}" target="_blank" rel="noopener"
+                       title="Klik untuk membuka ukuran penuh"
+                       class="nota-kotak flex h-[68vh] w-full items-center justify-center bg-gray-100 p-2 dark:bg-gray-800">
                         <img
                             src="{{ $url }}"
                             alt="Nota"
-                            class="block max-h-[80vh] w-full bg-gray-100 object-contain dark:bg-gray-800"
+                            class="max-h-full max-w-full object-contain"
                             loading="lazy"
                         />
                     </a>
                 @elseif ($ekstensi === 'pdf')
                     {{--
-                        PDF LEBAR PENUH + tinggi besar (70% layar) supaya
-                        halaman nota terbaca utuh, tidak terpotong separuh.
-                        #view=FitH = pas lebar; scrollbar aktif untuk turun.
+                        PDF ditampilkan dalam kotak tinggi tetap.
+                        #view=FitH = pas lebar; toolbar aktif untuk zoom.
+                        Admin mengetik sambil melihat nota ini, jadi ukurannya
+                        sengaja dibuat besar (68vh) agar terbaca.
                     --}}
                     <iframe
                         src="{{ $url }}#view=FitH&toolbar=1&navpanes=0"
-                        class="block h-[70vh] w-full"
+                        class="block h-[68vh] w-full"
                         title="Pratinjau nota PDF"
                     ></iframe>
                 @else
