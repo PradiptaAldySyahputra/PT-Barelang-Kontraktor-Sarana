@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Penggunas\Tables;
 
 use App\Enums\Peran;
+use App\Filament\Actions\EksporPdf;
 use App\Filament\Exports\PenggunaExporter;
 use App\Filament\Resources\Penggunas\PenggunaResource;
 use App\Models\Pengguna;
@@ -94,6 +95,8 @@ class PenggunasTable
                     ->label('Ekspor Excel')
                     ->icon('heroicon-m-table-cells')
                     ->exporter(PenggunaExporter::class),
+
+                EksporPdf::make(PenggunaExporter::class, 'Daftar Pengguna'),
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Mitras\Tables;
 
 use App\Enums\KategoriMitra;
+use App\Filament\Actions\EksporPdf;
 use App\Filament\Exports\MitraExporter;
 use App\Filament\Resources\Mitras\MitraResource;
 use Filament\Actions\BulkActionGroup;
@@ -100,6 +101,8 @@ class MitrasTable
                     ->label('Ekspor Excel')
                     ->icon('heroicon-m-table-cells')
                     ->exporter(MitraExporter::class),
+
+                EksporPdf::make(MitraExporter::class, 'Daftar Mitra'),
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ])->visible(fn (): bool => MitraResource::bolehUbahData()),

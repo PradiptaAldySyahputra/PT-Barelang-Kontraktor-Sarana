@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\UangMasuks\Tables;
 
 use App\Enums\AkunKas;
+use App\Filament\Actions\EksporPdf;
 use App\Filament\Concerns\FilterPeriodeUang;
 use App\Filament\Exports\UangMasukExporter;
 use App\Filament\Resources\UangMasuks\UangMasukResource;
@@ -173,6 +174,8 @@ class UangMasuksTable
                     ->label('Ekspor Excel')
                     ->icon('heroicon-m-table-cells')
                     ->exporter(UangMasukExporter::class),
+
+                EksporPdf::make(UangMasukExporter::class, 'Daftar Uang Masuk'),
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ])->visible(fn (): bool => UangMasukResource::bolehUbahData()),

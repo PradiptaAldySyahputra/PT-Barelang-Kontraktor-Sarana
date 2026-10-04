@@ -33,8 +33,28 @@ class SpkExporter extends Exporter
             ExportColumn::make('lokasi')->label('Lokasi'),
             ExportColumn::make('mitra.nama')->label('Pemberi Kerja'),
             ExportColumn::make('nilai_spk')->label('Nilai SPK'),
-            ExportColumn::make('totalPenerimaan')->label('Sudah Diterima'),
-            ExportColumn::make('sisaTagih')->label('Belum Diterima'),
+
+            /*
+             * ⚠️ BUG YANG DIPERBAIKI (2 Okt 2026):
+             * Dulu memakai `ExportColumn::make('totalPenerimaan')` dan
+             * `make('sisaTagih')`. Keduanya adalah METHOD pada model Spk
+             * (bukan kolom/relasi). Filament membaca state lewat
+             * `data_get($record, 'totalPenerimaan')`, dan Laravel mengira
+             * method itu sebuah RELASI → melempar
+             *   "Spk::totalPenerimaan must return a relationship instance".
+             * Akibatnya SELURUH ekspor Excel menu SPK GAGAL, bukan sekadar
+             * satu kolom kosong.
+             *
+             * `getStateUsing()` memanggil method-nya langsung, jadi nilai
+             * benar-benar terhitung.
+             */
+            ExportColumn::make('total_penerimaan')
+                ->label('Sudah Diterima')
+                ->getStateUsing(fn (Spk $record): float => $record->totalPenerimaan()),
+
+            ExportColumn::make('sisa_tagih')
+                ->label('Belum Diterima')
+                ->getStateUsing(fn (Spk $record): float => $record->sisaTagih()),
             ExportColumn::make('status_spk')->label('Status Pekerjaan'),
             ExportColumn::make('status_tagihan')->label('Status Tagihan'),
             ExportColumn::make('dikerjakan_oleh')->label('Dikerjakan Oleh'),

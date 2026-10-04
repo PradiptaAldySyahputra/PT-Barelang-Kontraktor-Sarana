@@ -6,6 +6,7 @@ namespace App\Filament\Resources\UangKeluars\Tables;
 
 use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
+use App\Filament\Actions\EksporPdf;
 use App\Filament\Concerns\FilterPeriodeUang;
 use App\Filament\Exports\UangKeluarExporter;
 use App\Filament\Resources\UangKeluars\UangKeluarResource;
@@ -178,6 +179,8 @@ class UangKeluarsTable
                     ->label('Ekspor Excel')
                     ->icon('heroicon-m-table-cells')
                     ->exporter(UangKeluarExporter::class),
+
+                EksporPdf::make(UangKeluarExporter::class, 'Daftar Uang Keluar'),
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ])->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
