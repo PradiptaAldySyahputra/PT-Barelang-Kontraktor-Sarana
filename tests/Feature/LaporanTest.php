@@ -109,16 +109,48 @@ class LaporanTest extends TestCase
 
         $html = Livewire::test(Laporan::class)->html();
 
-        // ⚠️ KEPUTUSAN USER: laba/rugi, piutang, aging, retensi DIHAPUS.
+        // ⚠️ KEPUTUSAN USER: laba/rugi, aging, retensi DIHAPUS.
+        // PIUTANG tetap ada (PRD FR-RPT-005, datanya nyata).
         foreach ([
             'Ringkasan',
             'Arus Uang per Bulan',
             'Pengeluaran per Kategori',
+            'Piutang (Belum Diterima)',
             'Daftar SPK',
             'Tenggat SPK',
             'Bulan Ini',
         ] as $bagian) {
             $this->assertStringContainsString($bagian, $html, "Bagian '$bagian' tidak tampil");
+        }
+    }
+
+    /**
+     * ⚠️ PERBAIKAN UI (2 Okt 2026):
+     * Dulu SATU dropdown ekspor berisi 5 laporan × 3 format = 15 baris
+     * menumpuk di atas halaman. Sekarang tiap bagian laporan punya tombol
+     * ekspor SENDIRI di header-nya.
+     *
+     * Tes ini menjaga agar setiap bagian tetap punya jalan ekspor, dan
+     * rute ekspor untuk tiap jenis laporan tetap terpasang.
+     */
+    public function test_setiap_bagian_punya_tombol_ekspor_sendiri(): void
+    {
+        $this->actingAs($this->admin);
+
+        $html = Livewire::test(Laporan::class)->html();
+
+        // Tiap jenis laporan harus punya tautan ekspor di halaman.
+        foreach (['spk', 'piutang', 'masuk', 'keluar', 'tenggat'] as $jenis) {
+            $this->assertStringContainsString(
+                route('laporan.ekspor', ['jenis' => $jenis, 'format' => 'xlsx']),
+                $html,
+                "Tautan ekspor Excel untuk laporan '$jenis' tidak ada",
+            );
+            $this->assertStringContainsString(
+                route('laporan.ekspor', ['jenis' => $jenis, 'format' => 'pdf']),
+                $html,
+                "Tautan ekspor PDF untuk laporan '$jenis' tidak ada",
+            );
         }
     }
 
@@ -272,5 +304,59 @@ class LaporanTest extends TestCase
         $csv = ob_get_clean();
 
         $this->assertStringStartsWith("\xEF\xBB\xBF", $csv, 'CSV harus diawali BOM agar Excel membaca UTF-8');
+    }
+
+    // ---------------------------------------------------------
+    // PEMBARUAN TAMPILAN & FITUR LAPORAN (2 Okt 2026)
+    // ---------------------------------------------------------
+
+    /**
+     * ⚠️ PERMINTAAN USER (2 Okt 2026): "update terbaru pada laporan saya rasa
+     * masih kurang juga tampilan dan fiturnya".
+     *
+     * Saldo "Masuk − Keluar" tadinya hanya angka merah/hijau tanpa label, jadi
+     * admin harus menafsirkan sendiri. Sekarang diberi status yang jelas:
+     * "Surplus" kalau positif, "Defisit" kalau negatif.
+     */
+    public function test_ringkasan_menampilkan_status_surplus_atau_defisit(): void
+    {
+        $this->actingAs($this->admin);
+
+        $html = Livewire::test(Laporan::class)->html();
+
+        $this->assertMatchesRegularExpression(
+            '/Surplus|Defisit/',
+            $html,
+            'Saldo harus diberi status Surplus/Defisit supaya jelas.'
+        );
+    }
+
+    /**
+     * ⚠️ PERMINTAAN USER: laporan terasa "kurang". Angka bulanan susah
+     * dibandingkan tanpa gambaran visual. Ditambah tren arus uang (batang
+     * CSS sederhana, tanpa pustaka chart baru).
+     */
+    public function test_laporan_menampilkan_tren_arus_uang(): void
+    {
+        $this->actingAs($this->admin);
+
+        $html = Livewire::test(Laporan::class)->html();
+
+        $this->assertStringContainsString('Tren', $html, 'Bagian tren arus uang tidak tampil.');
+    }
+
+    /**
+     * Data jumlah mitra & transaksi sudah dihitung di getViewData() tetapi
+     * tidak pernah ditampilkan. Ditampilkan sebagai konteks di bawah ringkasan
+     * supaya admin tahu seberapa besar data yang mendasarinya.
+     */
+    public function test_ringkasan_menampilkan_konteks_jumlah_data(): void
+    {
+        $this->actingAs($this->admin);
+
+        $html = Livewire::test(Laporan::class)->html();
+
+        $this->assertStringContainsString('Mitra', $html);
+        $this->assertStringContainsString('Transaksi', $html);
     }
 }
