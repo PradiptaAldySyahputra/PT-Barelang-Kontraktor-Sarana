@@ -9,6 +9,7 @@ use App\Filament\Resources\MonitoringSpk\Pages\ListTagihanSpk;
 use App\Models\Pengguna;
 use App\Models\Spk;
 use App\Models\UangMasuk;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -119,8 +120,15 @@ class CatatPembayaranSpkTest extends TestCase
 
         $this->actingAs($admin);
 
+        /*
+         * ⚠️ PERUBAHAN (2 Okt 2026): "Catat Pembayaran" tidak lagi jadi tombol
+         * langsung di baris tabel. Sesuai permintaan pengguna, aksi (termasuk
+         * kelola) dipindah KE DALAM preview SPK. Jadi diperiksa di dalam
+         * preview — bukan sebagai aksi tabel.
+         */
         Livewire::test(ListTagihanSpk::class)
-            ->assertTableActionExists('catatPembayaran');
+            ->mountAction(TestAction::make('view')->table($spk))
+            ->assertActionVisible('catatPembayaran');
     }
 
     public function test_hapus_pembayaran_mengembalikan_status(): void

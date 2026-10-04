@@ -7,12 +7,13 @@ namespace App\Filament\Resources\MonitoringSpk;
 use App\Enums\DikerjakanOleh;
 use App\Enums\StatusSpk;
 use App\Filament\Actions\CatatPembayaran;
+use App\Filament\Actions\EksporPdf;
+use App\Filament\Actions\PreviewSpk;
 use App\Filament\Exports\SpkExporter;
 use App\Filament\Resources\MonitoringSpk\Pages\ListStatusSpk;
 use App\Filament\Resources\Spks\Pages\UbahStatusSpk;
 use App\Models\Spk;
 use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
 use Filament\Actions\ExportAction;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -146,39 +147,49 @@ class StatusSpkResource extends MonitoringSpkResource
                     ->query(fn (Builder $q): Builder => $q->disubkonkan())
                     ->toggle(),
             ])
+            /*
+             * ⚠️ SATU JALAN MASUK (perbaikan 2 Okt 2026):
+             * Klik baris membuka PREVIEW (aksi `view`, kini tanpa tombol di
+             * baris). Menu monitoring tidak punya halaman detail, jadi tidak
+             * ada `recordUrl` — cukup `recordAction('view')`.
+             */
+            ->recordAction('view')
             ->recordActions([
                 /*
-                 * ⚠️ PERBAIKAN UI (29 Sep 2026): "Catat Pembayaran" dan
-                 * "Ubah Status" digabung jadi SATU menu — keduanya mengurus
-                 * kondisi SPK yang sama. Dua tombol berdampingan membuat admin
-                 * bingung mana yang harus diklik.
+                 * ⚠️ PERBAIKAN UI (2 Okt 2026) — permintaan pengguna:
+                 *   "untuk button edit, hapus, kelola, dan lainya itu
+                 *    diletakkan pada preview dari data spk yang dipilih"
+                 *
+                 * Dulu tiap baris punya menu "Kelola SPK" (Catat Pembayaran +
+                 * Ubah Status). Sekarang satu preview berisi data lengkap,
+                 * dan aksi-aksinya ada DI DALAM preview.
                  */
-                ActionGroup::make([
-                    // Catat pembayaran (termasuk sebagian) dari menu Status SPK.
-                    CatatPembayaran::make(),
+                PreviewSpk::make(
+                    aksi: [
+                        CatatPembayaran::make(),
 
-                    // Form TERPISAH, hanya status pekerjaan.
-                    // `asal` dipakai supaya setelah simpan kembali ke sini.
-                    Action::make('ubahStatus')
-                        ->label('Ubah Status Pekerjaan')
-                        ->icon('heroicon-m-pencil-square')
-                        ->color('primary')
-                        ->visible(fn (): bool => static::bolehUbahData())
-                        ->url(fn (Spk $r): string => UbahStatusSpk::getUrl([
-                            'record' => $r,
-                            'asal' => 'status-spk',
-                        ])),
-                ])
-                    ->label('Kelola SPK')
-                    ->icon('heroicon-m-ellipsis-vertical')
-                    ->color('primary')
-                    ->button(),
+                        // Form TERPISAH, hanya status pekerjaan.
+                        // `asal` dipakai supaya setelah simpan kembali ke sini.
+                        Action::make('ubahStatus')
+                            ->label('Ubah Status Pekerjaan')
+                            ->icon('heroicon-m-pencil-square')
+                            ->color('primary')
+                            ->visible(fn (): bool => static::bolehUbahData())
+                            ->url(fn (Spk $r): string => UbahStatusSpk::getUrl([
+                                'record' => $r,
+                                'asal' => 'status-spk',
+                            ])),
+                    ],
+                    aksiUbahHapus: false,
+                ),
             ])
             ->toolbarActions([
                 ExportAction::make()
                     ->label('Ekspor Excel')
                     ->icon('heroicon-m-table-cells')
                     ->exporter(SpkExporter::class),
+
+                EksporPdf::make(SpkExporter::class, 'Status SPK'),
             ]);
     }
 

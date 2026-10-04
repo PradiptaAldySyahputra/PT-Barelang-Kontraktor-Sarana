@@ -7,11 +7,14 @@ namespace Tests\Feature;
 use App\Filament\Resources\MonitoringSpk\StatusSpkResource;
 use App\Filament\Resources\MonitoringSpk\TagihanSelesaiSpkResource;
 use App\Filament\Resources\MonitoringSpk\TagihanSpkResource;
+use App\Filament\Resources\Spks\Pages\ListSpks;
 use App\Filament\Resources\Spks\SpkResource;
 use App\Models\Pengguna;
 use App\Models\Spk;
 use App\Models\UangKeluar;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -75,22 +78,24 @@ class RevisiMenuSpkTest extends TestCase
 
     public function test_list_spk_punya_edit_dan_delete(): void
     {
-        Spk::factory()->pln()->create(['dibuat_oleh' => $this->admin->id]);
+        $spk = Spk::factory()->pln()->create(['dibuat_oleh' => $this->admin->id]);
 
-        $html = $this->actingAs($this->admin)
-            ->get('/admin/spks')
-            ->assertOk()
-            ->getContent();
+        $this->actingAs($this->admin);
 
         /*
-         * ⚠️ CATATAN (audit 26 Sep 2026): dulu tes ini memeriksa kata INGGRIS
-         * ('Edit'/'Delete') dan LOLOS hanya karena locale tes masih Inggris.
-         * Aplikasi sebenarnya memakai APP_LOCALE=id, jadi label yang dilihat
-         * admin adalah 'Ubah'/'Hapus'. Setelah locale tes diselaraskan ke `id`,
-         * ketidaksesuaian itu ketahuan. Sekarang diperiksa label yang BENAR.
+         * ⚠️ PERUBAHAN (2 Okt 2026) — permintaan pengguna:
+         *   "untuk button edit, hapus, kelola, dan lainya itu diletakkan pada
+         *    preview dari data spk yang dipilih"
+         *
+         * Dulu 'Ubah'/'Hapus' tampil di TIAP baris tabel. Sekarang keduanya
+         * ada DI DALAM preview (tombol "Detail"), supaya tabel bersih dan
+         * tombol tidak mudah salah klik. Jadi tes ini tidak lagi mencari teks
+         * di halaman, melainkan memastikan aksinya ADA di dalam preview.
          */
-        $this->assertStringContainsString('Ubah', $html);
-        $this->assertStringContainsString('Hapus', $html);
+        Livewire::test(ListSpks::class)
+            ->mountAction(TestAction::make('view')->table($spk))
+            ->assertActionVisible('ubah')
+            ->assertActionVisible('hapus');
     }
 
     public function test_list_spk_tidak_punya_restore_dan_force_delete(): void

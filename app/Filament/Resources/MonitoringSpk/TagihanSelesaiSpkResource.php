@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MonitoringSpk;
 
 use App\Enums\StatusTagihan;
+use App\Filament\Actions\EksporPdf;
+use App\Filament\Actions\PreviewSpk;
 use App\Filament\Exports\SpkExporter;
 use App\Filament\Resources\MonitoringSpk\Pages\ListTagihanSelesaiSpk;
 use App\Filament\Resources\Spks\Pages\UbahStatusTagihan;
@@ -125,23 +127,38 @@ class TagihanSelesaiSpkResource extends MonitoringSpkResource
                         ->when($data['dari'] ?? null, fn (Builder $q, $t): Builder => $q->whereDate('tanggal_spk', '>=', $t))
                         ->when($data['sampai'] ?? null, fn (Builder $q, $t): Builder => $q->whereDate('tanggal_spk', '<=', $t))),
             ])
+            /*
+             * ⚠️ SATU JALAN MASUK (perbaikan 2 Okt 2026): klik baris = preview.
+             */
+            ->recordAction('view')
             ->recordActions([
-                // PERMINTAAN USER: bisa diperbaiki kalau salah input.
-                Action::make('perbaikiStatus')
-                    ->label('Perbaiki Status')
-                    ->icon('heroicon-m-arrow-uturn-left')
-                    ->color('warning')
-                    ->visible(fn (): bool => static::bolehUbahData())
-                    ->url(fn (Spk $r): string => UbahStatusTagihan::getUrl([
-                        'record' => $r,
-                        'asal' => 'tagihan-selesai',
-                    ])),
+                /*
+                 * ⚠️ PERBAIKAN UI (2 Okt 2026): preview berisi data lengkap.
+                 * Aksi "Perbaiki Status" (permintaan user: bisa diperbaiki
+                 * kalau salah input) ada DI DALAM preview.
+                 */
+                PreviewSpk::make(
+                    aksi: [
+                        Action::make('perbaikiStatus')
+                            ->label('Perbaiki Status')
+                            ->icon('heroicon-m-arrow-uturn-left')
+                            ->color('warning')
+                            ->visible(fn (): bool => static::bolehUbahData())
+                            ->url(fn (Spk $r): string => UbahStatusTagihan::getUrl([
+                                'record' => $r,
+                                'asal' => 'tagihan-selesai',
+                            ])),
+                    ],
+                    aksiUbahHapus: false,
+                ),
             ])
             ->toolbarActions([
                 ExportAction::make()
                     ->label('Ekspor Excel')
                     ->icon('heroicon-m-table-cells')
                     ->exporter(SpkExporter::class),
+
+                EksporPdf::make(SpkExporter::class, 'Tagihan Selesai SPK'),
             ]);
     }
 

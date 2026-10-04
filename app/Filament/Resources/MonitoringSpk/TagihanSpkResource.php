@@ -6,12 +6,13 @@ namespace App\Filament\Resources\MonitoringSpk;
 
 use App\Enums\StatusTagihan;
 use App\Filament\Actions\CatatPembayaran;
+use App\Filament\Actions\EksporPdf;
+use App\Filament\Actions\PreviewSpk;
 use App\Filament\Exports\SpkExporter;
 use App\Filament\Resources\MonitoringSpk\Pages\ListTagihanSpk;
 use App\Filament\Resources\Spks\Pages\UbahStatusTagihan;
 use App\Models\Spk;
 use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
 use Filament\Actions\ExportAction;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -120,38 +121,38 @@ class TagihanSpkResource extends MonitoringSpkResource
                     ->searchable()
                     ->preload(),
             ])
+            /*
+             * ⚠️ SATU JALAN MASUK (perbaikan 2 Okt 2026): klik baris = preview.
+             * Menu monitoring tidak punya halaman detail → cukup recordAction.
+             */
+            ->recordAction('view')
             ->recordActions([
                 /*
-                 * ⚠️ PERBAIKAN UI (29 Sep 2026) — keluhan pengguna:
-                 *   "contoh lagi bug atau kesalahan pada menu status tagihan itu
-                 *    kenapa ada dua button edit atau pembaruan kenapa tidak
-                 *    disatukan saja"
+                 * ⚠️ PERBAIKAN UI (2 Okt 2026) — permintaan pengguna:
+                 *   "untuk button edit, hapus, kelola, dan lainya itu
+                 *    diletakkan pada preview dari data spk yang dipilih"
                  *
-                 * Sebelumnya ada DUA tombol berdampingan: "Catat Pembayaran" dan
-                 * "Ubah Status". Keduanya mengurus hal yang sama — kondisi
-                 * tagihan SPK — sehingga membingungkan: mana yang harus diklik?
-                 *
-                 * Sekarang keduanya berada dalam SATU menu "Kelola Tagihan",
-                 * dengan keterangan singkat agar admin tahu bedanya.
+                 * Dulu tiap baris punya menu "Kelola Tagihan" (Catat Pembayaran
+                 * + Ubah Status). Sekarang preview berisi data lengkap, dan
+                 * aksinya ada DI DALAM preview.
                  */
-                ActionGroup::make([
-                    CatatPembayaran::make(),
+                PreviewSpk::make(
+                    aksi: [
+                        CatatPembayaran::make(),
 
-                    // Form TERPISAH, hanya status tagihan.
-                    Action::make('ubahStatusTagihan')
-                        ->label('Ubah Status Tagihan')
-                        ->icon('heroicon-m-pencil-square')
-                        ->color('primary')
-                        ->visible(fn (): bool => static::bolehUbahData())
-                        ->url(fn (Spk $r): string => UbahStatusTagihan::getUrl([
-                            'record' => $r,
-                            'asal' => 'tagihan-spk',
-                        ])),
-                ])
-                    ->label('Kelola Tagihan')
-                    ->icon('heroicon-m-ellipsis-vertical')
-                    ->color('primary')
-                    ->button(),
+                        // Form TERPISAH, hanya status tagihan.
+                        Action::make('ubahStatusTagihan')
+                            ->label('Ubah Status Tagihan')
+                            ->icon('heroicon-m-pencil-square')
+                            ->color('primary')
+                            ->visible(fn (): bool => static::bolehUbahData())
+                            ->url(fn (Spk $r): string => UbahStatusTagihan::getUrl([
+                                'record' => $r,
+                                'asal' => 'tagihan-spk',
+                            ])),
+                    ],
+                    aksiUbahHapus: false,
+                ),
             ])
             ->toolbarActions([
                 /*
@@ -163,6 +164,8 @@ class TagihanSpkResource extends MonitoringSpkResource
                     ->label('Ekspor Excel')
                     ->icon('heroicon-m-table-cells')
                     ->exporter(SpkExporter::class),
+
+                EksporPdf::make(SpkExporter::class, 'Tagihan SPK'),
             ]);
     }
 

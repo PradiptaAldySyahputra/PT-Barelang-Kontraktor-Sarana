@@ -9,15 +9,14 @@ use App\Enums\StatusAntar;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use App\Filament\Actions\CatatPembayaran;
+use App\Filament\Actions\EksporPdf;
+use App\Filament\Actions\PreviewSpk;
 use App\Filament\Exports\SpkExporter;
 use App\Filament\Resources\Spks\SpkResource;
 use App\Models\Spk;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Actions\ExportAction;
-use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -266,27 +265,42 @@ class SpksTable
 
                 TrashedFilter::make()->label('Data Terhapus'),
             ])
-            // HANYA Edit dan Delete (permintaan user).
-            // Restore dan Force Delete dihapus dari baris. Data yang sudah
-            // dihapus tetap bisa dilihat lewat filter "Data Terhapus".
+            /*
+             * ⚠️ SATU JALAN MASUK (perbaikan 2 Okt 2026) — permintaan user:
+             *   "kenapa ada dua preview detail itu ketika di klik spk dan di
+             *    klik button detail ... apakah button detail masih diperlukan
+             *    kalau data diklik langsung bisa preview?"
+             *
+             * AKAR MASALAH: Filament otomatis mengisi `recordUrl` selama
+             * Resource punya halaman `view` → KLIK BARIS menuju HALAMAN detail,
+             * sedangkan tombol "Detail" membuka MODAL. Dua jalur berbeda.
+             *
+             * SOLUSI:
+             *   - `recordUrl(null)`  → klik baris TIDAK lagi ke halaman.
+             *   - `recordAction('view')` → klik baris membuka PREVIEW.
+             *   - Tombol "Detail" di baris dihapus (aksi `view` di-`hidden()`).
+             *   - Tombol "Buka Halaman Detail" ada DI DALAM preview.
+             */
+            ->recordUrl(null)
+            ->recordAction('view')
             ->recordActions([
-                // Detail SPK (FR-SPK-005) — membuka halaman berisi data lengkap
-                // + daftar uang masuk & uang keluar milik SPK ini.
-                ViewAction::make()
-                    ->label('Detail')
-                    ->visible(fn (): bool => true),
+                PreviewSpk::make(),
 
-                // Catat pembayaran (termasuk sebagian: 50%, 95%, dst).
+                // Catat pembayaran tetap di baris: aksi CEPAT yang sering
+                // dipakai admin saat menagih — bukan jalur "detail", jadi tidak
+                // menimbulkan dua jalur yang membingungkan.
                 CatatPembayaran::make(),
-
-                EditAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
-                DeleteAction::make()->visible(fn (): bool => SpkResource::bolehUbahData()),
             ])
             ->toolbarActions([
                 ExportAction::make()
                     ->label('Ekspor Excel')
                     ->icon('heroicon-m-table-cells')
                     ->exporter(SpkExporter::class),
+
+                // PDF — untuk menyerahkan/mengarsipkan (mis. lampiran pajak).
+                // Memakai exporter yang sama, jadi kolomnya identik dengan Excel.
+                EksporPdf::make(SpkExporter::class, 'Daftar SPK'),
+
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ])->visible(fn (): bool => SpkResource::bolehUbahData()),
