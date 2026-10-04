@@ -111,7 +111,10 @@ class UangMasukForm
                                 fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
                                     $spk = $value ? Spk::find($value) : null;
 
-                                    if ($spk !== null && ! $spk->status_spk->bolehTransaksiBaru()) {
+                                    // ⚠️ `status_spk` boleh NULL (data lama/belum diisi).
+                                    // Guard ini mencegah error "Call to a member function
+                                    // bolehTransaksiBaru() on null". NULL = belum dibatalkan.
+                                    if ($spk !== null && $spk->status_spk !== null && ! $spk->status_spk->bolehTransaksiBaru()) {
                                         $fail('SPK ini berstatus Dibatalkan — tidak bisa menerima transaksi baru.');
                                     }
                                 },

@@ -370,7 +370,14 @@ class Spk extends Model
      */
     public function scopeBelumLunas(Builder $query): void
     {
-        $query->where('status_tagihan', '!=', StatusTagihan::Dibayar->value);
+        // ⚠️ `status_tagihan` boleh NULL. Di SQL, `NULL != 'dibayar'` bernilai
+        // UNKNOWN (bukan true), sehingga tanpa `orWhereNull` SPK yang statusnya
+        // belum diisi HILANG dari daftar "Belum Lunas" — padahal justru itu yang
+        // perlu ditindaklanjuti. Perlakukan NULL sebagai "belum lunas".
+        $query->where(function (Builder $q): void {
+            $q->where('status_tagihan', '!=', StatusTagihan::Dibayar->value)
+                ->orWhereNull('status_tagihan');
+        });
     }
 
     /**
@@ -391,13 +398,20 @@ class Spk extends Model
         // ⚠️ Hanya SPK yang MASIH BERJALAN. Tanpa syarat ini, SPK lama yang
         // sudah selesai ikut terhitung "lewat tenggat" dan memunculkan alarm
         // palsu (pernah terjadi: 67 dari 90 SPK asli dianggap lewat tenggat).
+        //
+        // ⚠️ `status_spk` boleh NULL. `whereNotIn` MENYARING HABIS baris NULL
+        // (karena `NULL NOT IN (...)` = UNKNOWN), sehingga SPK berstatus belum
+        // diisi justru lolos dari pemantauan tenggat. NULL diperlakukan sebagai
+        // "belum selesai" lewat `orWhereNull`.
         $query->whereNotNull('tanggal_akhir')
             ->whereDate('tanggal_akhir', '<', now()->toDateString())
-            ->whereNotIn('status_spk', [
-                StatusSpk::Selesai->value,
-                StatusSpk::SudahDitagihkan->value,
-                StatusSpk::Dibatalkan->value,
-            ]);
+            ->where(function (Builder $q): void {
+                $q->whereNotIn('status_spk', [
+                    StatusSpk::Selesai->value,
+                    StatusSpk::SudahDitagihkan->value,
+                    StatusSpk::Dibatalkan->value,
+                ])->orWhereNull('status_spk');
+            });
     }
 
     /**
@@ -410,11 +424,13 @@ class Spk extends Model
         $query->whereNotNull('tanggal_akhir')
             ->whereDate('tanggal_akhir', '>=', now()->toDateString())
             ->whereDate('tanggal_akhir', '<=', now()->addDays($hari)->toDateString())
-            ->whereNotIn('status_spk', [
-                StatusSpk::Selesai->value,
-                StatusSpk::SudahDitagihkan->value,
-                StatusSpk::Dibatalkan->value,
-            ]);
+            ->where(function (Builder $q): void {
+                $q->whereNotIn('status_spk', [
+                    StatusSpk::Selesai->value,
+                    StatusSpk::SudahDitagihkan->value,
+                    StatusSpk::Dibatalkan->value,
+                ])->orWhereNull('status_spk');
+            });
     }
 
     /**
