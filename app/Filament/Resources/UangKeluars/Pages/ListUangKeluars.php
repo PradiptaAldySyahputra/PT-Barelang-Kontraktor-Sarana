@@ -23,6 +23,12 @@ class ListUangKeluars extends ListRecords
         ];
     }
 
+    public function getSubheading(): ?string
+    {
+        return 'Semua pengeluaran uang. Tab menyaring: Terkait SPK (biaya proyek) · Umum / Operasional (biaya non-SPK). '
+            .'Baris Total di bawah tabel menghitung SEMUA baris terfilter — bukan hanya halaman ini.';
+    }
+
     public function getTabs(): array
     {
         return [

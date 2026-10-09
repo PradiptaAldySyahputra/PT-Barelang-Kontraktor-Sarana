@@ -23,6 +23,12 @@ class ListUangMasuks extends ListRecords
         ];
     }
 
+    public function getSubheading(): ?string
+    {
+        return 'Semua penerimaan uang. Tab menyaring: Dari SPK (penagihan pekerjaan) · Luar SPK (penerimaan lain). '
+            .'Baris Total di bawah tabel menghitung SEMUA baris terfilter — bukan hanya halaman ini.';
+    }
+
     public function getTabs(): array
     {
         return [

@@ -20,6 +20,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Support\RawJs;
 
 /**
@@ -62,6 +63,7 @@ class UangMasukForm
         return $schema
             ->components([
                 Section::make('Sumber Penerimaan')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
                     ->description('Pilih "Berdasarkan SPK" jika uang masuk dari penagihan SPK. Pilih "Manual" untuk penerimaan di luar SPK (mis. penjualan sisa material).')
                     ->schema([
                         /*
@@ -100,6 +102,7 @@ class UangMasukForm
                     ]),
 
                 Section::make('Data SPK')
+                    ->icon(Heroicon::OutlinedDocumentText)
                     ->visible(fn (Get $get): bool => $get('mode') === 'spk')
                     ->schema([
                         Select::make('spk_id')
@@ -169,6 +172,7 @@ class UangMasukForm
                     ->columns(2),
 
                 Section::make('Data Manual (Luar SPK)')
+                    ->icon(Heroicon::OutlinedPencilSquare)
                     ->visible(fn (Get $get): bool => $get('mode') === 'manual')
                     ->schema([
                         TextInput::make('nomor_spk')
@@ -184,6 +188,7 @@ class UangMasukForm
                     ->columns(2),
 
                 Section::make('Detail Penerimaan')
+                    ->icon(Heroicon::OutlinedBanknotes)
                     ->schema([
                         DatePicker::make('tanggal')
                             ->label('Tanggal Masuk')
@@ -291,6 +296,7 @@ class UangMasukForm
                     ->columns(2),
 
                 Section::make('Bukti Penerimaan')
+                    ->icon(Heroicon::OutlinedPaperClip)
                     ->description('Jumlah file BEBAS — bisa 1, bisa banyak (bukti transfer + nota + screenshot).')
                     ->schema([
                         /*

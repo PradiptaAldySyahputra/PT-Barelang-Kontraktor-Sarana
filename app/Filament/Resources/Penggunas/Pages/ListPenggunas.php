@@ -20,4 +20,10 @@ class ListPenggunas extends ListRecords
             CreateAction::make()->visible(fn (): bool => PenggunaResource::bolehUbahData())->label('Tambah Pengguna'),
         ];
     }
+
+    public function getSubheading(): ?string
+    {
+        return 'Akun yang boleh masuk sistem. Ada 2 peran: Admin (input data) & Direktur (hanya melihat). '
+            .'Pengguna nonaktif tidak bisa login.';
+    }
 }

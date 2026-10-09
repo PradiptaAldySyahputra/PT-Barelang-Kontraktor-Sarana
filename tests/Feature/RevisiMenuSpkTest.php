@@ -120,7 +120,10 @@ class RevisiMenuSpkTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('TANPA SPK', $html);
+        // Kolom Tanggal SPK untuk SPK tanpa tanggal kini menampilkan
+        // "Tanpa tanggal" (dulu "TANPA SPK" — membingungkan karena kolomnya
+        // Tanggal, bukan status SPK). Temuan uji deploy 9 Okt 2026.
+        $this->assertStringContainsString('Tanpa tanggal', $html);
     }
 
     // =========================================================

@@ -17,6 +17,11 @@ class EditUangMasuk extends EditRecord
 
     protected static ?string $title = 'Ubah Uang Masuk';
 
+    public function getSubheading(): ?string
+    {
+        return 'Ubah catatan penerimaan. Mengubah SUMBER (SPK ↔ Manual) akan menyesuaikan kolom yang aktif.';
+    }
+
     /**
      * ⚠️ BUG-02 — normalisasi nominal sebelum form diisi (lihat EditSpk).
      * Tanpa ini `"10000.00"` tampil `1.000.000` (100× lipat).

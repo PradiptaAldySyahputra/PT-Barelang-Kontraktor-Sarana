@@ -13,6 +13,12 @@ class CreateUangMasuk extends CreateRecord
 
     protected static ?string $title = 'Tambah Uang Masuk';
 
+    public function getSubheading(): ?string
+    {
+        return 'Pilih dulu SUMBER penerimaan: "Berdasarkan SPK" (penagihan pekerjaan) atau "Manual" (di luar SPK). '
+            .'Kolom yang muncul menyesuaikan pilihan itu.';
+    }
+
     /**
      * Pastikan `spk_id` kosong saat mode manual, agar sumbernya
      * tersimpul benar sebagai "Luar SPK".

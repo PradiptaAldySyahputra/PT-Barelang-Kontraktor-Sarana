@@ -50,7 +50,7 @@
             </div>
 
             @if ($jumlahLengkap > 0)
-                <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-50">
+                <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-50">
                     Rp {{ number_format($totalRupiah, 0, ',', '.') }}
                 </span>
             @endif

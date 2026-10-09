@@ -819,3 +819,111 @@ textarea {
     .fi-body[wire\:loading]::before { animation: none !important; }
     .fi-wi-stats-overview-stat { transition: none !important; }
 }
+
+/* =========================================================
+   20. WARNA NAVIGASI PER MODUL (navigasi saja, bukan dekorasi)
+   ---------------------------------------------------------
+   Permintaan user (9 Okt 2026):
+     "sepertinya boleh menggunakan warna tapi untuk navigasi saja
+      yang jelas desain tidak ai slop"
+
+   Aturan: warna HANYA dipakai sebagai PENANDA MODUL di sidebar, bukan
+   menghias isi halaman. Tiap grup menu punya SATU warna desaturated yang
+   konsisten — memberi "peta" modul, bukan pelangi.
+
+   Teknik: pilih berdasarkan atribut `data-group-label` yang memang
+   dirender Filament, jadi tidak perlu ikon grup (Filament 5 melarang grup
+   & item sama-sama berikon). Warna tampil sebagai:
+     · titik kecil di kiri label grup
+     · warna teks label grup
+     · garis kiri item aktif (menggantikan amber generik)
+
+   Palet desaturated agar tetap profesional (bukan neon):
+     SPK         → biru    #2563eb
+     Keuangan    → hijau   #059669
+     Master Data → violet  #7c3aed
+     Laporan     → amber   #d97706
+   --------------------------------------------------------- */
+
+/* Titik penanda modul sebelum label grup */
+.fi-sidebar-group-label::before {
+    content: '' !important;
+    display: inline-block !important;
+    width: 7px !important;
+    height: 7px !important;
+    border-radius: 9999px !important;
+    margin-right: 0.5rem !important;
+    vertical-align: middle !important;
+    background-color: currentColor !important;
+    opacity: 0.9 !important;
+}
+
+/* Warna per modul — teks label + titik memakai warna yang sama */
+.fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-group-label {
+    color: #2563eb !important;
+}
+.fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-group-label {
+    color: #059669 !important;
+}
+.fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-group-label {
+    color: #7c3aed !important;
+}
+.fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-group-label {
+    color: #d97706 !important;
+}
+
+/* Mode gelap: versi lebih terang agar terbaca di latar #09090b */
+.dark .fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-group-label {
+    color: #60a5fa !important;
+}
+.dark .fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-group-label {
+    color: #34d399 !important;
+}
+.dark .fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-group-label {
+    color: #a78bfa !important;
+}
+.dark .fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-group-label {
+    color: #fbbf24 !important;
+}
+
+/* Garis kiri item AKTIF mengikuti warna modulnya — penanda "kamu di sini" */
+.fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-item.fi-active .fi-sidebar-item-btn::before {
+    background-color: #2563eb !important;
+}
+.fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-item.fi-active .fi-sidebar-item-btn::before {
+    background-color: #059669 !important;
+}
+.fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-item.fi-active .fi-sidebar-item-btn::before {
+    background-color: #7c3aed !important;
+}
+.fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-item.fi-active .fi-sidebar-item-btn::before {
+    background-color: #d97706 !important;
+}
+
+/* Ikon item aktif juga ikut warna modul (bukan amber generik) */
+.fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #2563eb !important;
+}
+.fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #059669 !important;
+}
+.fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #7c3aed !important;
+}
+.fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #d97706 !important;
+}
+
+/* Mode gelap: ikon aktif versi terang */
+.dark .fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #60a5fa !important;
+}
+.dark .fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #34d399 !important;
+}
+.dark .fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #a78bfa !important;
+}
+.dark .fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: #fbbf24 !important;
+}

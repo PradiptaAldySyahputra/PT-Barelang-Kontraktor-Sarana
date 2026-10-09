@@ -24,6 +24,12 @@ class ListMitras extends ListRecords
         ];
     }
 
+    public function getSubheading(): ?string
+    {
+        return 'Semua mitra & subkon. Tab menyaring per kategori: PLN (pemberi kerja) · Subkon (rekanan pelaksana). '
+            .'Baris Total di bawah tabel menghitung SEMUA baris terfilter.';
+    }
+
     /**
      * Tab menu Mitra — TEPAT TIGA: Semua · PLN · Subkon.
      *
@@ -53,7 +59,7 @@ class ListMitras extends ListRecords
             'semua' => Tab::make('Semua')
                 ->badge(fn (): int => MitraResource::getModel()::query()->count()),
 
-            'pln' => Tab::make('PLN')
+            'mitra' => Tab::make('Mitra (Pemberi Kerja)')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('kategori', KategoriMitra::Mitra->value))
                 ->badge(fn (): int => MitraResource::getModel()::query()
                     ->where('kategori', KategoriMitra::Mitra->value)->count()),

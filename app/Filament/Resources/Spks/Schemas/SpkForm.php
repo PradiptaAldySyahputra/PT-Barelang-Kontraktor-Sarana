@@ -23,6 +23,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Support\RawJs;
 
 /**
@@ -70,6 +71,7 @@ class SpkForm
             ->components([
                 // ── Baris 1 ──────────────────────────────────────────────
                 Section::make('Data SPK')
+                    ->icon(Heroicon::OutlinedDocumentText)
                     ->description('Nomor SPK wajib unik. Untuk pekerjaan tanpa surat resmi, isi nomor dengan "TANPA SPK" dan biarkan tanggal kosong.')
                     ->schema([
                         TextInput::make('nomor_spk')
@@ -99,6 +101,7 @@ class SpkForm
                     ->columns(2),
 
                 Section::make('Pekerjaan')
+                    ->icon(Heroicon::OutlinedWrenchScrewdriver)
                     ->schema([
                         TextInput::make('nama_pekerjaan')
                             ->label('Nama Pekerjaan')
@@ -121,6 +124,7 @@ class SpkForm
 
                 // ── Baris 2 ──────────────────────────────────────────────
                 Section::make('Nilai SPK')
+                    ->icon(Heroicon::OutlinedBanknotes)
                     ->description('Nilai kontrak murni. Sistem TIDAK memakai retensi/dana ditahan — piutang = Nilai SPK − Total Uang Masuk.')
                     ->schema([
                         TextInput::make('nilai_spk')
@@ -140,6 +144,7 @@ class SpkForm
                     ->columns(1),
 
                 Section::make('Klasifikasi')
+                    ->icon(Heroicon::OutlinedTag)
                     ->schema([
                         Select::make('jenis_sumber')
                             ->label('Jenis Sumber')
@@ -161,6 +166,7 @@ class SpkForm
 
                 // ── Baris 3 ──────────────────────────────────────────────
                 Section::make('Pengantaran Dokumen')
+                    ->icon(Heroicon::OutlinedTruck)
                     ->description('Catat apakah dokumen SPK sudah diantar ke pihak terkait.')
                     ->schema([
                         Select::make('status_antar')
@@ -190,6 +196,7 @@ class SpkForm
                 // Karena schema dibatasi 5 tabel, pekerjaan yang sebagian
                 // disubkonkan dibuat sebagai SPK TERPISAH.
                 Section::make('Pelaksana Pekerjaan')
+                    ->icon(Heroicon::OutlinedUserGroup)
                     ->description('Tandai apakah SPK ini dikerjakan tim sendiri atau diserahkan ke subkon (kita bayar mereka).')
                     ->schema([
                         Radio::make('dikerjakan_oleh')
@@ -235,6 +242,7 @@ class SpkForm
                 // Status pekerjaan (progres fisik) & status tagihan (progres
                 // bayar) ditampilkan BERDAMPINGAN agar bisa dipantau independen.
                 Section::make('Status (hanya tampil)')
+                    ->icon(Heroicon::OutlinedSignal)
                     ->description('Status diubah lewat menu Status SPK & Tagihan SPK — bukan dari sini.')
                     ->hiddenOn('create')
                     ->schema([
@@ -251,6 +259,7 @@ class SpkForm
 
                 // Saat TAMBAH: status diisi otomatis (tidak perlu dipilih).
                 Section::make('Status Awal')
+                    ->icon(Heroicon::OutlinedRocketLaunch)
                     ->description('SPK baru otomatis berstatus Draft & Belum Ditagihkan. Ubah lewat menu Status SPK / Tagihan SPK.')
                     ->visibleOn('create')
                     ->schema([
@@ -272,6 +281,7 @@ class SpkForm
                 // bawah untuk menampung scan kontrak SPK, kuitansi tagihan,
                 // BAST, atau BAAP sekaligus.
                 Section::make('Dokumen SPK')
+                    ->icon(Heroicon::OutlinedPaperClip)
                     ->description('Unggah scan kontrak SPK, kuitansi tagihan, BAST, atau BAAP. Boleh banyak berkas sekaligus.')
                     ->schema([
                         FileUpload::make('dokumen')

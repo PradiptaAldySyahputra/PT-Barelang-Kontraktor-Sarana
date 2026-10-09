@@ -8,6 +8,7 @@ use App\Filament\Resources\Spks\SpkResource;
 use App\Models\Spk;
 use App\Models\UangMasuk;
 use App\Support\Format;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
@@ -106,6 +107,29 @@ class CatatPembayaran
                     ->required()
                     ->minValue(1)
                     ->prefix('Rp')
+                    // -------------------------------------------------
+                    // ⚠️ BUG (temuan 9 Okt 2026) — CEGAH OVERPAY.
+                    //
+                    // Form Uang Masuk SUDAH menolak penerimaan melebihi
+                    // piutang SPK, TAPI aksi ini TIDAK. Akibatnya admin bisa
+                    // mencatat pembayaran Rp 500 juta untuk SPK Rp 100 juta
+                    // lewat halaman SPK → piutang jadi NEGATIF & laporan rusak.
+                    // Aturan yang sama kini diterapkan di sini.
+                    // -------------------------------------------------
+                    ->rules([
+                        fn (Spk $record): Closure => function (string $attribute, $value, Closure $fail) use ($record): void {
+                            $sisa = $record->sisaTagih();
+
+                            if ((float) $value > $sisa + 0.01) {
+                                $fail(sprintf(
+                                    'Melebihi sisa tagihan. Nilai SPK Rp %s, sudah diterima Rp %s — maksimal Rp %s.',
+                                    number_format((float) $record->nilai_spk, 0, ',', '.'),
+                                    number_format($record->totalPenerimaan(), 0, ',', '.'),
+                                    number_format($sisa, 0, ',', '.'),
+                                ));
+                            }
+                        },
+                    ])
                     ->helperText(fn (Spk $record): string => 'Sisa tagihan saat ini: '.Format::rupiah($record->sisaTagih())),
 
                 DatePicker::make('tanggal')

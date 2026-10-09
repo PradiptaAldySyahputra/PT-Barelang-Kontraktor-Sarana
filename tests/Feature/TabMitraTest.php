@@ -14,7 +14,7 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * TAB MENU MITRA — hanya TIGA: Semua · PLN · Subkon.
+ * TAB MENU MITRA — hanya TIGA: Semua · Mitra (Pemberi Kerja) · Subkon.
  *
  * ⚠️ PERMINTAAN PENGGUNA (26 Sep 2026):
  * "di filter menu mitra kenapa anda buat jadi banyak filter navbarnya buat
@@ -22,12 +22,15 @@ use Tests\TestCase;
  *
  * Juga: "pln itu dimasukkan kedalam mitra jadi atau dua mitra dan subkon"
  * → benar, PLN dilebur ke kategori `mitra` (pemberi kerja). Jadi cukup
- *   3 tab: Semua, PLN (= pemberi kerja), Subkon.
+ *   3 tab: Semua, Mitra (Pemberi Kerja), Subkon.
  *
  * ⚠️ RIWAYAT BUG: versi lama punya tab "PLN" yang menyaring
  * `kategori = 'pln'` — padahal nilai 'pln' SUDAH TIDAK ADA di enum
  * (hanya `mitra` & `subkon`), sehingga tab itu SELALU KOSONG.
- * Sekarang tab PLN menyaring kategori `mitra` yang BENAR.
+ * Tab kedua menyaring kategori `mitra` yang BENAR, dan (9 Okt 2026)
+ * LABELNYA diperbaiki dari "PLN" menjadi "Mitra (Pemberi Kerja)" agar
+ * cocok dengan nama kategori — temuan uji deploy: "label tab PLN 4 padahal
+ * kategorinya Mitra".
  */
 class TabMitraTest extends TestCase
 {
@@ -53,9 +56,23 @@ class TabMitraTest extends TestCase
         $tab = $komponen->instance()->getTabs();
 
         $this->assertSame(
-            ['semua', 'pln', 'subkon'],
+            ['semua', 'mitra', 'subkon'],
             array_keys($tab),
-            'Menu Mitra harus punya TEPAT 3 tab: Semua, PLN, Subkon.',
+            'Menu Mitra harus punya TEPAT 3 tab: Semua, Mitra (Pemberi Kerja), Subkon.',
+        );
+    }
+
+    public function test_label_tab_kedua_cocok_dengan_kategori(): void
+    {
+        $admin = $this->siapkan();
+        $this->actingAs($admin);
+
+        $tab = Livewire::test(ListMitras::class)->instance()->getTabs();
+
+        $this->assertSame(
+            'Mitra (Pemberi Kerja)',
+            $tab['mitra']->getLabel(),
+            'Label tab harus cocok dengan nama kategori (bukan "PLN").',
         );
     }
 

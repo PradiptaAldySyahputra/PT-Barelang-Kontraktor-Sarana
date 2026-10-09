@@ -23,6 +23,12 @@ class EditSpk extends EditRecord
 
     protected static ?string $title = 'Ubah SPK';
 
+    public function getSubheading(): ?string
+    {
+        return 'Ubah data SPK di sini. STATUS tidak bisa diubah dari halaman ini — '
+            .'pakai menu Status SPK / Tagihan SPK agar tidak salah ubah data lain.';
+    }
+
     /**
      * ⚠️ BUG-02 (uji deploy 7 Okt 2026) — normalisasi nominal SEBELUM form diisi.
      *

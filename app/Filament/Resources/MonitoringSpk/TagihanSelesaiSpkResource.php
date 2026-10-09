@@ -82,7 +82,7 @@ class TagihanSelesaiSpkResource extends MonitoringSpkResource
                 TextColumn::make('tanggal_spk')
                     ->label('Tanggal SPK')
                     ->date('d/m/Y')
-                    ->placeholder('TANPA SPK')
+                    ->placeholder('Tanpa tanggal')
                     ->sortable(),
 
                 TextColumn::make('nilai_spk')

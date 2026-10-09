@@ -54,7 +54,7 @@ class ViewSpk extends ViewRecord
                         TextEntry::make('nama_pekerjaan')->label('Nama Pekerjaan')->columnSpanFull(),
                         TextEntry::make('mitra.nama')->label('Pemberi Kerja / Mitra')->placeholder('—'),
                         TextEntry::make('lokasi')->label('Lokasi')->placeholder('—'),
-                        TextEntry::make('tanggal_spk')->label('Tanggal SPK')->date('d/m/Y')->placeholder('TANPA SPK'),
+                        TextEntry::make('tanggal_spk')->label('Tanggal SPK')->date('d/m/Y')->placeholder('Tanpa tanggal'),
                         TextEntry::make('tanggal_akhir')->label('Tenggat')->date('d/m/Y')->placeholder('—'),
                     ])
                     ->columns(3),

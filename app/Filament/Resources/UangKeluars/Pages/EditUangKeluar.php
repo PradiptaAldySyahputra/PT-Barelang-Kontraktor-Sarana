@@ -17,6 +17,11 @@ class EditUangKeluar extends EditRecord
 
     protected static ?string $title = 'Ubah Uang Keluar';
 
+    public function getSubheading(): ?string
+    {
+        return 'Ubah satu catatan pengeluaran. Untuk mencatat banyak nota sekaligus, pakai menu Tambah Uang Keluar.';
+    }
+
     /**
      * ⚠️ BUG-02 — normalisasi nominal sebelum form diisi (lihat EditSpk).
      * Tanpa ini `"10000.00"` tampil `1.000.000` (100× lipat).

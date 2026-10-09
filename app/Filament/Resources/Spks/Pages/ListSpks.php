@@ -24,6 +24,19 @@ class ListSpks extends ListRecords
     }
 
     /**
+     * Subjudul halaman — menjelaskan CAKUPAN data & arti tab.
+     *
+     * Permintaan user (9 Okt 2026): "batasan setiap data tidak jelas jadi user
+     * tidak ternavigasi". Subjudul ini menjawab: data apa yang tampil, tab
+     * menyaring apa, dan total dihitung dari mana.
+     */
+    public function getSubheading(): ?string
+    {
+        return 'Seluruh SPK yang tercatat. Tab menyaring cepat: Berjalan · Belum Lunas · Tanpa SPK. '
+            .'Baris Total di bawah tabel menghitung SEMUA baris terfilter — bukan hanya halaman ini.';
+    }
+
+    /**
      * Tab filter cepat — memudahkan melihat SPK yang perlu ditindaklanjuti.
      */
     public function getTabs(): array

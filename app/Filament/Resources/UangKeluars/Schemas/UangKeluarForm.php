@@ -26,6 +26,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Support\RawJs;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -667,7 +668,23 @@ class UangKeluarForm
      *     item lama, sehingga tersimpan sebagai NULL.
      *     (Terbukti: kategori terpilih "Material" di layar, tapi tersimpan null.)
      *
-     * Dengan memakai ulang kunci lama, item tetap dikenali Livewire.
+     * ───────────────────────────────────────────────────────────────
+     * ⚠️ PERBAIKAN BUG-B (temuan 9 Okt 2026) — "semua terisi tapi alert
+     *    belum lengkap".
+     *
+     * Dulu kunci lama dipakai ulang BERDASARKAN POSISI (`$kunciLama[$i]`).
+     * Saat jumlah baris berubah (mis. OCR selesai belakangan: berkas A
+     * ternyata 2 nota, bukan 4 default), baris BERGESER — kunci baris ke-3
+     * tadinya milik berkas A, kini menempel ke berkas B. Di browser, pilihan
+     * dropdown yang sudah dikirim untuk kunci itu jadi nyasar ke baris yang
+     * berbeda → tersimpan null → progress menghitungnya "belum lengkap"
+     * padahal admin sudah mengisi semua. Sudah dibuktikan lewat tes:
+     * 4 dari 6 kunci bergeser.
+     *
+     * SEKARANG kunci dicocokkan lewat IDENTITAS baris (sumber berkas +
+     * nomor nota), BUKAN posisi. Kunci tetap menempel pada nota yang sama
+     * walau jumlah/urutan baris berubah.
+     * ───────────────────────────────────────────────────────────────
      *
      * @param  array<mixed>  $lama
      * @param  array<int, array<string, mixed>>  $baru
@@ -675,19 +692,70 @@ class UangKeluarForm
      */
     private static function gabungBaris(array $lama, array $baru): array
     {
-        $kunciLama = array_keys(array_filter(
-            $lama,
-            fn ($r): bool => is_array($r),
-        ));
+        // Peta IDENTITAS -> kunci lama. Identitas = sumber berkas + nota ke-berapa.
+        $kunciPerIdentitas = [];
+
+        foreach ($lama as $kunci => $r) {
+            if (! is_array($r)) {
+                continue;
+            }
+
+            $identitas = self::identitasBaris($r);
+
+            // Kalau ada identitas ganda (seharusnya tidak), kunci pertama menang.
+            if ($identitas !== null && ! isset($kunciPerIdentitas[$identitas])) {
+                $kunciPerIdentitas[$identitas] = (string) $kunci;
+            }
+        }
 
         $hasil = [];
+        $terpakai = [];
 
-        foreach ($baru as $i => $r) {
-            $kunci = $kunciLama[$i] ?? (string) Str::uuid();
+        foreach ($baru as $r) {
+            $identitas = self::identitasBaris($r);
+
+            // Pakai ulang kunci lama kalau identitasnya sama & belum dipakai.
+            $kunci = null;
+
+            if ($identitas !== null && isset($kunciPerIdentitas[$identitas])) {
+                $kandidat = $kunciPerIdentitas[$identitas];
+
+                if (! isset($terpakai[$kandidat])) {
+                    $kunci = $kandidat;
+                }
+            }
+
+            $kunci ??= (string) Str::uuid();
+
+            $terpakai[$kunci] = true;
             $hasil[$kunci] = $r;
         }
 
         return $hasil;
+    }
+
+    /**
+     * Identitas unik satu baris: sumber berkas + nomor nota.
+     *
+     * Dipakai `gabungBaris()` supaya kunci Livewire menempel pada NOTA yang
+     * sama, bukan pada POSISI baris. `nota_ke` = 0 untuk mode total.
+     *
+     * @param  array<string, mixed>  $r
+     */
+    private static function identitasBaris(array $r): ?string
+    {
+        $sumber = $r['sumber'] ?? null;
+
+        // Sumber bisa berupa array (state FileUpload) — ambil berkas pertama.
+        if (is_array($sumber)) {
+            $sumber = reset($sumber) ?: null;
+        }
+
+        if (blank($sumber)) {
+            return null;
+        }
+
+        return $sumber.'|'.(int) ($r['nota_ke'] ?? 0);
     }
 
     /**
@@ -1324,6 +1392,7 @@ class UangKeluarForm
             ->columns(1)
             ->components([
                 Section::make('1. Unggah Berkas Nota')
+                    ->icon(Heroicon::OutlinedArrowUpTray)
                     ->description('Unggah berkas nota, lalu isi jumlah nota di dalamnya. Baris rincian dibuat otomatis.')
                     ->schema([
                         // Peta path berkas -> daftar potongan hasil OCR.
@@ -1349,6 +1418,7 @@ class UangKeluarForm
                     ->columnSpanFull(),
 
                 Section::make('2. Isi Rincian')
+                    ->icon(Heroicon::OutlinedListBullet)
                     ->description('Nota tampil di kiri, isi angkanya di kanan. Baris kosong tidak tersimpan.')
                     ->schema([
                         /*

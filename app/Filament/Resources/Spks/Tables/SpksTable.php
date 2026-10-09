@@ -82,10 +82,7 @@ class SpksTable
                 TextColumn::make('tanggal_spk')
                     ->label('Tanggal SPK')
                     ->date('d/m/Y')
-                    ->placeholder('TANPA SPK')
-                    ->description(fn (Spk $record): ?string => $record->tanggal_spk === null
-                        ? 'Tidak ada tanggal resmi'
-                        : null)
+                    ->placeholder('Tanpa tanggal')
                     ->sortable(),
 
                 TextColumn::make('tanggal_akhir')
