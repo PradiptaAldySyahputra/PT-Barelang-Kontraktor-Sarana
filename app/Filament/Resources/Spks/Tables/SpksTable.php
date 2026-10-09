@@ -38,6 +38,16 @@ use Illuminate\Database\Eloquent\Builder;
  *
  * Tabel ini fokus pada **identitas SPK**: nomor, pekerjaan, mitra,
  * tanggal, nilai, pelaksana, dan status (tampil saja).
+ *
+ * ───────────────────────────────────────────────────────────────
+ * PETA FILE INI (satu method — pakai Ctrl+F nama kolomnya)
+ * ───────────────────────────────────────────────────────────────
+ *   configure()  susunan tabel, berurutan:
+ *      - Kolom: nomor_spk · nama_pekerjaan · mitra · tanggal
+ *               nilai_spk · pelaksana · status (badge)
+ *      - Filter: pencarian, status, mitra, periode tanggal
+ *      - Aksi baris: lihat / ubah
+ * ───────────────────────────────────────────────────────────────
  */
 class SpksTable
 {

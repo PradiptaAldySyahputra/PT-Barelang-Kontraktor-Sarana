@@ -45,6 +45,27 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *   - Retensi
  *
  * Semua angka dihitung on-the-fly dari transaksi (tidak ada tabel ringkasan).
+ *
+ * ───────────────────────────────────────────────────────────────
+ * PETA FILE INI (pakai Ctrl+F nama method)
+ * ───────────────────────────────────────────────────────────────
+ *   PROPERTI   $periode — filter bulan ('semua' / jumlah bulan ke belakang)
+ *
+ *   FILTER     setPeriode()   ubah periode
+ *              tanggalAwal()  batas awal periode
+ *              labelPeriode() label "Bulan Ini" / "3 Bulan" / dst.
+ *
+ *   QUERY      queryMasuk()   query uang masuk (terfilter periode)
+ *              queryKeluar()  query uang keluar (terfilter periode)
+ *
+ *   DATA       getViewData()  SEMUA angka laporan dikumpulkan di sini
+ *              → dikirim ke resources/views/filament/pages/laporan.blade.php
+ *
+ *   EKSPOR     ekspor()       unduh CSV / XLSX / PDF
+ *              amanCsv()      cegah CSV injection
+ *
+ * CARA MEMBACA: mulai dari `getViewData()` — itu "dapur" yang menghitung semua
+ * angka. Tampilannya ada di file Blade `pages/laporan.blade.php`.
  */
 class Laporan extends Page
 {

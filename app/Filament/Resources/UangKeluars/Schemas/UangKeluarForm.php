@@ -68,6 +68,32 @@ use Throwable;
  * BATAS: `MAKS_BARIS` ada sebagai pengaman teknis (bukan pembatas kerja).
  * Tanpa batas, salah ketik jumlah bisa membuat browser hang dan transaksi
  * database menyimpan ratusan record sekaligus.
+ *
+ * ───────────────────────────────────────────────────────────────
+ * PETA FILE INI (urutan dari atas ke bawah — pakai Ctrl+F nama fungsi)
+ * ───────────────────────────────────────────────────────────────
+ *   KONSTANTA BATAS  MAKS_BARIS · MAKS_NOTA_PER_BERKAS · DEFAULT_NOTA
+ *                    MODE_DEFAULT · MAKS_NOTA_INFO
+ *
+ *   FIELD FORM       fieldInti()        field yang dipakai KEDUA bentuk
+ *                    fieldPengeluaran() satu baris repeater (bukti + form)
+ *                    pratinjauNota()    pratinjau gambar/potongan nota
+ *
+ *   UPLOAD + OCR     repeaterBerkas()   unggah berkas + pemicu OCR
+ *                    bacaDenganOcr()    OCR satu berkas
+ *                    prosesOcr()        OCR semua berkas (pakai cache)
+ *                    hitungPetaPotongan() · jalankanOcrPenuh()
+ *
+ *   PENYUSUN BARIS   susunBaris()       berkas → daftar baris rincian
+ *                    gabungBaris()      pertahankan kunci baris (Livewire)
+ *                    isianAdmin() · isianOcr()
+ *
+ *   PINTU MASUK      configure()          form Ubah (1 pengeluaran)
+ *                    configureSekaligus() form Tambah (banyak sekaligus)
+ *
+ * CARA MEMBACA: mulai dari `configureSekaligus()` (halaman Tambah) → ikuti ke
+ * `fieldInti()` (isi field) → `repeaterBerkas()` (unggah + OCR) → `susunBaris()`
+ * (cara baris dibuat). Bagian OCR & penyusunan baris ada di tengah file.
  */
 class UangKeluarForm
 {

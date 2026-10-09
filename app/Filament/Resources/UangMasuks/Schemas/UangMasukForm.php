@@ -34,6 +34,18 @@ use Filament\Support\RawJs;
  *
  * Sumber uang masuk TIDAK disimpan sebagai kolom terpisah — disimpulkan
  * dari `spk_id` (lihat Schema.md §3 dan model UangMasuk::isDariSpk()).
+ *
+ * ───────────────────────────────────────────────────────────────
+ * PETA FILE INI (hanya satu method besar — pakai Ctrl+F isi bagiannya)
+ * ───────────────────────────────────────────────────────────────
+ *   configure()  susunan seluruh form, berurutan:
+ *      1. Pemilih MODE (segmented: "Dari SPK" vs "Manual / Luar SPK")
+ *      2. Field SPK   → muncul HANYA di mode SPK (nomor & pekerjaan readonly)
+ *      3. Field manual→ nomor & nama pekerjaan (diketik sendiri)
+ *      4. Tanggal · Akun Kas/Bank · Jumlah (Rp)
+ *      5. Keterangan
+ *      6. Unggah bukti (disk privat `nota`)
+ * ───────────────────────────────────────────────────────────────
  */
 class UangMasukForm
 {

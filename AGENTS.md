@@ -35,6 +35,7 @@
 - `docs/Architecture.md` — struktur teknis, deployment, backup, pengujian, OCR
 - `docs/Schema.md` — struktur database
 - `docs/Design.md` — UI/UX
+- `docs/PANDUAN-FILAMENT.md` — cara review & ubah kode Filament (untuk yang biasa Blade)
 - `docs/MANUAL-BOOK.md` — panduan Admin & Direktur
 
 ## 4. Keputusan Bisnis FINAL
