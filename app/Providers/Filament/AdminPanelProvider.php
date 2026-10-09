@@ -10,6 +10,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -89,6 +90,24 @@ class AdminPanelProvider extends PanelProvider
             ->collapsibleNavigationGroups(true)
             ->sidebarWidth('15rem')
             ->collapsedSidebarWidth('4.5rem')
+
+            // ---------------------------------------------------------
+            // GRUP NAVIGASI
+            // ---------------------------------------------------------
+            // ⚠️ Filament 5 MELARANG grup dan item sama-sama berikon
+            // ("Either the group or its items can have icons, but not both").
+            // Ikon PER-MENU lebih berguna untuk navigasi, jadi ikon tetap di
+            // item; grup dibedakan lewat AKSEN WARNA (lihat .fi-sidebar-group-label
+            // di theme.css) — memberi "peta" modul tanpa ikon kedua.
+            //
+            // Catatan: daftar grup di bawah ini hanya MENDAFTARKAN urutannya;
+            // tanpa ->icon() agar tidak bentrok dengan ikon item.
+            ->navigationGroups([
+                NavigationGroup::make('SPK'),
+                NavigationGroup::make('Keuangan'),
+                NavigationGroup::make('Master Data'),
+                NavigationGroup::make('Laporan'),
+            ])
 
             // Layout
             ->maxContentWidth('full')

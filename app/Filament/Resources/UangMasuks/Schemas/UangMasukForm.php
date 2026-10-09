@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Resources\UangMasuks\Schemas;
 
 use App\Enums\AkunKas;
+use App\Filament\Concerns\PratinjauNotaPrivat;
 use App\Models\Spk;
+use App\Services\PenyimpanBerkas;
+use App\Support\Format;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -34,6 +37,14 @@ use Filament\Support\RawJs;
  */
 class UangMasukForm
 {
+    use PratinjauNotaPrivat;
+
+    /** Tipe berkas bukti yang diterima — disamakan dengan Uang Keluar. */
+    private const TIPE_FILE = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
+    /** Batas ukuran unggah (KB) — disamakan dengan Uang Keluar. */
+    private const MAKS_UKURAN_KB = 25600;
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -41,6 +52,14 @@ class UangMasukForm
                 Section::make('Sumber Penerimaan')
                     ->description('Pilih "Berdasarkan SPK" jika uang masuk dari penagihan SPK. Pilih "Manual" untuk penerimaan di luar SPK (mis. penjualan sisa material).')
                     ->schema([
+                        /*
+                         * MODE INPUT — ditaruh PALING ATAS sebagai segmented
+                         * toggle horizontal (brief UI/UX 8 Okt 2026).
+                         *
+                         * `->inline()` membuat pilihan berdampingan (horizontal),
+                         * bukan menumpuk vertikal — lebih ringkas di HP & jelas
+                         * bahwa ini pilihan utama yang mengubah sisa form.
+                         */
                         Radio::make('mode')
                             ->label('Mode Input')
                             ->options([
@@ -50,6 +69,7 @@ class UangMasukForm
                             ->default('spk')
                             ->required()
                             ->live()
+                            ->inline()
                             ->dehydrated(false)
                             ->columnSpanFull()
                             ->afterStateHydrated(function (Radio $component, $state, ?object $record): void {
@@ -176,6 +196,9 @@ class UangMasukForm
                             ->numeric()
                             ->minValue(0.01)
                             ->prefix('Rp')
+                            // ⚠️ BUG-02: normalisasi sebelum mask, kalau tidak
+                            // "10000.00" tampil "1.000.000" (100× lipat).
+                            ->formatStateUsing(fn ($state): ?string => Format::untukInputUang($state))
                             ->mask(RawJs::make('$money($input, \',\', \'.\')'))
                             ->stripCharacters('.')
                             ->live(onBlur: true)
@@ -258,15 +281,36 @@ class UangMasukForm
                 Section::make('Bukti Penerimaan')
                     ->description('Jumlah file BEBAS — bisa 1, bisa banyak (bukti transfer + nota + screenshot).')
                     ->schema([
+                        /*
+                         * ⚠️ CELAH KEAMANAN YANG DIPERBAIKI (audit 8 Okt 2026).
+                         *
+                         * Dulu FileUpload ini TIDAK menyetel `->disk('nota')`,
+                         * sehingga berkas jatuh ke disk default (`FILESYSTEM_DISK=public`)
+                         * dan bisa diunduh SIAPA PUN TANPA LOGIN lewat /storage/...
+                         * Nota memuat harga material, pembayaran subkon, dan gaji
+                         * karyawan — jadi ini kebocoran serius. Uang Keluar sudah
+                         * benar sejak awal; Uang Masuk terlewat. Sekarang DISAMAKAN.
+                         */
                         FileUpload::make('bukti')
                             ->label('File Bukti')
                             ->multiple()
                             ->reorderable()
                             ->appendFiles()
+                            ->disk('nota')
                             ->directory('uang_masuk')
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
-                            ->maxSize(10240)
-                            ->helperText('JPG, PNG, WEBP, atau PDF. Maks 10 MB per file.')
+                            ->acceptedFileTypes(self::TIPE_FILE)
+                            ->maxSize(self::MAKS_UKURAN_KB)
+                            ->saveUploadedFileUsing(fn ($file): ?string => app(PenyimpanBerkas::class)->simpanKe(
+                                $file,
+                                'uang_masuk',
+                                'nota',
+                            ))
+                            // Disk nota PRIVAT: URL bawaan Filament (/storage/...)
+                            // TIDAK boleh dipakai — berkas hanya boleh dibaca lewat
+                            // rute ber-otentikasi /admin/nota/{path}.
+                            ->fetchFileInformation(false)
+                            ->tap(fn ($field) => self::pratinjauPrivat($field))
+                            ->helperText('JPG, PNG, WEBP, atau PDF. Maks '.round(self::MAKS_UKURAN_KB / 1024).' MB per file.')
                             ->columnSpanFull(),
                     ]),
             ]);

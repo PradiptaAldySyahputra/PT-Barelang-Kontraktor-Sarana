@@ -24,12 +24,14 @@ use Tests\TestCase;
  *   Batas ini PENGAMAN TEKNIS, bukan pembatas kerja. Tanpa batas, salah ketik
  *   "jumlah nota = 4000" akan membuat browser hang dan satu transaksi database
  *   menyimpan ribuan record sekaligus.
+ *   5. User: "upload banyak nota dalam satu pdf hanya terdeteksi sampai 50"
+ *      → batas dinaikkan 50 → 200 (8 Okt 2026).
  */
 class BatasNotaSekaligusTest extends TestCase
 {
-    public function test_batas_baris_adalah_20(): void
+    public function test_batas_baris_adalah_200(): void
     {
-        $this->assertSame(20, UangKeluarForm::MAKS_BARIS);
+        $this->assertSame(200, UangKeluarForm::MAKS_BARIS);
     }
 
     /**

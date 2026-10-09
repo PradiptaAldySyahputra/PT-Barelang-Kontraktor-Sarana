@@ -35,6 +35,19 @@ class UangKeluarsTable
     {
         return $table
             ->defaultSort('tanggal', 'desc')
+            /*
+             * SATU baris total saja (keputusan user 8 Okt 2026).
+             *
+             * ⚠️ MASALAH YANG DIPERBAIKI:
+             * Bawaan Filament menampilkan DUA baris total — "Halaman ini"
+             * (hanya baris halaman aktif) DAN "Semua Uang Keluar" (seluruh
+             * data terfilter). Dua angka berbeda berlabel "Total" yang sama
+             * membingungkan & memakan ruang. Baris "Halaman ini" dihapus.
+             *
+             * `summaries(pageCondition: false)` → HANYA total seluruh data
+             * terfilter yang tampil, tetap menghormati filter aktif.
+             */
+            ->summaries(pageCondition: false)
             ->columns([
                 TextColumn::make('tanggal')
                     ->label('Tanggal')
@@ -172,7 +185,16 @@ class UangKeluarsTable
 
                 EditAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
                 DeleteAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
-                RestoreAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
+
+                /*
+                 * ⚠️ BUG YANG DICEGAH (temuan uji deploy 7 Okt 2026):
+                 * `->visible()` MENIMPA visibility bawaan RestoreAction, yang
+                 * seharusnya hanya tampil untuk record terhapus (`trashed()`).
+                 * Tanpa cek `trashed()`, tombol "Pulihkan data" muncul di
+                 * SEMUA baris — menyesatkan, karena baris aktif tidak bisa
+                 * dipulihkan. Jadi syaratnya digabung: boleh ubah DAN terhapus.
+                 */
+                RestoreAction::make()->visible(fn (UangKeluar $r): bool => UangKeluarResource::bolehUbahData() && $r->trashed()),
             ])
             ->toolbarActions([
                 ExportAction::make()

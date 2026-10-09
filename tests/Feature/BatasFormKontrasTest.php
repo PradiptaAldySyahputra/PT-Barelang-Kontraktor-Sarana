@@ -31,10 +31,17 @@ class BatasFormKontrasTest extends TestCase
     {
         $css = $this->tema();
 
+        // Desain baru (8 Okt 2026): border tipis 1px + garis aksen kiri 2px.
         $this->assertMatchesRegularExpression(
-            '/\.fi-fo-repeater-item\s*\{[^}]*border:\s*2px\s+solid/s',
+            '/\.fi-fo-repeater-item\s*\{[^}]*border:\s*1px\s+solid/s',
             $css,
-            'Baris repeater harus punya border 2px agar batasnya jelas',
+            'Baris repeater harus punya border agar batasnya jelas',
+        );
+
+        $this->assertMatchesRegularExpression(
+            '/\.fi-fo-repeater-item\s*\{[^}]*border-left-width:\s*2px/s',
+            $css,
+            'Baris repeater harus punya garis aksen kiri sebagai penanda baris',
         );
     }
 

@@ -112,6 +112,48 @@ class RingkasanTotalUangTest extends TestCase
     }
 
     // ---------------------------------------------------------------
+    // SATU BARIS TOTAL (perbaikan 8 Okt 2026)
+    // ---------------------------------------------------------------
+
+    /**
+     * Tabel HARUS menampilkan SATU total saja (seluruh data terfilter),
+     * BUKAN dua baris ("Halaman ini" + "Semua ...").
+     *
+     * ⚠️ Keluhan user 8 Okt 2026: dua angka berbeda yang dua-duanya berlabel
+     * "Total" membingungkan (terlihat seperti bug) & membuang ruang. Baris
+     * "Halaman ini" dihapus lewat `->summaries(pageCondition: false)`.
+     */
+    public function test_uang_masuk_hanya_satu_baris_total(): void
+    {
+        $tabel = Livewire::test(ListUangMasuks::class)->instance()->getTable();
+
+        $this->assertFalse(
+            $tabel->hasPageSummary(),
+            'Ringkasan "Halaman ini" harus DINONAKTIFKAN — hanya satu total yang tampil.',
+        );
+
+        $this->assertTrue(
+            $tabel->hasAllTableSummary(),
+            'Total seluruh data terfilter harus tetap tampil.',
+        );
+    }
+
+    public function test_uang_keluar_hanya_satu_baris_total(): void
+    {
+        $tabel = Livewire::test(ListUangKeluars::class)->instance()->getTable();
+
+        $this->assertFalse(
+            $tabel->hasPageSummary(),
+            'Ringkasan "Halaman ini" harus DINONAKTIFKAN — hanya satu total yang tampil.',
+        );
+
+        $this->assertTrue(
+            $tabel->hasAllTableSummary(),
+            'Total seluruh data terfilter harus tetap tampil.',
+        );
+    }
+
+    // ---------------------------------------------------------------
     // UANG KELUAR
     // ---------------------------------------------------------------
 

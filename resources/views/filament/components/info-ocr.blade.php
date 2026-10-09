@@ -5,33 +5,34 @@
       - berapa nota yang terdeteksi OCR, ATAU
       - OCR gagal membaca (admin harus isi jumlah nota manual).
 
-    Penting: OCR ini BANTUAN. Pesan ini menegaskan bahwa angka rupiah tetap
-    diisi admin — supaya tidak ada yang mengira nominalnya dibaca otomatis.
+    ⚠️ PEROMBAKAN DESAIN (8 Okt 2026) — hilangkan "AI slop":
+    Versi lama memakai kotak besar berwarna (success/warning) dengan ikon
+    sparkles. Terlalu ramai. Versi baru: satu baris tenang dengan titik status,
+    profesional dan mudah dipindai.
 
     Variabel:
         $pesan : teks pesan
         $gagal : true kalau OCR gagal membaca
 --}}
-<div @class([
-    'flex items-start gap-2 rounded-lg border p-3',
-    'border-warning-300 bg-warning-50 dark:border-warning-700 dark:bg-warning-950' => $gagal ?? false,
-    'border-success-300 bg-success-50 dark:border-success-700 dark:bg-success-950' => ! ($gagal ?? false),
-])>
-    @if ($gagal ?? false)
-        <x-filament::icon icon="heroicon-m-exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-warning-600 dark:text-warning-400" />
-        <div class="text-xs text-warning-800 dark:text-warning-200">
-            <p class="font-semibold">{{ $pesan }}</p>
-            <p class="mt-0.5">Isi <strong>Jumlah nota</strong> manual sesuai yang Anda lihat di berkas.</p>
-        </div>
-    @else
-        <x-filament::icon icon="heroicon-m-sparkles" class="mt-0.5 h-5 w-5 shrink-0 text-success-600 dark:text-success-400" />
-        <div class="text-xs text-success-800 dark:text-success-200">
-            <p class="font-semibold">{{ $pesan }}</p>
-            <p class="mt-0.5">
-                Baris rincian sudah dibuat otomatis, dan tiap baris menampilkan
-                <strong>potongan notanya sendiri</strong>. Nominal tetap diisi manual —
-                OCR tidak membaca angka.
-            </p>
-        </div>
-    @endif
+@php $gagal = (bool) ($gagal ?? false); @endphp
+
+<div class="flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5
+    @if ($gagal) border-amber-300 bg-amber-50 dark:border-amber-700/60 dark:bg-amber-950/40
+    @else border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5 @endif">
+    <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full
+        @if ($gagal) bg-amber-500 @else bg-emerald-500 @endif"></span>
+
+    <div class="min-w-0 text-xs leading-relaxed">
+        <p class="font-medium @if ($gagal) text-amber-900 dark:text-amber-200 @else text-gray-800 dark:text-gray-100 @endif">
+            {{ $pesan }}
+        </p>
+        <p class="mt-0.5 @if ($gagal) text-amber-800/90 dark:text-amber-300/80 @else text-gray-500 dark:text-gray-400 @endif">
+            @if ($gagal)
+                Isi <strong>Jumlah nota</strong> manual sesuai yang Anda lihat di berkas.
+            @else
+                Tiap baris menampilkan potongan notanya dan diisi <strong>draf hasil baca OCR</strong>.
+                Periksa &amp; koreksi dulu sebelum menyimpan — nota tulisan tangan bisa salah baca.
+            @endif
+        </p>
+    </div>
 </div>

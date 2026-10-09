@@ -10,6 +10,7 @@ use App\Filament\Concerns\PratinjauNotaPrivat;
 use App\Models\Spk;
 use App\Services\PembacaNota;
 use App\Services\PenyimpanBerkas;
+use App\Support\Format;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -75,10 +76,14 @@ class UangKeluarForm
     /**
      * Batas pengaman jumlah berkas & baris sekaligus.
      *
-     * 20 dipilih longgar: pemakaian normal (mis. 5 PDF × 4 nota = 20) masih
-     * masuk, tapi salah input ekstrem tetap tertahan.
+     * Dinaikkan 20 → 50 (8 Okt 2026) → 200 (permintaan user 8 Okt 2026):
+     * "upload banyak nota dalam satu pdf hanya terdeteksi sampai 50".
+     * Berkas gabungan sebulan sering berisi puluhan–ratusan nota (contoh
+     * nyata: 57 nota dalam 15 halaman), jadi 50 terlalu ketat dan memotong
+     * nota di tengah. 200 memberi ruang cukup, sekaligus tetap menahan salah
+     * ketik ekstrem (mis. "4000") yang bisa membuat browser hang.
      */
-    public const MAKS_BARIS = 20;
+    public const MAKS_BARIS = 200;
 
     /**
      * Maksimal nota yang boleh dideklarasikan untuk SATU berkas (mode rinci).
@@ -125,12 +130,15 @@ class UangKeluarForm
      *   - 'total' → 1 berkas = 1 baris (isi TOTAL saja). Untuk nota sebulan
      *     yang di-merge jadi satu PDF (mis. 57 nota jadi 1 file).
      *   - 'rinci' → 1 berkas = N baris (tiap nota sendiri). Untuk nota
-     *     satuan / harian.
+     *     satuan / harian, DAN untuk berkas gabungan saat user ingin tiap
+     *     nota dicatat sendiri (mis. 25 nota → 25 form).
      *
-     * DEFAULT 'total' karena itu yang paling sering dipakai admin untuk
-     * berkas gabungan — dan mencegah 57 baris form yang tak terisi.
+     * DEFAULT 'rinci' (keputusan user 8 Okt 2026): ketika satu berkas berisi
+     * banyak nota, user ingin tiap nota dipotong & dibuatkan form sendiri
+     * ("kalau ada 25 nota berarti ada 25 form"). Admin TETAP bisa memilih
+     * 'total' kalau memang ingin mencatat satu total untuk berkas gabungan.
      */
-    public const MODE_DEFAULT = 'total';
+    public const MODE_DEFAULT = 'rinci';
 
     /**
      * Kolom yang diisi ADMIN (bukan struktur) pada satu baris pengeluaran.
@@ -192,6 +200,10 @@ class UangKeluarForm
                 ->minValue(0.01)
                 ->maxValue(self::BATAS_NOMINAL)
                 ->prefix('Rp')
+                // ⚠️ BUG-02: normalisasi sebelum mask, kalau tidak nilai
+                // "10000.00" tampil "1.000.000" (100× lipat) dan bisa
+                // tersimpan salah kalau admin tidak mengetik ulang.
+                ->formatStateUsing(fn ($state): ?string => Format::untukInputUang($state))
                 ->mask(RawJs::make('$money($input, \',\', \'.\')'))
                 ->stripCharacters('.')
                 ->dehydrateStateUsing(fn ($state): ?float => filled($state) ? (float) $state : null)
@@ -302,12 +314,40 @@ class UangKeluarForm
     /**
      * Aturan anti-salah-ketik: total biaya SPK tidak wajar.
      *
+     * ⚠️ BUG YANG DICEGAH (BUG-01, ditemukan saat uji deploy 7 Okt 2026):
+     *
+     * Sebelumnya closure ini memakai signature validator Laravel SEKALIGUS
+     * injeksi Filament:
+     *
+     *     function (string $attribute, $value, Closure $fail, Get $get): void
+     *
+     * Filament mengevaluasi closure lewat `EvaluatesClosures::evaluate()`, yang
+     * menyuntikkan dependensi PER PARAMETER lewat refleksi. Parameter `$attribute`
+     * dan `$value` TIDAK dikenal (bukan nama/tipe injeksi yang dikenali), jadi
+     * Filament melempar:
+     *
+     *     BindingResolutionException: An attempt was made to evaluate a closure
+     *     for [Filament\Forms\Components\TextInput], but [$attribute] was
+     *     unresolvable.
+     *
+     * Akibatnya halaman UBAH Uang Keluar gagal total — admin tidak bisa
+     * menyimpan perubahan sama sekali.
+     *
+     * PERBAIKAN: pisahkan dua tanggung jawab.
+     *   1. Closure LUAR adalah closure Filament — hanya menerima `Get $get`,
+     *      yang MEMANG dikenali & disuntik Filament. Di dalamnya `spk` dihitung
+     *      dari state form.
+     *   2. Closure DALAM adalah aturan validator Laravel murni
+     *      (`$attribute, $value, $fail`) — dipanggil Laravel sendiri saat
+     *      validasi, jadi signature-nya valid. Nilai `$spk` ditangkap lewat
+     *      `use`, bukan disuntik.
+     *
      * @return array<int, mixed>
      */
     private static function aturanJumlah(): array
     {
         return [
-            function (string $attribute, $value, Closure $fail, Get $get): void {
+            fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get): void {
                 $spk = self::spkTerkait($get);
 
                 if ($spk === null) {
@@ -560,11 +600,12 @@ class UangKeluarForm
             ->afterStateUpdated(function (Set $set, Get $get): void {
                 $berkas = is_array($get('berkas_nota')) ? $get('berkas_nota') : [];
                 $cache = is_array($get('potongan_ocr')) ? $get('potongan_ocr') : [];
+                $cacheIsi = is_array($get('isi_nota_ocr')) ? $get('isi_nota_ocr') : [];
                 // Baris yang SUDAH ada — isian admin di dalamnya harus
                 // dipertahankan, jangan dibuat ulang jadi kosong.
                 $lama = is_array($get('pengeluaran')) ? $get('pengeluaran') : [];
 
-                $hasil = self::prosesOcr($berkas, $cache);
+                $hasil = self::prosesOcr($berkas, $cache, $cacheIsi);
 
                 // Tulis hasil OCR ke item berkas (jumlah_nota + info),
                 // HANYA kalau memang berubah — supaya tidak memicu loop.
@@ -573,6 +614,7 @@ class UangKeluarForm
                 }
 
                 $set('potongan_ocr', $hasil['potongan']);
+                $set('isi_nota_ocr', $hasil['isi']);
                 // `$lama` diteruskan supaya isian admin TIDAK hilang saat OCR
                 // selesai belakangan, DAN kunci item dipertahankan supaya
                 // pilihan dropdown (Kategori) tidak nyasar jadi null.
@@ -581,6 +623,7 @@ class UangKeluarForm
                     $hasil['potongan'],
                     [],
                     $lama,
+                    $hasil['isi'],
                 )));
             });
     }
@@ -641,11 +684,11 @@ class UangKeluarForm
      * HILANG — baris rincian tetap memakai gambar penuh.
      *
      * @param  mixed  $state  state FileUpload (array path, karena multiple)
-     * @return array{jumlah_nota: int|null, potongan: array<int, string>, pesan: string|null}
+     * @return array{jumlah_nota: int|null, potongan: array<int, string>, isi: array<int, array<string, mixed>>, pesan: string|null}
      */
     private static function bacaDenganOcr(mixed $state): array
     {
-        $kosong = ['jumlah_nota' => null, 'potongan' => [], 'pesan' => null];
+        $kosong = ['jumlah_nota' => null, 'potongan' => [], 'isi' => [], 'pesan' => null];
 
         $pembaca = app(PembacaNota::class);
 
@@ -657,7 +700,7 @@ class UangKeluarForm
 
         if (blank($path)) {
             // Berkas dihapus — bersihkan hasil OCR sebelumnya.
-            return ['jumlah_nota' => null, 'potongan' => [], 'pesan' => ''];
+            return ['jumlah_nota' => null, 'potongan' => [], 'isi' => [], 'pesan' => ''];
         }
 
         try {
@@ -674,15 +717,21 @@ class UangKeluarForm
             return [
                 'jumlah_nota' => null,
                 'potongan' => [],
+                'isi' => [],
                 'pesan' => 'OCR tidak bisa membaca berkas ini — isi jumlah nota manual.',
             ];
         }
 
         $jumlah = (int) $hasil['jumlah_nota'];
 
+        // DRAF isi tiap nota (nominal/tanggal/penerima/kategori) — dipakai
+        // mengisi baris otomatis. Admin tetap bisa mengubah.
+        $isi = is_array($hasil['nota'] ?? null) ? $hasil['nota'] : [];
+
         return [
             'jumlah_nota' => $jumlah,
             'potongan' => $hasil['potongan'] ?? [],
+            'isi' => $isi,
             'pesan' => $jumlah > 1
                 ? "OCR mendeteksi {$jumlah} nota di berkas ini."
                 : null,
@@ -710,15 +759,17 @@ class UangKeluarForm
      *
      * @param  array<mixed>  $berkas
      * @param  array<string, array<int, string>>  $cache
-     * @return array{berkas: array<mixed>, potongan: array<string, array<int, string>>}
+     * @param  array<string, array<int, array<string, mixed>>>  $cacheIsi
+     * @return array{berkas: array<mixed>, potongan: array<string, array<int, string>>, isi: array<string, array<int, array<string, mixed>>>}
      */
-    public static function prosesOcr(array $berkas, array $cache = []): array
+    public static function prosesOcr(array $berkas, array $cache = [], array $cacheIsi = []): array
     {
         if (! app(PembacaNota::class)->aktif()) {
-            return ['berkas' => $berkas, 'potongan' => $cache];
+            return ['berkas' => $berkas, 'potongan' => $cache, 'isi' => $cacheIsi];
         }
 
         $peta = $cache;
+        $petaIsi = $cacheIsi;
 
         foreach ($berkas as $index => $item) {
             if (! is_array($item)) {
@@ -739,6 +790,7 @@ class UangKeluarForm
             $hasil = self::bacaDenganOcr($item['file'] ?? null);
 
             $peta[$path] = $hasil['potongan'];
+            $petaIsi[$path] = $hasil['isi'];
 
             // Tulis hasil OCR ke item, supaya `jumlah_nota` di form ikut terisi
             // dan baris rincian disusun dengan jumlah yang benar.
@@ -749,7 +801,7 @@ class UangKeluarForm
             $berkas[$index]['ocr_info'] = $hasil['pesan'];
         }
 
-        return ['berkas' => $berkas, 'potongan' => $peta];
+        return ['berkas' => $berkas, 'potongan' => $peta, 'isi' => $petaIsi];
     }
 
     /**
@@ -809,11 +861,12 @@ class UangKeluarForm
      * (jumlah nota per berkas + baris rincian) dalam satu panggilan.
      *
      * @param  array<mixed>  $berkas
-     * @return array{berkas: array<mixed>, potongan: array<string, array<int, string>>, baris: array<int, array<string, mixed>>}
+     * @return array{berkas: array<mixed>, potongan: array<string, array<int, string>>, isi: array<string, array<int, array<string, mixed>>>, baris: array<int, array<string, mixed>>}
      */
     public static function jalankanOcrPenuh(array $berkas): array
     {
         $peta = self::hitungPetaPotongan($berkas);
+        $petaIsi = [];
 
         // Isi jumlah_nota per berkas dari hasil OCR.
         foreach ($berkas as $index => $item) {
@@ -834,12 +887,14 @@ class UangKeluarForm
             }
 
             $berkas[$index]['ocr_info'] = $hasil['pesan'];
+            $petaIsi[$path] = $hasil['isi'];
         }
 
         return [
             'berkas' => $berkas,
             'potongan' => $peta,
-            'baris' => self::susunBaris($berkas, $peta),
+            'isi' => $petaIsi,
+            'baris' => self::susunBaris($berkas, $peta, [], [], $petaIsi),
         ];
     }
 
@@ -873,6 +928,50 @@ class UangKeluarForm
     }
 
     /**
+     * Ubah DRAF hasil OCR satu nota menjadi isian baris.
+     *
+     * ⚠️ HANYA field yang BERHASIL dibaca yang diisi (null/blank dilewati),
+     * supaya baris tidak terisi nilai kosong yang menutupi input admin.
+     *
+     * ⚠️ Hasilnya DRAF. `susunBaris()` memasang draf ini LEBIH DULU daripada
+     * isian admin (`isianAdmin`), jadi apa pun yang sudah diketik admin selalu
+     * menang. Ini pengaman agar OCR tidak pernah menimpa pekerjaan admin —
+     * penting karena nota banyak yang tulisan tangan dan bisa salah baca.
+     *
+     * @param  array<string, mixed>  $isi  satu entri dari `petaIsi` hasil OCR
+     * @return array<string, mixed>
+     */
+    private static function isianOcr(array $isi): array
+    {
+        $isian = [];
+
+        // Nominal → kolom `jumlah` (hanya kalau wajar).
+        $nominal = $isi['nominal'] ?? null;
+
+        if (is_numeric($nominal) && (int) $nominal > 0) {
+            $isian['jumlah'] = (int) $nominal;
+        }
+
+        // Kategori saran — HANYA kalau kode enum-nya valid, supaya dropdown
+        // tidak menerima nilai asing.
+        $kategori = $isi['kategori'] ?? null;
+
+        if (is_string($kategori) && array_key_exists($kategori, KategoriPengeluaran::opsi())) {
+            $isian['kategori'] = $kategori;
+        }
+
+        if (filled($isi['penerima'] ?? null)) {
+            $isian['penerima'] = mb_substr((string) $isi['penerima'], 0, 200);
+        }
+
+        if (filled($isi['keterangan'] ?? null)) {
+            $isian['keterangan'] = mb_substr((string) $isi['keterangan'], 0, 500);
+        }
+
+        return $isian;
+    }
+
+    /**
      * Susun baris rincian dari daftar berkas + jumlah notanya.
      *
      * Aturan penting:
@@ -887,9 +986,13 @@ class UangKeluarForm
      *                                                           Peta path berkas -> daftar path potongan hasil OCR.
      *                                                           Dipisah dari `$berkas` supaya tidak ada masalah state basi
      *                                                           (lihat catatan di repeaterBerkas()).
+     * @param  array<string, array<int, array<string, mixed>>>  $petaIsi
+     *                                                                    Peta path berkas -> daftar DRAF isi tiap nota hasil OCR
+     *                                                                    (nominal, tanggal, penerima, kategori, keterangan).
+     *                                                                    Dipakai mengisi otomatis baris; admin tetap bisa ubah.
      * @return array<int, array<string, mixed>>
      */
-    public static function susunBaris(mixed $berkas, array $petaPotongan = [], array $petaJumlah = [], mixed $lama = []): array
+    public static function susunBaris(mixed $berkas, array $petaPotongan = [], array $petaJumlah = [], mixed $lama = [], array $petaIsi = []): array
     {
         $baris = [];
         $nomorBerkas = 0;
@@ -1046,7 +1149,12 @@ class UangKeluarForm
                     // Potongan khusus untuk baris ini (kalau OCR berhasil).
                     'potongan' => $potongan[$n - 1] ?? null,
                     'tanggal' => now()->toDateString(),
-                ], self::isianAdmin($petaIsian[$path][$n] ?? []));
+                ],
+                    // 1) DRAF dari OCR — hanya field yang berhasil dibaca.
+                    self::isianOcr($petaIsi[$path][$n - 1] ?? []),
+                    // 2) Isian admin yang SUDAH ADA menang atas draf OCR, jadi
+                    //    OCR tidak pernah menimpa apa yang sudah diisi admin.
+                    self::isianAdmin($petaIsian[$path][$n] ?? []));
             }
         }
 
@@ -1134,9 +1242,20 @@ class UangKeluarForm
                     ->schema([self::pratinjauNota()])
                     ->columnSpanFull(),
 
+                /*
+                 * SATU KOLOM PENUH (brief UI/UX 8 Okt 2026).
+                 *
+                 * Form Uang Keluar dipakai admin untuk pencatatan cepat di
+                 * lapangan lewat HP. Satu kolom dari atas ke bawah membuat
+                 * tiap field lebar penuh → mudah disentuh & tidak salah tekan,
+                 * dan tidak ada field yang berdempetan di layar sempit.
+                 *
+                 * (Sebelumnya `columns(2)` — di HP tetap menumpuk, tapi di
+                 * tablet/desktop field jadi sempit & berjejer, kurang nyaman.)
+                 */
                 Section::make('Detail Pengeluaran')
                     ->schema(self::fieldInti(true))
-                    ->columns(2)
+                    ->columns(1)
                     ->columnSpanFull(),
 
                 Section::make('Bukti Pengeluaran')
@@ -1179,9 +1298,7 @@ class UangKeluarForm
             ->columns(1)
             ->components([
                 Section::make('1. Unggah Berkas Nota')
-                    ->description('Unggah berkas notanya, lalu isi ADA BERAPA NOTA di dalam berkas itu. '
-                        .'Contoh: 1 PDF berisi 4 nota → isi "4". Baris rincian di bawah akan dibuat otomatis sebanyak itu. '
-                        .'Kalau OCR aktif, jumlah nota terisi otomatis.')
+                    ->description('Unggah berkas nota, lalu isi jumlah nota di dalamnya. Baris rincian dibuat otomatis.')
                     ->schema([
                         // Peta path berkas -> daftar potongan hasil OCR.
                         //
@@ -1196,13 +1313,17 @@ class UangKeluarForm
                         // jadi state di dalam repeater masih LAMA.
                         Hidden::make('jumlah_nota_ocr'),
 
+                        // Peta path berkas -> DRAF isi tiap nota hasil OCR
+                        // (nominal, tanggal, penerima, kategori, keterangan).
+                        // Dipakai mengisi baris rincian otomatis; admin bisa ubah.
+                        Hidden::make('isi_nota_ocr'),
+
                         self::repeaterBerkas(),
                     ])
                     ->columnSpanFull(),
 
                 Section::make('2. Isi Rincian')
-                    ->description('Baris di bawah dibuat OTOMATIS sesuai jumlah nota tiap berkas — tidak perlu ditambah manual. '
-                        .'Nota tampil di KIRI, isi angkanya di KANAN. Baris kosong tidak tersimpan.')
+                    ->description('Nota tampil di kiri, isi angkanya di kanan. Baris kosong tidak tersimpan.')
                     ->schema([
                         /*
                          * PROGRES + RINGKASAN di ATAS daftar baris.

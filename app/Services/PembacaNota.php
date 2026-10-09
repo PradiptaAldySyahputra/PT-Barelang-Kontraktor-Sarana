@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Support\PembacaIsiNota;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -120,17 +121,39 @@ class PembacaNota
 
         // Ubah path potongan (absolut) jadi path relatif storage, supaya bisa
         // dipakai Storage::url() saat ditampilkan.
+        //
+        // Sekaligus baca ISI tiap nota (nominal, tanggal, penerima, saran
+        // kategori) dari teks yang sudah dikelompokkan skrip Python. Hasilnya
+        // DRAF — admin WAJIB konfirmasi sebelum dipakai (nota sering tulisan
+        // tangan, OCR bisa salah baca).
         $potongan = [];
+        $daftarNota = [];
 
         foreach (($hasil['nota'] ?? []) as $nota) {
             $file = $nota['potongan'] ?? null;
+            $path = null;
 
-            if (blank($file)) {
-                continue;
+            if (filled($file)) {
+                $nama = basename((string) $file);
+                $path = $dirRelatif.'/'.$nama;
+                $potongan[] = $path;
             }
 
-            $nama = basename((string) $file);
-            $potongan[] = $dirRelatif.'/'.$nama;
+            $isi = PembacaIsiNota::urai(
+                is_array($nota['teks'] ?? null) ? $nota['teks'] : []
+            );
+
+            $daftarNota[] = [
+                'ke' => (int) ($nota['ke'] ?? count($daftarNota) + 1),
+                'halaman' => (int) ($nota['halaman'] ?? 1),
+                'potongan' => $path,
+                'nominal' => $isi['nominal'],
+                'tanggal' => $isi['tanggal'],
+                'penerima' => $isi['penerima'],
+                'kategori' => $isi['kategori'],
+                'keterangan' => $isi['keterangan'],
+                'keyakinan' => $isi['keyakinan'],
+            ];
         }
 
         $hasilAkhir = [
@@ -138,6 +161,8 @@ class PembacaNota
             'jumlah_nota' => max(1, (int) ($hasil['jumlah_nota'] ?? 1)),
             'metode' => (string) ($hasil['metode'] ?? 'ocr'),
             'potongan' => $potongan,
+            // Isi tiap nota (DRAF) — dipakai form untuk mengisi otomatis.
+            'nota' => $daftarNota,
         ];
 
         // Simpan hasil SUKSES ke cache (7 hari) — permintaan pengguna:

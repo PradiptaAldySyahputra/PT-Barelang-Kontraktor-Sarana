@@ -2,16 +2,18 @@
     Penanda asal berkas — MEMBEDAKAN baris mana milik berkas mana.
 
     Permintaan user:
-      "bisa diberi pembeda untuk setiap bukti atau nota karna anda hanya buat
-       pengeluaran 1 sampai selanjutnya itu bergabung dengan nota yang lain
-       jadi admin tidak ada navigasi yang jelas untuk membedakanya"
+      "bisa diberi pembeda untuk setiap bukti atau nota ... admin tidak ada
+       navigasi yang jelas untuk membedakanya"
 
-    Solusi: badge BERWARNA per berkas (warna berputar otomatis), plus nomor
-    berkas & nomor nota. Jadi admin bisa membedakan baris dengan sekali lihat,
-    bukan harus membaca nama berkas yang panjang.
+    ⚠️ PEROMBAKAN DESAIN (8 Okt 2026) — hilangkan "AI slop":
+    Versi lama memakai badge 8 WARNA BERPUTAR (emerald, sky, violet, amber,
+    rose, teal, indigo, orange) + garis kiri 6px warna-warni. Terlalu ramai,
+    terasa seperti template generik, dan tidak profesional untuk aplikasi
+    keuangan.
 
-    Ditambah IKON STATUS: ✓ kalau baris sudah lengkap, ⚠ kalau belum —
-    supaya admin tahu baris mana yang masih perlu diisi.
+    Versi baru: MONOKROM. Pembedanya adalah TEKS yang jelas ("Nota 3 / 50")
+    plus nama berkas — bukan warna. Satu-satunya warna adalah indikator status
+    tipis (belum diisi / belum lengkap / lengkap) yang benar-benar bermakna.
 
     Variabel:
         $berkasKe   : nomor berkas (1, 2, 3, ...)
@@ -23,86 +25,53 @@
         $adaIsi     : apakah baris ini sudah ada isian sebagian (bool)
 --}}
 @php
-    // Palet warna — berputar sesuai nomor berkas. Setiap warna punya
-    // pasangan mode terang & gelap agar tetap terbaca di keduanya.
-    $palet = [
-        ['bg-emerald-100', 'text-emerald-800', 'border-emerald-300', 'dark:bg-emerald-900', 'dark:text-emerald-100', 'dark:border-emerald-700'],
-        ['bg-sky-100', 'text-sky-800', 'border-sky-300', 'dark:bg-sky-900', 'dark:text-sky-100', 'dark:border-sky-700'],
-        ['bg-violet-100', 'text-violet-800', 'border-violet-300', 'dark:bg-violet-900', 'dark:text-violet-100', 'dark:border-violet-700'],
-        ['bg-amber-100', 'text-amber-800', 'border-amber-300', 'dark:bg-amber-900', 'dark:text-amber-100', 'dark:border-amber-700'],
-        ['bg-rose-100', 'text-rose-800', 'border-rose-300', 'dark:bg-rose-900', 'dark:text-rose-100', 'dark:border-rose-700'],
-        ['bg-teal-100', 'text-teal-800', 'border-teal-300', 'dark:bg-teal-900', 'dark:text-teal-100', 'dark:border-teal-700'],
-        ['bg-indigo-100', 'text-indigo-800', 'border-indigo-300', 'dark:bg-indigo-900', 'dark:text-indigo-100', 'dark:border-indigo-700'],
-        ['bg-orange-100', 'text-orange-800', 'border-orange-300', 'dark:bg-orange-900', 'dark:text-orange-100', 'dark:border-orange-700'],
-    ];
-
-    $warna = $palet[((int) ($berkasKe ?? 1) - 1) % count($palet)];
-    $kelas = implode(' ', $warna);
-
     $adaBerkas = filled($nama ?? null);
     $lengkap = (bool) ($lengkap ?? false);
     $adaIsi = (bool) ($adaIsi ?? false);
+
+    // Label nota — teks, bukan warna.
+    if (($mode ?? '') === 'total') {
+        $labelNota = 'TOTAL '.($notaDari ?? 1).' nota';
+    } elseif (($notaDari ?? 1) > 1) {
+        $labelNota = 'Nota '.($notaKe ?? 1).' / '.($notaDari ?? 1);
+    } else {
+        $labelNota = 'Nota 1';
+    }
 @endphp
 
-<div class="flex flex-wrap items-center gap-2">
+<div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
     @if ($adaBerkas)
-        {{--
-            Badge warna: pembeda utama antar berkas.
-
-            Kelas `penanda-berkas-N` dipakai CSS `:has()` pada baris repeater
-            untuk mewarnai GARIS KIRI baris itu (lihat theme.css). Jadi admin
-            bisa membedakan berkas dari warna garis, tanpa membaca teks.
-        --}}
-        <span class="penanda-berkas-{{ (int) ($berkasKe ?? 1) }} inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold {{ $kelas }}">
-            <x-filament::icon icon="heroicon-m-document" class="h-3.5 w-3.5" />
-            @if (($berkasDari ?? 1) > 1)
-                BERKAS {{ $berkasKe }}/{{ $berkasDari }}
-            @else
-                BERKAS 1
-            @endif
+        {{-- Nomor nota: teks tegas, monokrom --}}
+        <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100">
+            {{ $labelNota }}
         </span>
 
-        {{--
-            Nomor nota di dalam berkas.
-
-            Mode total: baris ini adalah TOTAL dari sekian nota, jadi jangan
-            ditulis "Nota 0 dari 57" — itu membingungkan (seolah tidak ada
-            notanya). Tulis jelas: "TOTAL 57 nota".
-        --}}
-        <span class="inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
-            @if (($mode ?? '') === 'total')
-                TOTAL {{ $notaDari ?? 1 }} nota
-            @elseif (($notaDari ?? 1) > 1)
-                Nota {{ $notaKe }} dari {{ $notaDari }}
-            @else
-                Nota 1 dari 1
-            @endif
-        </span>
-
-        {{-- IKON STATUS: langsung terlihat baris mana yang belum lengkap --}}
-        @if ($lengkap)
-            <span class="inline-flex items-center gap-1 rounded-md border border-success-300 bg-success-50 px-2 py-1 text-xs font-semibold text-success-700 dark:border-success-700 dark:bg-success-950 dark:text-success-300">
-                <x-filament::icon icon="heroicon-m-check-circle" class="h-3.5 w-3.5" />
-                Lengkap
-            </span>
-        @elseif ($adaIsi)
-            <span class="inline-flex items-center gap-1 rounded-md border border-warning-300 bg-warning-50 px-2 py-1 text-xs font-semibold text-warning-700 dark:border-warning-700 dark:bg-warning-950 dark:text-warning-300">
-                <x-filament::icon icon="heroicon-m-exclamation-triangle" class="h-3.5 w-3.5" />
-                Belum lengkap
-            </span>
-        @else
-            <span class="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-400">
-                <x-filament::icon icon="heroicon-m-minus-circle" class="h-3.5 w-3.5" />
-                Belum diisi
+        @if (($berkasDari ?? 1) > 1)
+            <span class="text-xs text-gray-400 dark:text-gray-500">
+                berkas {{ $berkasKe }}/{{ $berkasDari }}
             </span>
         @endif
 
-        {{-- Nama berkas --}}
-        <span class="truncate text-xs text-gray-500 dark:text-gray-400" title="{{ $nama }}">
+        {{-- Status: satu titik kecil + teks. Tanpa kotak berwarna besar. --}}
+        <span class="inline-flex items-center gap-1.5 text-xs font-medium
+            @if ($lengkap) text-emerald-700 dark:text-emerald-400
+            @elseif ($adaIsi) text-amber-700 dark:text-amber-400
+            @else text-gray-400 dark:text-gray-500 @endif">
+            <span class="h-1.5 w-1.5 rounded-full
+                @if ($lengkap) bg-emerald-500
+                @elseif ($adaIsi) bg-amber-500
+                @else bg-gray-300 dark:bg-gray-600 @endif"></span>
+            @if ($lengkap) Lengkap
+            @elseif ($adaIsi) Belum lengkap
+            @else Belum diisi @endif
+        </span>
+
+        {{-- Nama berkas: kecil, abu, dipotong --}}
+        <span class="truncate text-xs text-gray-400 dark:text-gray-500" title="{{ $nama }}">
             {{ $nama }}
         </span>
     @else
-        <span class="text-xs text-gray-500 dark:text-gray-400">
+        <span class="text-xs text-gray-400 dark:text-gray-500">
             Nota belum ditentukan — unggah berkas di bagian 1.
         </span>
     @endif

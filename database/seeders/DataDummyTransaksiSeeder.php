@@ -254,13 +254,23 @@ class DataDummyTransaksiSeeder extends Seeder
 
     private function bersihkanTransaksiLama(): void
     {
+        /*
+         * ⚠️ SEEDER INI HANYA UNTUK LINGKUNGAN UJI/DUMMY.
+         *
+         * forceDelete() tanpa `where` menghapus SELURUH baris permanen. Aman di
+         * sini karena seeder memang bertujuan mengisi ulang data dummy — TAPI
+         * JANGAN pernah meniru pola ini di luar seeder (pernah menyebabkan
+         * seluruh data produksi terhapus). Untuk pembersihan manual, SELALU
+         * pakai klausa `where`.
+         */
         UangMasuk::withTrashed()->forceDelete();
         UangKeluar::withTrashed()->forceDelete();
 
         // File bukti lama ikut dibersihkan supaya tidak menumpuk.
+        // ⚠️ DISK `nota` (privat), bukan `public` — bukti tidak boleh publik.
         foreach ([self::DIR_MASUK, self::DIR_KELUAR] as $dir) {
-            foreach (Storage::disk('public')->files($dir) as $file) {
-                Storage::disk('public')->delete($file);
+            foreach (Storage::disk('nota')->files($dir) as $file) {
+                Storage::disk('nota')->delete($file);
             }
         }
     }
@@ -280,7 +290,7 @@ class DataDummyTransaksiSeeder extends Seeder
             ."trailer<</Root 1 0 R>>\n%%EOF";
 
         $path = self::DIR_MASUK.'/nota-contoh.pdf';
-        Storage::disk('public')->put($path, $isi);
+        Storage::disk('nota')->put($path, $isi);
 
         return $path;
     }
@@ -316,7 +326,7 @@ class DataDummyTransaksiSeeder extends Seeder
         $data = ob_get_clean();
         imagedestroy($img);
 
-        Storage::disk('public')->put($path, $data);
+        Storage::disk('nota')->put($path, $data);
 
         return $path;
     }

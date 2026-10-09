@@ -45,6 +45,25 @@ class TagihanSpkResource extends MonitoringSpkResource
     protected static ?int $navigationSort = 3;
 
     /**
+     * Badge jumlah tagihan yang BELUM lunas.
+     *
+     * Satu COUNT terindeks pada kolom `status_tagihan` — sangat ringan,
+     * tapi memberi admin sinyal langsung "ada N tagihan perlu ditindak".
+     * Dikembalikan null saat kosong supaya badge tidak menampilkan "0".
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        $jumlah = static::getEloquentQuery()->count();
+
+        return $jumlah > 0 ? (string) $jumlah : null;
+    }
+
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        return 'warning';
+    }
+
+    /**
      * Hanya SPK yang BELUM lunas.
      *
      * @return Builder<Spk>

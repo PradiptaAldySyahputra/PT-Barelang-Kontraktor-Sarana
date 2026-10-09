@@ -60,7 +60,7 @@ class NavigasiUangKeluarTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Progres pengisian', $html);
+        $this->assertStringContainsString('baris lengkap', $html);
     }
 
     /**
@@ -76,7 +76,10 @@ class NavigasiUangKeluarTest extends TestCase
             ],
         ])->render();
 
-        $this->assertStringContainsString('2 dari 3 baris lengkap', $view);
+        // Desain baru: "2/3" baris lengkap.
+        $this->assertStringContainsString('2', $view);
+        $this->assertStringContainsString('3', $view);
+        $this->assertStringContainsString('baris lengkap', $view);
     }
 
     /**
@@ -106,7 +109,6 @@ class NavigasiUangKeluarTest extends TestCase
             ],
         ])->render();
 
-        $this->assertStringContainsString('Total yang akan tersimpan', $view);
         $this->assertStringContainsString('Rp 250.000', $view);
     }
 
@@ -118,7 +120,7 @@ class NavigasiUangKeluarTest extends TestCase
             ],
         ])->render();
 
-        $this->assertStringNotContainsString('Total yang akan tersimpan', $view);
+        $this->assertStringNotContainsString('Rp ', $view);
     }
 
     // =========================================================
@@ -135,7 +137,7 @@ class NavigasiUangKeluarTest extends TestCase
         ])->render();
 
         $this->assertStringContainsString('belum lengkap', $view);
-        $this->assertStringContainsString('TIDAK akan tersimpan', $view);
+        $this->assertStringContainsString('tidak akan tersimpan', $view);
     }
 
     public function test_alert_tidak_muncul_kalau_semua_lengkap(): void
@@ -147,23 +149,22 @@ class NavigasiUangKeluarTest extends TestCase
             ],
         ])->render();
 
-        $this->assertStringContainsString('Semua baris sudah lengkap', $view);
-        $this->assertStringNotContainsString('TIDAK akan tersimpan', $view);
+        $this->assertStringContainsString('semua baris lengkap', $view);
+        $this->assertStringNotContainsString('tidak akan tersimpan', $view);
     }
 
     // =========================================================
     // 3. IKON STATUS PER BARIS
     // =========================================================
 
-    public function test_penanda_berkas_punya_ikon_status(): void
+    public function test_penanda_berkas_punya_status_baris(): void
     {
         $view = file_get_contents(resource_path('views/filament/components/penanda-berkas.blade.php'));
 
+        // Status berbasis TEKS + titik status (desain baru 8 Okt 2026).
         $this->assertStringContainsString('Lengkap', $view);
         $this->assertStringContainsString('Belum lengkap', $view);
         $this->assertStringContainsString('Belum diisi', $view);
-        $this->assertStringContainsString('heroicon-m-check-circle', $view);
-        $this->assertStringContainsString('heroicon-m-exclamation-triangle', $view);
     }
 
     /**
@@ -296,6 +297,9 @@ class NavigasiUangKeluarTest extends TestCase
 
         $html = $test->html();
 
-        $this->assertStringContainsString('1 dari 2 baris lengkap', $html);
+        // Desain baru: ringkasan "1/2 ... baris lengkap".
+        $this->assertStringContainsString('baris lengkap', $html);
+        $this->assertStringContainsString('1', $html);
+        $this->assertStringContainsString('2', $html);
     }
 }

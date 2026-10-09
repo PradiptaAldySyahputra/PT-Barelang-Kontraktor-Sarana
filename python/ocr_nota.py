@@ -236,6 +236,63 @@ def hitung_potongan(
     return potongan
 
 
+def teks_per_kotak(
+    hasil_ocr: list[Any],
+    kotak: list[tuple[float, float, float, float]],
+) -> list[list[dict[str, Any]]]:
+    """
+    Kelompokkan teks OCR ke dalam tiap kotak nota.
+
+    KENAPA DI SINI (bukan di PHP)
+    -----------------------------
+    Skrip ini sudah memegang koordinat tiap kotak. Mengelompokkan teks ke
+    kotak paling akurat dilakukan di sini (sekali jalan), lalu PHP hanya perlu
+    mengurai teks yang sudah terpisah rapi per nota — tanpa tahu soal piksel.
+
+    Tiap teks diletakkan ke kotak yang memuat TITIK TENGAHNYA. Kalau tidak ada
+    (mis. teks di tepi), dipakai kotak terdekat supaya tidak ada teks hilang.
+
+    Return: untuk tiap kotak, daftar {"teks": str, "x": float, "y": float}
+    yang sudah diurutkan atas->bawah lalu kiri->kanan (urutan baca manusia).
+    """
+    sel: list[list[dict[str, Any]]] = [[] for _ in kotak]
+
+    if not kotak:
+        return sel
+
+    for item in hasil_ocr:
+        box, teks = item[0], str(item[1])
+
+        if not teks.strip():
+            continue
+
+        xs = [p[0] for p in box]
+        ys = [p[1] for p in box]
+        cx = (min(xs) + max(xs)) / 2
+        cy = (min(ys) + max(ys)) / 2
+
+        idx = None
+
+        for i, (x1, y1, x2, y2) in enumerate(kotak):
+            if x1 <= cx < x2 and y1 <= cy < y2:
+                idx = i
+                break
+
+        if idx is None:
+            idx = min(
+                range(len(kotak)),
+                key=lambda i: abs((kotak[i][0] + kotak[i][2]) / 2 - cx)
+                + abs((kotak[i][1] + kotak[i][3]) / 2 - cy),
+            )
+
+        sel[idx].append({"teks": teks, "x": float(min(xs)), "y": float(min(ys))})
+
+    for isi in sel:
+        isi.sort(key=lambda b: (b["y"], b["x"]))
+
+    return sel
+
+
 def simpan_potongan(
     gambar: Any,
     kotak: list[tuple[float, float, float, float]],
@@ -333,20 +390,35 @@ def main() -> None:
 
             anchor = cari_anchor(hasil)
 
-            if not anchor:
-                continue
-
-            ada_penanda = True
-
-            # Toleransi baris: 6% tinggi halaman.
-            toleransi = tinggi * 0.06
-            baris = kelompuk_baris(anchor, toleransi)
-
-            kotak = hitung_potongan(baris, lebar, tinggi)
+            if anchor:
+                # Susunan nota dikenali dari penanda "NOTA NO.".
+                # Toleransi baris: 6% tinggi halaman.
+                toleransi = tinggi * 0.06
+                baris = kelompuk_baris(anchor, toleransi)
+                kotak = hitung_potongan(baris, lebar, tinggi)
+            else:
+                # ⚠️ TIDAK ADA PENANDA "NOTA" (nota satuan, nota tipe lain,
+                # atau judul yang kurang jelas terbaca).
+                #
+                # Dulu halaman ini DILEWATI → hasilnya `nota: []` → admin
+                # melihat "OCR tidak bisa membaca" PADAHAL teksnya terbaca.
+                # Itulah bug "nota satuan tidak terbaca OCR".
+                #
+                # Sekarang SELURUH halaman diperlakukan sebagai SATU nota:
+                # potongan = seluruh gambar, teks = semua teks halaman.
+                # Dengan begitu nota satuan tetap bisa dibaca isinya dan
+                # tetap punya pratinjau.
+                ada_penanda = True
+                metode = "halaman_penuh"
+                kotak = [(0.0, 0.0, float(lebar), float(tinggi))]
 
             potongan = simpan_potongan(
                 gambar, kotak, dir_keluar, mulai_dari=nomor_potongan
             )
+
+            # Teks OCR tiap nota — dikelompokkan ke kotak nota masing-masing.
+            # PHP memakai ini untuk membaca isi nota (nominal, tanggal, dst).
+            teks_kotak = teks_per_kotak(hasil, kotak)
 
             for i in range(len(kotak)):
                 nomor_potongan += 1
@@ -355,38 +427,31 @@ def main() -> None:
                     "halaman": nomor_halaman,
                     "kotak": [round(v, 1) for v in kotak[i]],
                     "potongan": potongan[i],
+                    # Daftar {"teks": str, "x": float, "y": float} terurut baca.
+                    "teks": teks_kotak[i] if i < len(teks_kotak) else [],
                 })
 
-        jumlah = len(semua_nota)
-
-        # Tidak ada teks sama sekali (mis. foto gelap / scan kosong).
-        # Bukan error — admin tinggal isi jumlah manual.
-        if not ada_teks:
-            keluaran({
-                "ok": True,
-                "jumlah_nota": 1,
-                "halaman_diproses": len(daftar_halaman),
-                "lebar": lebar,
-                "tinggi": tinggi,
-                "metode": "tidak_ada_teks",
-                "nota": [],
+        # Tidak ada teks SAMA SEKALI (mis. foto gelap / scan kosong).
+        # Tetap kembalikan SATU nota = SELURUH berkas, supaya admin bisa
+        # melihat berkasnya & mengisi jumlah manual — bukan `nota: []`.
+        if not ada_teks and daftar_halaman:
+            gambar_pertama = daftar_halaman[0][0]
+            lebar = gambar_pertama.shape[1]
+            tinggi = gambar_pertama.shape[0]
+            kotak = [(0.0, 0.0, float(lebar), float(tinggi))]
+            potongan = simpan_potongan(gambar_pertama, kotak, dir_keluar)
+            semua_nota.append({
+                "ke": 1,
+                "halaman": 1,
+                "kotak": [0.0, 0.0, float(lebar), float(tinggi)],
+                "potongan": potongan[0] if potongan else None,
+                "teks": [],
             })
-
-        # Ada teks, tapi tidak ada penanda "NOTA" — mungkin nota tipe lain.
-        if not ada_penanda:
-            keluaran({
-                "ok": True,
-                "jumlah_nota": 1,
-                "halaman_diproses": len(daftar_halaman),
-                "lebar": lebar,
-                "tinggi": tinggi,
-                "metode": "tanpa_penanda",
-                "nota": [],
-            })
+            metode = "tidak_ada_teks"
 
         keluaran({
             "ok": True,
-            "jumlah_nota": jumlah,
+            "jumlah_nota": len(semua_nota),
             "halaman_diproses": len(daftar_halaman),
             "lebar": lebar,
             "tinggi": tinggi,

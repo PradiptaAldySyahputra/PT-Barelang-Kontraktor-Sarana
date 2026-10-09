@@ -45,7 +45,7 @@ class TataLetakUangKeluarTest extends TestCase
 
         Livewire::test(CreateUangKeluar::class)
             ->assertOk()
-            ->assertSee('1. Unggah Nota')
+            ->assertSee('Unggah Berkas Nota')
             ->assertSee('2. Isi Rincian');
     }
 

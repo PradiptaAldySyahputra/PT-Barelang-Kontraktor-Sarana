@@ -131,16 +131,18 @@ class OcrNotaTest extends TestCase
     }
 
     /**
-     * Skrip OCR TIDAK boleh membaca nominal rupiah.
+     * Skrip OCR (Python) TIDAK mengurai nominal — ia hanya mengembalikan TEKS
+     * mentah per nota (kunci `teks`). Penguraian nominal/tanggal/penerima
+     * dilakukan di PHP (`App\Support\PembacaIsiNota`), supaya bisa diuji cepat
+     * tanpa model OCR.
      *
-     * Ini batas keselamatan yang disepakati: salah baca nominal bisa langsung
-     * masuk laporan keuangan. Kalau ada yang menambahkan pembacaan nominal
-     * tanpa sengaja, tes ini menangkapnya.
-     *
-     * CATATAN: komentar & docstring sengaja DIBUANG dulu, karena di sana kata
-     * "nominal" justru muncul untuk menjelaskan bahwa OCR TIDAK membacanya.
+     * ⚠️ PERUBAHAN KEBIJAKAN (8 Okt 2026): user meminta OCR membaca ISI nota.
+     * Pembacaan itu kini ADA, tapi di PHP dan hasilnya DRAF yang WAJIB
+     * dikonfirmasi admin — bukan langsung masuk laporan. Skrip Python tetap
+     * sengaja "buta angka" supaya tanggung jawabnya jelas: Python = gambar,
+     * PHP = logika. Tes ini menjaga batas itu.
      */
-    public function test_skrip_ocr_tidak_membaca_nominal_rupiah(): void
+    public function test_skrip_ocr_tidak_mengurai_nominal_sendiri(): void
     {
         $mentah = (string) file_get_contents(config('ocr.skrip'));
 
@@ -152,23 +154,31 @@ class OcrNotaTest extends TestCase
             $this->assertStringNotContainsString(
                 $terlarang,
                 strtolower($kode),
-                "Kode OCR tidak boleh membaca '$terlarang' — nominal diisi admin",
+                "Skrip Python tidak boleh mengurai '$terlarang' — itu tugas PHP (PembacaIsiNota)",
             );
         }
+
+        // Skrip HARUS mengembalikan teks mentah per nota.
+        $this->assertStringContainsString(
+            'teks',
+            $kode,
+            'Skrip OCR harus mengembalikan TEKS per nota (kunci "teks") untuk diurai PHP',
+        );
     }
 
     /**
-     * Keluaran JSON skrip tidak boleh memuat kolom nominal.
+     * Keluaran JSON skrip (Python) tidak memuat kolom nominal terurai —
+     * hanya teks mentah. Penguraian ada di PHP.
      */
-    public function test_keluaran_json_tidak_memuat_nominal(): void
+    public function test_keluaran_json_skrip_tidak_memuat_nominal_terurai(): void
     {
         $skrip = (string) file_get_contents(config('ocr.skrip'));
 
-        foreach (['"jumlah_rp"', '"nominal"', '"total"'] as $kunci) {
+        foreach (['"jumlah_rp"', '"nominal"', '"total_rupiah"'] as $kunci) {
             $this->assertStringNotContainsString(
                 $kunci,
                 $skrip,
-                "Keluaran OCR tidak boleh memuat kunci $kunci",
+                "Keluaran skrip OCR tidak boleh memuat kunci terurai $kunci — itu diurai di PHP",
             );
         }
     }
@@ -323,9 +333,9 @@ class OcrNotaTest extends TestCase
 
         $view = file_get_contents(resource_path('views/filament/components/info-ocr.blade.php'));
 
-        // Pesan harus menegaskan nominal diisi manual.
-        $this->assertStringContainsString('Nominal tetap diisi manual', $view);
-        $this->assertStringContainsString('OCR tidak membaca angka', $view);
+        // Pesan harus menegaskan hasil OCR adalah DRAF yang wajib diperiksa.
+        $this->assertStringContainsString('draf hasil baca OCR', $view);
+        $this->assertStringContainsString('Periksa', $view);
     }
 
     /**

@@ -80,10 +80,13 @@ class PerbaikanBugTest extends TestCase
      */
     public function test_pemotongan_baris_ditandai_bukan_diam_diam(): void
     {
+        // Jumlah nota SENGAJA di atas batas pengaman supaya pemotongan terjadi.
+        $melebihi = UangKeluarForm::MAKS_BARIS + 10;
+
         $baris = UangKeluarForm::susunBaris([
             'b1' => [
                 'file' => 'uang_keluar/nota-sebulan.pdf',
-                'jumlah_nota' => 57,
+                'jumlah_nota' => $melebihi,
                 'mode' => 'rinci',
             ],
         ]);

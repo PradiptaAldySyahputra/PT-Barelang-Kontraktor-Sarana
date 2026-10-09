@@ -63,9 +63,9 @@ class NotaSekaligusTest extends TestCase
     /**
      * Bantu: susun baris dari daftar berkas (path + jumlah nota).
      *
-     * ⚠️ DEFAULT MODE SEKARANG 'total' (1 berkas = 1 baris), karena itu
-     * permintaan admin untuk berkas gabungan sebulan. Tes yang menguji
-     * perilaku "1 nota = 1 baris" harus memakai mode 'rinci' secara eksplisit.
+     * ⚠️ DEFAULT MODE SEKARANG 'rinci' (1 nota = 1 baris), keputusan user
+     * 8 Okt 2026. Tes yang menguji perilaku "1 berkas = 1 baris total" harus
+     * memakai mode 'total' secara eksplisit.
      *
      * @param  array<int, array{path: string, nota: int, mode?: string}>  $berkas
      * @return array<int, array<string, mixed>>
@@ -123,7 +123,7 @@ class NotaSekaligusTest extends TestCase
     public function test_mode_total_satu_berkas_banyak_nota_menghasilkan_satu_baris(): void
     {
         $baris = $this->susun([
-            ['path' => 'uang_keluar/nota-sebulan.pdf', 'nota' => 57],
+            ['path' => 'uang_keluar/nota-sebulan.pdf', 'nota' => 57, 'mode' => 'total'],
         ]);
 
         $this->assertCount(
@@ -140,12 +140,12 @@ class NotaSekaligusTest extends TestCase
     }
 
     /**
-     * Default mode HARUS 'total' — supaya berkas gabungan tidak melahirkan
-     * puluhan baris kosong yang tidak akan diisi admin.
+     * Default mode HARUS 'rinci' (keputusan user 8 Okt 2026): saat satu berkas
+     * berisi banyak nota, tiap nota dipotong & dibuatkan form sendiri.
      */
-    public function test_default_mode_adalah_total(): void
+    public function test_default_mode_adalah_rinci(): void
     {
-        $this->assertSame('total', UangKeluarForm::MODE_DEFAULT);
+        $this->assertSame('rinci', UangKeluarForm::MODE_DEFAULT);
     }
 
     public function test_satu_berkas_satu_nota_menghasilkan_satu_baris(): void
@@ -259,27 +259,28 @@ class NotaSekaligusTest extends TestCase
     }
 
     /**
-     * Badge pembeda berkas harus benar-benar dirender.
+     * Penanda baris harus benar-benar dirender — memakai TEKS (nomor nota),
+     * bukan lagi badge warna (desain baru 8 Okt 2026).
      */
     public function test_ada_penanda_berkas_di_tiap_baris(): void
     {
         $view = file_get_contents(resource_path('views/filament/components/penanda-berkas.blade.php'));
 
-        $this->assertStringContainsString('BERKAS', $view);
-        $this->assertStringContainsString('penanda-berkas-', $view, 'Kelas warna pembeda harus ada');
         $this->assertStringContainsString('Nota', $view);
+        $this->assertStringContainsString('TOTAL', $view, 'Mode total harus jelas tertulis');
     }
 
     /**
-     * CSS pembeda (garis kiri berwarna) harus ada di tema.
+     * Desain baru: garis kiri MONOKROM tipis (bukan warna-warni per berkas).
      */
-    public function test_tema_punya_garis_pembeda_per_berkas(): void
+    public function test_tema_punya_garis_pembeda_monokrom(): void
     {
         $css = file_get_contents(resource_path('css/filament/admin/theme.css'));
 
-        $this->assertStringContainsString('border-left-width: 6px', $css);
-        $this->assertStringContainsString('penanda-berkas-1', $css);
-        $this->assertStringContainsString('penanda-berkas-4', $css);
+        $this->assertStringContainsString('border-left-width: 2px', $css);
+        // Warna-warni lama harus HILANG.
+        $this->assertStringNotContainsString('penanda-berkas-1', $css);
+        $this->assertStringNotContainsString('border-left-color: #10b981', $css);
     }
 
     // =========================================================

@@ -50,13 +50,11 @@
 
 <div class="w-full">
     @if ($daftar->isEmpty())
-        {{-- Belum ada nota: beri petunjuk jelas, jangan tampilkan kotak kosong besar --}}
-        <div class="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center dark:border-gray-700 dark:bg-gray-900">
-            <x-filament::icon icon="heroicon-o-document-plus" class="h-9 w-9 text-gray-400" />
-            <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Nota belum ada</p>
-            <p class="max-w-md text-xs text-gray-500 dark:text-gray-400">
-                Unggah nota pada bagian <strong>“1. Unggah Nota”</strong> di atas.
-                Setelah terunggah, pratinjau akan muncul di sini secara otomatis.
+        {{-- Belum ada nota: petunjuk singkat, bukan kotak besar --}}
+        <div class="flex h-full min-h-[8rem] w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center dark:border-white/10">
+            <x-filament::icon icon="heroicon-o-document-plus" class="h-5 w-5 text-gray-300 dark:text-gray-600" />
+            <p class="text-xs text-gray-400 dark:text-gray-500">
+                Belum ada nota — unggah di bagian 1.
             </p>
         </div>
     @else
