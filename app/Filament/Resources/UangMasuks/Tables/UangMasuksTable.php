@@ -52,6 +52,19 @@ class UangMasuksTable
              * saring "Kas" → totalnya hanya Kas).
              */
             ->summaries(pageCondition: false)
+            /*
+             * ⚠️ BARIS TOTAL TERFILTER DI ATAS TABEL (saran user 9 Okt 2026).
+             *
+             * Total bawaan Filament hanya muncul di BAWAH tabel. Baris ini
+             * menaruhnya di ATAS, selalu terlihat tanpa scroll, dan mengikuti
+             * filter aktif — plus rincian per Kas/Bank.
+             */
+            ->header(fn ($livewire) => view('filament.components.total-terfilter', [
+                'judul' => 'Total Uang Masuk (terfilter)',
+                'total' => (clone $livewire->getFilteredTableQuery())->sum('jumlah'),
+                'catatan' => 'dari '.$livewire->getFilteredTableQuery()->count().' transaksi',
+                'nada' => 'masuk',
+            ]))
             ->columns([
                 TextColumn::make('tanggal')
                     ->label('Tanggal')

@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
 use App\Models\Mitra;
 use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
+use App\Support\BukuKasBank;
+use App\Support\SaldoKas;
+use App\Support\TandaTangan;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Pages\Page;
@@ -17,6 +21,8 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Response;
 use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Writer\XLSX\Entity\SheetView;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -40,7 +46,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *
  * DIHAPUS (tidak ada datanya / tidak dipakai perusahaan):
  *   - Laba-Rugi per SPK   (tidak ada data biaya & laba)
- *   - Piutang             (tidak ada data pembayaran lengkap)
  *   - Umur Piutang (aging)
  *   - Retensi
  *
@@ -125,6 +130,10 @@ class Laporan extends Page
 
         $nilaiSpk = (float) Spk::sum('nilai_spk');
         $belumDiterima = $nilaiSpk - (float) UangMasuk::whereNotNull('spk_id')->sum('jumlah');
+
+        // Saldo kas & bank (fitur T2) — dihitung dari SEMUA transaksi, tidak
+        // dibatasi periode, karena saldo adalah posisi terkini.
+        $saldo = SaldoKas::ringkasan();
 
         // ---------------------------------------------------------
         // 2 & 3. UANG MASUK / KELUAR PER BULAN
@@ -240,6 +249,17 @@ class Laporan extends Page
             'nilaiSpk' => $nilaiSpk,
             'belumDiterima' => max(0, $belumDiterima),
 
+            // Saldo kas & bank (fitur T2, permintaan user 10 Okt 2026).
+            'saldoKas' => $saldo['kas'],
+            'saldoBank' => $saldo['bank'],
+            'saldoTotal' => $saldo['total'],
+            'saldoKasPerBulan' => SaldoKas::perBulan(AkunKas::Kas),
+            'saldoBankPerBulan' => SaldoKas::perBulan(AkunKas::Bank),
+
+            // Buku kas & bank (B2-11) — format template perusahaan.
+            'bukuKas' => BukuKasBank::susun(AkunKas::Kas, $this->tanggalAwal(), now()),
+            'bukuBank' => BukuKasBank::susun(AkunKas::Bank, $this->tanggalAwal(), now()),
+
             // Rincian
             'perBulan' => $perBulan,
             'perKategori' => $perKategori,
@@ -264,6 +284,17 @@ class Laporan extends Page
         $data = $this->getViewData();
 
         [$judul, $header, $baris] = match ($jenis) {
+            'buku-kas', 'buku-bank' => (function () use ($jenis): array {
+                $akun = $jenis === 'buku-bank' ? AkunKas::Bank : AkunKas::Kas;
+                $buku = BukuKasBank::susun($akun, $this->tanggalAwal(), now());
+                [$header, $baris] = BukuKasBank::untukEkspor($buku);
+
+                return [
+                    'Buku '.$akun->label().' ('.$this->labelPeriode().')',
+                    $header,
+                    $baris,
+                ];
+            })(),
             'masuk' => [
                 'Laporan Uang Masuk per Bulan',
                 ['Bulan', 'Jumlah Transaksi', 'Total Masuk', 'Total Keluar', 'Selisih'],
@@ -382,6 +413,7 @@ class Laporan extends Page
                 'header' => $header,
                 'baris' => $baris,
                 'periode' => $this->labelPeriode(),
+                'tandaTangan' => TandaTangan::untukPdf(),
             ])->setPaper('a4', 'landscape');
 
             return $pdf->download($namaFile.'.pdf');
@@ -393,13 +425,39 @@ class Laporan extends Page
             $writer = new XlsxWriter;
             $writer->openToFile($path);
 
-            $writer->addRow(Row::fromValues([$judul]));
+            /*
+             * ⚠️ PERBAIKAN EKSPOR EXCEL (saran user 9 Okt 2026):
+             * "header rapi, tanpa merge cell, ada baris total, freeze pane —
+             *  supaya bisa di-sort/filter di Excel".
+             *
+             *  - FREEZE PANE: baris judul (1-3) + baris header (4) dibekukan,
+             *    jadi saat menggulir ratusan baris, nama kolom tetap terlihat.
+             *  - HEADER TEBAL: baris header diberi style bold.
+             *  - BARIS TOTAL: nominal dijumlahkan di baris paling bawah
+             *    (angka asli, bukan teks), supaya bisa dicek cepat.
+             */
+            $writer->getCurrentSheet()->setSheetView(
+                (new SheetView)->setFreezeRow(5),
+            );
+
+            $judulStyle = (new Style)->setFontBold()->setFontSize(13);
+            $headerStyle = (new Style)->setFontBold();
+
+            $writer->addRow(Row::fromValues([$judul], $judulStyle));
             $writer->addRow(Row::fromValues(['Dicetak: '.now()->format('d/m/Y H:i')]));
             $writer->addRow(Row::fromValues([]));
-            $writer->addRow(Row::fromValues($header));
+            $writer->addRow(Row::fromValues($header, $headerStyle));
 
             foreach ($baris as $r) {
                 $writer->addRow(Row::fromValues(array_values((array) $r)));
+            }
+
+            // Baris TOTAL: jumlahkan kolom yang seluruh barisnya numerik.
+            $total = self::hitungBarisTotal($header, $baris);
+
+            if ($total !== null) {
+                $writer->addRow(Row::fromValues([]));
+                $writer->addRow(Row::fromValues($total, $headerStyle));
             }
 
             $writer->close();
@@ -461,6 +519,75 @@ class Laporan extends Page
         }
 
         return $teks;
+    }
+
+    /**
+     * Hitung baris TOTAL untuk ekspor Excel.
+     *
+     * ⚠️ SARAN USER (9 Okt 2026): "ada baris total ... supaya bisa di-sort/
+     * filter di Excel".
+     *
+     * Sebuah kolom dijumlahkan HANYA jika SEMUA barisnya angka (int/float) —
+     * jadi kolom seperti "Nomor SPK" atau "Mitra" (teks) tidak ikut dijumlah.
+     * Label "TOTAL" ditaruh di kolom pertama yang TIDAK dijumlahkan.
+     *
+     * @param  array<int, string>  $header
+     * @param  array<int, mixed>  $baris
+     * @return array<int, mixed>|null
+     */
+    private static function hitungBarisTotal(array $header, array $baris): ?array
+    {
+        if ($baris === []) {
+            return null;
+        }
+
+        $kolom = count($header);
+        $total = array_fill(0, $kolom, null);
+        $adaAngka = false;
+
+        for ($i = 0; $i < $kolom; $i++) {
+            $semuaAngka = true;
+            $jumlah = 0.0;
+            $terisi = false;
+
+            foreach ($baris as $r) {
+                $nilai = array_values((array) $r)[$i] ?? null;
+
+                if (is_int($nilai) || is_float($nilai)) {
+                    $jumlah += (float) $nilai;
+                    $terisi = true;
+
+                    continue;
+                }
+
+                // Nilai teks boleh "—" (placeholder), tapi bukan angka.
+                if ($nilai !== null && $nilai !== '' && $nilai !== '—') {
+                    $semuaAngka = false;
+
+                    break;
+                }
+            }
+
+            if ($semuaAngka && $terisi) {
+                $total[$i] = $jumlah;
+                $adaAngka = true;
+            }
+        }
+
+        if (! $adaAngka) {
+            return null;
+        }
+
+        // Label "TOTAL" di kolom pertama yang bukan hasil jumlah.
+        foreach ($total as $i => $nilai) {
+            if ($nilai === null) {
+                $total[$i] = 'TOTAL';
+
+                break;
+            }
+        }
+
+        return $total;
     }
 
     public function getSubheading(): ?string

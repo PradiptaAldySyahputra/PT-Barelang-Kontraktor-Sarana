@@ -47,7 +47,10 @@ class BersihkanPotonganOcr extends Command
 
     public function handle(): int
     {
-        $disk = Storage::disk(config('filament.default_filesystem_disk', 'public'));
+        // ⚠️ Potongan OCR disimpan di disk PRIVAT `nota` (lihat PembacaNota),
+        // BUKAN disk default `public`. Dulu perintah ini membaca disk `public`
+        // sehingga TIDAK PERNAH menemukan potongan sama sekali.
+        $disk = Storage::disk('nota');
 
         if (! $disk->exists(self::FOLDER)) {
             $this->info('Tidak ada folder potongan — tidak ada yang perlu dibersihkan.');
@@ -130,7 +133,10 @@ class BersihkanPotonganOcr extends Command
     {
         $hash = [];
 
-        foreach ($disk->files('uang_keluar') as $file) {
+        // ⚠️ PINDAI REKURSIF: berkas nota BARU tersimpan di sub-folder bertanggal
+        // (mis. uang_keluar/2026/10/11/nota-x.jpg). Pemindaian NON-rekursif
+        // akan menganggap SEMUA potongan "yatim" lalu menghapusnya.
+        foreach ($disk->allFiles() as $file) {
             // Lewati folder potongan itu sendiri.
             if (str_starts_with($file, self::FOLDER.'/')) {
                 continue;

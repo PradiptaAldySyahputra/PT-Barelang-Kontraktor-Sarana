@@ -100,6 +100,22 @@ class EksporPdfMenuTest extends TestCase
         $this->assertStringStartsWith('%PDF', $this->isiPdf($respons));
     }
 
+    /**
+     * ⚠️ SARAN USER (9 Okt 2026): "PDF ... dokumen formal ... tanda tangan".
+     */
+    public function test_pdf_menu_punya_blok_tanda_tangan(): void
+    {
+        $html = view('filament.exports.tabel-pdf', [
+            'judul' => 'Daftar SPK',
+            'header' => ['Nomor SPK', 'Nilai SPK'],
+            'baris' => [['PDFMENU-001', 50_000_000]],
+        ])->render();
+
+        $this->assertStringContainsString('Dibuat oleh', $html);
+        $this->assertStringContainsString('Disetujui oleh', $html);
+        $this->assertStringContainsString('Direktur', $html);
+    }
+
     public function test_header_pdf_sama_dengan_kolom_exporter(): void
     {
         $susunan = RakitEkspor::susun(SpkExporter::class, Spk::all());

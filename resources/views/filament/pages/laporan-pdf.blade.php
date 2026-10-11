@@ -155,7 +155,8 @@
         </tbody>
     </table>
 
-    {{-- TANDA TANGAN --}}
+    {{-- TANDA TANGAN (⚠️ Diperbarui 10 Okt 2026: gambar tanda tangan Direktur
+         otomatis ditempel bila sudah diunggah di "Profil Saya"). --}}
     <table class="tanda-tangan">
         <tr>
             <td>
@@ -164,9 +165,14 @@
                 Admin
             </td>
             <td>
-                Disetujui oleh,<br><br><br>
-                (............................)<br>
-                Direktur
+                Disetujui oleh,<br>
+                @if (($tandaTangan['gambar'] ?? null))
+                    <img src="{{ $tandaTangan['gambar'] }}" alt="Tanda tangan" style="height: 55px; margin: 4px 0;">
+                @else
+                    <br><br>
+                @endif
+                {{ $tandaTangan['nama'] ?? '(............................)' }}<br>
+                {{ $tandaTangan['jabatan'] ?? 'Direktur' }}
             </td>
         </tr>
     </table>

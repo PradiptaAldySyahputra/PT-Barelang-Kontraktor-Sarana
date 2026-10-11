@@ -48,6 +48,31 @@ class UangKeluarsTable
              * terfilter yang tampil, tetap menghormati filter aktif.
              */
             ->summaries(pageCondition: false)
+            /*
+             * ⚠️ BARIS TOTAL TERFILTER DI ATAS TABEL (saran user 9 Okt 2026):
+             * total + rincian per kategori dalam satu baris, mengikuti filter.
+             */
+            ->header(function ($livewire) {
+                $rincian = (clone $livewire->getFilteredTableQuery())
+                    ->selectRaw('kategori, SUM(jumlah) as total')
+                    ->groupBy('kategori')
+                    ->orderByDesc('total')
+                    ->pluck('total', 'kategori');
+
+                $pecahan = [];
+                foreach ($rincian as $kode => $nilai) {
+                    $kategori = KategoriPengeluaran::tryFrom((string) $kode);
+                    $pecahan[$kategori?->label() ?? 'Lainnya'] = (float) $nilai;
+                }
+
+                return view('filament.components.total-terfilter', [
+                    'judul' => 'Total Uang Keluar (terfilter)',
+                    'total' => (clone $livewire->getFilteredTableQuery())->sum('jumlah'),
+                    'catatan' => 'dari '.$livewire->getFilteredTableQuery()->count().' transaksi',
+                    'rincian' => $pecahan,
+                    'nada' => 'keluar',
+                ]);
+            })
             ->columns([
                 TextColumn::make('tanggal')
                     ->label('Tanggal')

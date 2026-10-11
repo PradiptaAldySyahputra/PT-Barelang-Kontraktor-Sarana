@@ -107,14 +107,20 @@ t   dikaitkan ke SPK tertentu (laba-rugi TIDAK dihitung — lihat §2).
     > Diuji di `tests/Feature/SinkronStatusTagihanTest.php`.
 
 15. **⭐ UANG MASUK TIDAK BOLEH MELEBIHI PIUTANG LANCAR SPK.**
-    Untuk SPK yang dipilih, `jumlah` dibatasi `nilaiTagih() − sudah_diterima`.
+    Untuk SPK yang dipilih, `jumlah` dibatasi `sisaTagih() − sudah_diterima`
+    (`sisaTagih()` = `nilai_spk − sudah_diterima`, tidak pernah negatif).
     Kalau melebihi, form menolak dengan pesan yang menjelaskan batasnya.
     > Uang masuk **luar SPK** (mode manual, `spk_id` NULL) **tidak dibatasi**.
     > Diuji di `tests/Feature/BatasUangMasukTest.php`.
+    >
+    > 📌 Catatan (10 Okt 2026): dokumen lama menyebut `nilaiTagih()` — nama itu
+    > tidak ada di kode. Yang dipakai: `Spk::piutang()` / `Spk::sisaTagih()`.
 
-16. **⭐ UMUR PIUTANG (AGING) dihitung dari `tanggal_spk`.**
-    Kelompok: `0-30` · `31-60` · `61-90` · `>90` · `tanpa-tanggal`.
-    Dipakai di laporan & filter. Implementasi: `Spk::kategoriUmur()`.
+16. **❌ UMUR PIUTANG (AGING) TIDAK DIPAKAI** — keputusan user 19 Sep 2026.
+    Sebelumnya dokumen ini menjanjikan aging piutang (kelompok `0-30`/`31-60`/
+    `61-90`/`>90`), padahal **kode tidak punya `Spk::kategoriUmur()`** dan
+    laporan tidak menampilkannya. Sama seperti retensi & laba-rugi, aging
+    dihapus dari sistem. Yang dipakai hanya **tenggat SPK** (butir 17).
 
 17. **⭐ TENGGAT SPK (`tanggal_akhir`) DIPAKAI untuk peringatan.**
     - Lewat tenggat → badge merah
@@ -152,8 +158,14 @@ Sistem hanya memiliki **2 role**:
 
 | Role | Boleh | Tidak Boleh |
 |---|---|---|
-| **Admin** | CRUD SPK, input uang masuk & keluar, upload bukti, kelola master data, manajemen user (jika diberi kewenangan) | — |
-| **Direktur** | Monitoring dashboard, lihat semua data, ekspor laporan | CRUD input data |
+| **Admin** | CRUD SPK, input uang masuk & keluar, upload bukti, kelola Mitra | Kelola Pengguna (hanya Direktur) |
+| **Direktur** | Monitoring dashboard, lihat semua data, ekspor laporan, **kelola Pengguna** (tambah/ubah/hapus akun, kecuali akun sendiri) | CRUD transaksi & SPK (input data) |
+
+> 📌 Catatan (10 Okt 2026): dokumen lama menulis Admin boleh *"manajemen user
+> (jika diberi kewenangan)"*. Kenyataannya kode menetapkan **hanya Direktur**
+> yang boleh mengelola Pengguna (`PenggunaResource::canViewAny()` = Direktur).
+> Direktur juga **tidak boleh** menonaktifkan/menghapus **akunnya sendiri**
+> (pengaman sistem terkunci).
 
 > ⚠️ **Authorization wajib memakai middleware role** — **bukan** hanya menyembunyikan menu.
 > Direktur yang mencoba membuka halaman input harus **ditolak sistem**, bukan sekadar
@@ -164,8 +176,13 @@ Sistem hanya memiliki **2 role**:
 1. **Tanggal transaksi tidak boleh lebih dari hari ini** (kecuali input transaksi terlambat
    yang harus disertai catatan).
 2. **Nominal harus > 0** — tolak nilai negatif atau nol.
-3. **SPK yang dipilih harus valid** — SPK berstatus `Dibatalkan` tidak menerima transaksi baru
-   kecuali ada override khusus oleh Admin.
+3. **SPK yang dipilih harus valid** — SPK berstatus `Dibatalkan` **DITOLAK**
+   untuk transaksi baru (uang masuk & uang keluar), tanpa pengecualian.
+   > 📌 Catatan (10 Okt 2026): dokumen lama menyebut *"kecuali ada override
+   > khusus oleh Admin"*, tetapi **mekanisme override itu tidak pernah ada di
+   > kode**. Sistem menerapkan aturan secara KETAT (lebih aman). Kalau nanti
+   > perusahaan memang butuh override, tambahkan dulu fitur & aturannya —
+   > jangan menuliskan janji yang tidak dijalankan.
 4. **Setiap transaksi wajib punya kategori yang valid.**
 5. **Upload bukti:** validasi MIME type, ukuran maksimal 5–10 MB, nama file unik (timestamp/UUID).
 6. **Format tampilan rupiah di Blade tidak boleh mengubah nilai asli di database.**
@@ -215,6 +232,15 @@ Sistem hanya memiliki **2 role**:
 7. **`.env` tidak boleh** ter-commit ke Git dan tidak boleh diakses dari web.
 8. **Batasi akses folder upload dan database** agar tidak diubah di luar aplikasi.
 9. **Batasi akses fisik** ke PC server (PC Direktur).
+10. **Tidak ada akun/password default di repo.** Seeder hanya untuk data
+    **demo** (`APP_ENV != production`) dan **menolak jalan di produksi**.
+    Akun pertama dibuat lewat perintah interaktif **`php artisan app:buat-admin`**
+    (password diminta tersembunyi, minimal 8 karakter huruf+angka).
+    Seeder demo memakai password dari `BKS_SEEDER_PASSWORD` bila di-set,
+    selain itu password acak — **tidak pernah** `password` literal.
+11. **Notifikasi ekspor memerlukan queue worker.** `Filament\Notifications\DatabaseNotification`
+    meng-`implements ShouldQueue`; jalankan `php artisan queue:work` di produksi
+    (`QUEUE_CONNECTION=database`). Status worker terlihat di halaman **Status Sistem**.
 
 ## 10. Log Aktivitas — ❌ DIHAPUS
 

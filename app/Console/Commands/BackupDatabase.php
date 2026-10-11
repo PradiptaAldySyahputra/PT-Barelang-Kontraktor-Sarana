@@ -6,7 +6,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 /**
  * Backup database harian.
@@ -61,19 +61,27 @@ class BackupDatabase extends Command
             $env['MYSQL_PWD'] = $password;
         }
 
-        $proses = new Process($perintah, null, $env);
-        $proses->setTimeout(600);
-        $proses->run();
+        /*
+         * ⚠️ MEMAKAI FACADE `Process` (bukan `new Symfony\Process`) — agar bisa
+         * diuji dengan `Process::fake()`. Sebelumnya perintah ini memakai
+         * objek Symfony langsung sehingga `bks:backup` TIDAK BISA diuji tanpa
+         * mysqldump nyata; akibatnya fitur kritikal ini nol tes (temuan survei
+         * 10 Okt 2026). Dengan facade, tes `BackupDatabaseTest` memalsukan
+         * hasil dump dan memverifikasi logika kita (berkas, retensi, --simpan).
+         */
+        $hasil = Process::timeout(600)
+            ->env($env)
+            ->run($perintah);
 
-        if (! $proses->isSuccessful()) {
-            $this->error('Backup GAGAL: '.trim($proses->getErrorOutput()));
+        if (! $hasil->successful()) {
+            $this->error('Backup GAGAL: '.trim($hasil->errorOutput()));
 
             if (! $this->option('simpan')) {
                 return self::FAILURE;
             }
         }
 
-        $sql = $proses->getOutput();
+        $sql = $hasil->output();
 
         if (blank($sql) && ! $this->option('simpan')) {
             $this->error('Backup GAGAL: mysqldump tidak menghasilkan data. Pastikan `mysqldump` terpasang.');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\GrafikArusKas;
+use App\Filament\Widgets\RingkasanDirektur;
 use App\Filament\Widgets\RingkasanKeuangan;
 use App\Filament\Widgets\SpkBerjalan;
 use App\Filament\Widgets\SpkPerStatus;
@@ -57,6 +58,9 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            // B3-12: Direktur melihat SATU widget ringkas; Admin melihat
+            // dashboard lengkap. Filtering dilakukan oleh canView() tiap widget.
+            RingkasanDirektur::class,
             RingkasanKeuangan::class,
             GrafikArusKas::class,
             StatusTagihanChart::class,

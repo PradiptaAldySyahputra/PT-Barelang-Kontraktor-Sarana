@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Spks;
 
 use App\Filament\Concerns\BolehUbahData;
+use App\Filament\Concerns\PencarianGlobal;
 use App\Filament\Resources\Spks\Pages\CreateSpk;
 use App\Filament\Resources\Spks\Pages\EditSpk;
 use App\Filament\Resources\Spks\Pages\ListSpks;
@@ -16,12 +17,14 @@ use App\Filament\Resources\Spks\RelationManagers\UangMasukRelationManager;
 use App\Filament\Resources\Spks\Schemas\SpkForm;
 use App\Filament\Resources\Spks\Tables\SpksTable;
 use App\Models\Spk;
+use App\Support\Format;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 /**
@@ -36,6 +39,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class SpkResource extends Resource
 {
     use BolehUbahData;
+    use PencarianGlobal;
 
     protected static ?string $model = Spk::class;
 
@@ -97,6 +101,35 @@ class SpkResource extends Resource
         return [
             UangMasukRelationManager::class,
             UangKeluarRelationManager::class,
+        ];
+    }
+
+    // ---------------------------------------------------------
+    // Pencarian global (topbar "Cari")
+    // ---------------------------------------------------------
+
+    /**
+     * Kolom yang bisa ditemukan lewat pencarian global.
+     *
+     * @return array<int, string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['nomor_spk', 'nama_pekerjaan', 'lokasi'];
+    }
+
+    /**
+     * Detail yang tampil di bawah judul hasil pencarian.
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        /** @var Spk $record */
+        return [
+            'Mitra' => $record->mitra?->nama ?? '—',
+            'Nilai' => Format::rupiah($record->nilai_spk),
+            'Status' => $record->status_spk?->label() ?? '—',
         ];
     }
 

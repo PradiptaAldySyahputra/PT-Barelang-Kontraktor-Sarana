@@ -93,6 +93,18 @@
             border-top: 1px solid #d1d5db;
             padding-top: 5px;
         }
+
+        /* ⚠️ SARAN USER (9 Okt 2026): PDF untuk "dokumen formal ... tanda tangan". */
+        .tanda-tangan {
+            margin-top: 22px;
+            width: 100%;
+        }
+
+        .tanda-tangan td {
+            text-align: center;
+            font-size: 8px;
+            padding-top: 30px;
+        }
     </style>
 </head>
 <body>
@@ -139,6 +151,30 @@
                 </tr>
             @endforelse
         </tbody>
+    </table>
+
+    {{-- TANDA TANGAN (saran user 9 Okt 2026: PDF = dokumen formal)
+         ⚠️ Diperbarui 10 Okt 2026: bila Direktur sudah mengunggah tanda tangan
+         di "Profil Saya", gambarnya ditempel di kolom "Disetujui oleh".
+         Bila belum, tetap memakai garis titik-titik (PDF tidak gagal terbit). --}}
+    <table class="tanda-tangan">
+        <tr>
+            <td>
+                Dibuat oleh,<br><br><br>
+                (............................)<br>
+                Admin
+            </td>
+            <td>
+                Disetujui oleh,<br>
+                @if ($tandaTangan['gambar'] ?? null)
+                    <img src="{{ $tandaTangan['gambar'] }}" alt="Tanda tangan" style="height: 55px; margin: 4px 0;">
+                @else
+                    <br><br>
+                @endif
+                {{ $tandaTangan['nama'] ?? '(............................)' }}<br>
+                {{ $tandaTangan['jabatan'] ?? 'Direktur' }}
+            </td>
+        </tr>
     </table>
 
     <div class="kaki">

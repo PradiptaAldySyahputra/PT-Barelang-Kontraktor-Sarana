@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Mitras\Pages;
 
+use App\Filament\Concerns\AksiFormMenempel;
 use App\Filament\Resources\Mitras\MitraResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditMitra extends EditRecord
 {
+    use AksiFormMenempel;
+
     protected static string $resource = MitraResource::class;
 
     protected static ?string $title = 'Ubah Mitra';

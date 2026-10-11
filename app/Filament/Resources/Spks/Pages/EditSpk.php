@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Spks\Pages;
 
+use App\Filament\Concerns\AksiFormMenempel;
 use App\Filament\Resources\Spks\SpkResource;
 use App\Support\Format;
 use Filament\Actions\DeleteAction;
@@ -19,6 +20,8 @@ use Filament\Resources\Pages\EditRecord;
  */
 class EditSpk extends EditRecord
 {
+    use AksiFormMenempel;
+
     protected static string $resource = SpkResource::class;
 
     protected static ?string $title = 'Ubah SPK';

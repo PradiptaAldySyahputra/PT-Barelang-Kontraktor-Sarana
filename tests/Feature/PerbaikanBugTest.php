@@ -151,25 +151,50 @@ class PerbaikanBugTest extends TestCase
      */
     public function test_potongan_yatim_dibuang(): void
     {
-        Storage::fake('public');
+        // ⚠️ Potongan OCR ada di disk PRIVAT `nota` (lihat PembacaNota), BUKAN
+        // `public`. Dulu perintah membaca `public` sehingga tidak pernah
+        // menemukan apa pun — tes ini dulu ikut mem-fake disk yang salah.
+        Storage::fake('nota');
 
         // Potongan YATIM: tidak ada berkas sumbernya.
-        Storage::disk('public')->put('uang_keluar/potongan/'.md5('uang_keluar/hilang.pdf').'/nota_1.png', 'x');
+        Storage::disk('nota')->put('uang_keluar/potongan/'.md5('uang_keluar/hilang.pdf').'/nota_1.png', 'x');
 
         // Potongan yang masih dipakai: berkas sumbernya ada.
-        Storage::disk('public')->put('uang_keluar/ada.pdf', 'x');
-        Storage::disk('public')->put('uang_keluar/potongan/'.md5('uang_keluar/ada.pdf').'/nota_1.png', 'x');
+        Storage::disk('nota')->put('uang_keluar/ada.pdf', 'x');
+        Storage::disk('nota')->put('uang_keluar/potongan/'.md5('uang_keluar/ada.pdf').'/nota_1.png', 'x');
 
         $this->artisan('ocr:bersihkan')->assertSuccessful();
 
         $this->assertFalse(
-            Storage::disk('public')->exists('uang_keluar/potongan/'.md5('uang_keluar/hilang.pdf').'/nota_1.png'),
+            Storage::disk('nota')->exists('uang_keluar/potongan/'.md5('uang_keluar/hilang.pdf').'/nota_1.png'),
             'Potongan yatim harus dibuang.',
         );
 
         $this->assertTrue(
-            Storage::disk('public')->exists('uang_keluar/potongan/'.md5('uang_keluar/ada.pdf').'/nota_1.png'),
+            Storage::disk('nota')->exists('uang_keluar/potongan/'.md5('uang_keluar/ada.pdf').'/nota_1.png'),
             'Potongan yang masih dipakai TIDAK boleh dibuang.',
+        );
+    }
+
+    /**
+     * ⚠️ REGRESI: berkas nota BARU tersimpan di sub-folder bertanggal
+     * (uang_keluar/2026/10/11/nota-x.jpg). Perintah pembersih WAJIB memindai
+     * REKURSIF, kalau tidak semua potongan dianggap "yatim" lalu terhapus.
+     */
+    public function test_potongan_nota_bertanggal_tidak_dianggap_yatim(): void
+    {
+        Storage::fake('nota');
+
+        // Nota baru di folder bertanggal + potongan OCR-nya.
+        $path = 'uang_keluar/2026/10/11/nota-abc.jpg';
+        Storage::disk('nota')->put($path, 'x');
+        Storage::disk('nota')->put('uang_keluar/potongan/'.md5($path).'/nota_1.png', 'x');
+
+        $this->artisan('ocr:bersihkan')->assertSuccessful();
+
+        $this->assertTrue(
+            Storage::disk('nota')->exists('uang_keluar/potongan/'.md5($path).'/nota_1.png'),
+            'Potongan nota di folder bertanggal TIDAK boleh dianggap yatim.',
         );
     }
 

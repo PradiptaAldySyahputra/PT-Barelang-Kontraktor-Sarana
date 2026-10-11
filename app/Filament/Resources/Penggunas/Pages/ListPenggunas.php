@@ -16,8 +16,24 @@ class ListPenggunas extends ListRecords
 
     protected function getHeaderActions(): array
     {
+        /*
+         * ⚠️ BUG YANG DIPERBAIKI (temuan 10 Okt 2026):
+         * Sebelumnya memakai `PenggunaResource::bolehUbahData()` — trait itu
+         * memakai `bolehInput()` yang TRUE HANYA untuk Admin. Padahal
+         * `PenggunaResource::canCreate()` justru TRUE untuk DIREKTUR (pemilik
+         * keputusan kelola akun). Kontradiksi ini membuat tombol "Tambah
+         * Pengguna" TIDAK PERNAH muncul untuk Direktur — walau Direktur boleh
+         * membuka /penggunas/create. Praktis Direktur tak bisa menambah user.
+         *
+         * Perbaikan: ikuti OTORISASI Resource yang sebenarnya (`canCreate()`),
+         * bukan aturan input-data. Filament juga sudah otomatis menyembunyikan
+         * tombol bila `canCreate()` false — tapi `->visible()` eksplisit ini
+         * menjaga niat tetap terbaca jelas.
+         */
         return [
-            CreateAction::make()->visible(fn (): bool => PenggunaResource::bolehUbahData())->label('Tambah Pengguna'),
+            CreateAction::make()
+                ->visible(fn (): bool => PenggunaResource::canCreate())
+                ->label('Tambah Pengguna'),
         ];
     }
 

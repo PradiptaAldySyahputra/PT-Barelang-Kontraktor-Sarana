@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace App\Filament\Resources\UangKeluars;
 
 use App\Filament\Concerns\BolehUbahData;
+use App\Filament\Concerns\PencarianGlobal;
 use App\Filament\Resources\UangKeluars\Pages\CreateUangKeluar;
 use App\Filament\Resources\UangKeluars\Pages\EditUangKeluar;
 use App\Filament\Resources\UangKeluars\Pages\ListUangKeluars;
 use App\Filament\Resources\UangKeluars\Schemas\UangKeluarForm;
 use App\Filament\Resources\UangKeluars\Tables\UangKeluarsTable;
 use App\Models\UangKeluar;
+use App\Support\Format;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 /**
@@ -30,6 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class UangKeluarResource extends Resource
 {
     use BolehUbahData;
+    use PencarianGlobal;
 
     protected static ?string $model = UangKeluar::class;
 
@@ -65,6 +69,31 @@ class UangKeluarResource extends Resource
             'index' => ListUangKeluars::route('/'),
             'create' => CreateUangKeluar::route('/create'),
             'edit' => EditUangKeluar::route('/{record}/edit'),
+        ];
+    }
+
+    // ---------------------------------------------------------
+    // Pencarian global (topbar "Cari")
+    // ---------------------------------------------------------
+
+    /**
+     * @return array<int, string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['penerima', 'keterangan'];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        /** @var UangKeluar $record */
+        return [
+            'Tanggal' => $record->tanggal?->format('d/m/Y') ?? '—',
+            'Jumlah' => Format::rupiah($record->jumlah),
+            'Kategori' => $record->kategori?->label() ?? '—',
         ];
     }
 

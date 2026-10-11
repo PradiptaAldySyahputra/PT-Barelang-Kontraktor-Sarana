@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Actions;
 
 use App\Filament\Exports\RakitEkspor;
+use App\Support\TandaTangan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Actions\Exports\Exporter;
@@ -69,6 +70,7 @@ class EksporPdf
             'judul' => $judul,
             'header' => $susunan['header'],
             'baris' => $susunan['baris'],
+            'tandaTangan' => TandaTangan::untukPdf(),
         ])->setPaper('a4', 'landscape');
 
         $namaFile = str($judul)->slug().'-'.now()->format('Y-m-d').'.pdf';
@@ -80,5 +82,31 @@ class EksporPdf
             $namaFile,
             ['Content-Type' => 'application/pdf'],
         );
+    }
+
+    /**
+     * Hasilkan HTML PDF (tanpa merender dompdf) — DIPAKAI UNTUK PENGUJIAN.
+     *
+     * Memisahkan "menyusun HTML" dari "merender PDF" membuat tes bisa memeriksa
+     * isi dokumen (mis. keberadaan gambar tanda tangan) tanpa bergantung pada
+     * mesin dompdf yang lambat.
+     *
+     * @param  class-string<Exporter>  $exporterClass
+     * @param  iterable<mixed>  $records
+     */
+    public static function htmlUntukUji(string $exporterClass, iterable $records, string $judul): string
+    {
+        if ($records instanceof Collection) {
+            $records = $records->all();
+        }
+
+        $susunan = RakitEkspor::susun($exporterClass, $records);
+
+        return view('filament.exports.tabel-pdf', [
+            'judul' => $judul,
+            'header' => $susunan['header'],
+            'baris' => $susunan['baris'],
+            'tandaTangan' => TandaTangan::untukPdf(),
+        ])->render();
     }
 }

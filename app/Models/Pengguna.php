@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\Peran;
+use App\Support\Nota;
 use Database\Factories\PenggunaFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 
 /**
  * Model `pengguna` — akun pengguna sistem.
@@ -30,6 +32,9 @@ use Illuminate\Notifications\Notifiable;
  * @property string $password
  * @property Peran $peran
  * @property bool $is_aktif
+ * @property string|null $avatar
+ * @property string|null $tanda_tangan
+ * @property Carbon|null $terakhir_masuk
  */
 class Pengguna extends Authenticatable implements FilamentUser, HasName
 {
@@ -49,6 +54,9 @@ class Pengguna extends Authenticatable implements FilamentUser, HasName
         'password',
         'peran',
         'is_aktif',
+        'avatar',
+        'tanda_tangan',
+        'terakhir_masuk',
     ];
 
     /**
@@ -68,6 +76,7 @@ class Pengguna extends Authenticatable implements FilamentUser, HasName
             'peran' => Peran::class,
             'is_aktif' => 'boolean',
             'password' => 'hashed',
+            'terakhir_masuk' => 'datetime',
         ];
     }
 
@@ -107,6 +116,34 @@ class Pengguna extends Authenticatable implements FilamentUser, HasName
     public function getFilamentName(): string
     {
         return $this->nama;
+    }
+
+    /**
+     * URL avatar (disk privat `nota`). Null kalau belum diunggah.
+     */
+    public function urlAvatar(): ?string
+    {
+        return Nota::ada($this->avatar)
+            ? Nota::url($this->avatar)
+            : null;
+    }
+
+    /**
+     * URL tanda tangan (disk privat `nota`). Null kalau belum diunggah.
+     */
+    public function urlTandaTangan(): ?string
+    {
+        return Nota::ada($this->tanda_tangan)
+            ? Nota::url($this->tanda_tangan)
+            : null;
+    }
+
+    /**
+     * Apakah pengguna ini sudah punya tanda tangan untuk PDF?
+     */
+    public function punyaTandaTangan(): bool
+    {
+        return Nota::ada($this->tanda_tangan);
     }
 
     /**

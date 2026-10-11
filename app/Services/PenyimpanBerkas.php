@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -66,7 +67,7 @@ class PenyimpanBerkas
      *
      * @param  UploadedFile|string  $file  Berkas unggahan, path absolut, atau path relatif storage.
      */
-    public function simpanKe(mixed $file, string $direktori = 'uang_keluar', string $disk = 'nota'): ?string
+    public function simpanKe(mixed $file, string $direktori = 'uang_keluar', string $disk = 'nota', ?Carbon $tanggal = null): ?string
     {
         // --- 1. Sudah berupa path relatif yang ADA di disk: pakai apa adanya.
         if (is_string($file) && Storage::disk($disk)->exists($file)) {
@@ -118,7 +119,26 @@ class PenyimpanBerkas
 
         // --- 4. Nama DETERMINISTIK dari isi berkas asal -> idempoten.
         $kunci = substr(md5($sumber.'|'.strlen($isi)), 0, 24);
-        $relatif = trim($direktori.'/nota-'.$kunci.'.'.$ekstensi, '/');
+
+        /*
+         * ⚠️ STRUKTUR FOLDER BERTANGGAL (B2-7).
+         *
+         * Berkas BARU disimpan rapi per tahun/bulan/tanggal di bawah jenisnya:
+         *   nota/uang_keluar/2026/10/11/nota-<hash>.jpg
+         *
+         * Berkas LAMA (uang_keluar/nota-<hash>.jpg tanpa sub-folder tanggal)
+         * TETAP terbaca: Arsip Nota & pratinjau membaca PATH dari kolom `bukti`
+         * di database, bukan dari nama folder. Jadi kedua struktur hidup
+         * berdampingan — TIDAK ada migrasi berkas yang berisiko.
+         *
+         * `$tanggal` default = waktu unggah (dokumen: "tersimpan otomatis saat
+         * upload"). Bisa diisi tanggal transaksi bila pemanggil punya.
+         */
+        $tanggal ??= now();
+        $relatif = trim(
+            $direktori.'/'.$tanggal->format('Y/m/d').'/nota-'.$kunci.'.'.$ekstensi,
+            '/',
+        );
 
         if (! Storage::disk($disk)->exists($relatif)) {
             Storage::disk($disk)->put($relatif, $isi, ['visibility' => 'public']);

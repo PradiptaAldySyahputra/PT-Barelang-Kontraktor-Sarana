@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\HanyaAdmin;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
 use Filament\Widgets\ChartWidget;
@@ -14,6 +15,9 @@ use Illuminate\Support\Carbon;
  */
 class GrafikArusKas extends ChartWidget
 {
+    // B3-12: dashboard lengkap hanya untuk Admin.
+    use HanyaAdmin;
+
     protected static ?int $sort = 2;
 
     protected ?string $heading = 'Arus Kas';

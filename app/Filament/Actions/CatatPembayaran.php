@@ -55,7 +55,8 @@ class CatatPembayaran
             ->modalHeading('Catat Pembayaran SPK')
             ->modalDescription('Pembayaran sebagian diperbolehkan — sisa akan otomatis dihitung.')
             ->modalSubmitActionLabel('Simpan Pembayaran')
-            ->visible(fn (): bool => SpkResource::bolehUbahData())
+            ->visible(fn (Spk $record): bool => SpkResource::bolehUbahData()
+                && $record->status_spk?->bolehTransaksiBaru() !== false)
             ->fillForm(fn (Spk $record): array => [
                 'tanggal' => now()->toDateString(),
             ])
@@ -144,6 +145,20 @@ class CatatPembayaran
                     ->placeholder('mis. Termin 1 / DP 50% / Pelunasan'),
             ])
             ->action(function (array $data, Spk $record): void {
+                // ⚠️ PENJAGA KEDUA (Rules §5 butir 3): walaupun tombol sudah
+                // disembunyikan, tolak juga di sisi server — jangan hanya
+                // mengandalkan `visible()`. Kalau SPK dibatalkan, tidak ada
+                // transaksi baru yang boleh dicatat.
+                if ($record->status_spk?->bolehTransaksiBaru() === false) {
+                    Notification::make()
+                        ->title('SPK sudah dibatalkan')
+                        ->body('SPK '.$record->nomor_spk.' berstatus Dibatalkan — tidak bisa menerima pembayaran baru.')
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
                 $jumlah = (float) $data['jumlah'];
 
                 UangMasuk::create([

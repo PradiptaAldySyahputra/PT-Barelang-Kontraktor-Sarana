@@ -102,13 +102,14 @@ class RevisiMenuSpkTest extends TestCase
     {
         Spk::factory()->pln()->create(['dibuat_oleh' => $this->admin->id]);
 
-        $html = $this->actingAs($this->admin)
-            ->get('/admin/spks')
-            ->assertOk()
-            ->getContent();
-
-        $this->assertStringNotContainsString('Restore', $html, 'Aksi Restore harus dihapus');
-        $this->assertStringNotContainsString('Force', $html, 'Aksi Force Delete harus dihapus');
+        // ⚠️ Diuji lewat DAFTAR AKSI TABEL, bukan pencarian string di seluruh
+        // HTML halaman. Pencarian string sempat menangkap label menu sidebar
+        // "Backup & Restore" (menu Sistem) → gagal palsu. Yang dimaksud tes ini
+        // adalah aksi baris pada tabel SPK.
+        Livewire::test(ListSpks::class)
+            ->assertTableActionDoesNotExist('restore')
+            ->assertTableActionDoesNotExist('forceDelete')
+            ->assertTableActionDoesNotExist('force_delete');
     }
 
     public function test_tanpa_spk_tanggal_diberi_keterangan(): void

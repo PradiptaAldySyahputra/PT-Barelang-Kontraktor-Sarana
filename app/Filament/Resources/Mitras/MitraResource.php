@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Mitras;
 
 use App\Filament\Concerns\BolehUbahData;
+use App\Filament\Concerns\PencarianGlobal;
 use App\Filament\Resources\Mitras\Pages\CreateMitra;
 use App\Filament\Resources\Mitras\Pages\EditMitra;
 use App\Filament\Resources\Mitras\Pages\ListMitras;
@@ -25,6 +26,7 @@ use Filament\Tables\Table;
 class MitraResource extends Resource
 {
     use BolehUbahData;
+    use PencarianGlobal;
 
     protected static ?string $model = Mitra::class;
 

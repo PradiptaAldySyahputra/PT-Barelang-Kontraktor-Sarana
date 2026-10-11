@@ -90,6 +90,34 @@ class SeederTest extends TestCase
         );
     }
 
+    public function test_seeder_tidak_memakai_password_default_polos(): void
+    {
+        // ⚠️ KEAMANAN (B1-5): password harfiah 'password' di repo = siapa pun
+        // yang baca repo tahu password server. Seeder TIDAK boleh memakainya.
+        $isi = file_get_contents(database_path('seeders/DatabaseSeeder.php'));
+
+        $this->assertStringNotContainsString(
+            "'password' => 'password'",
+            $isi,
+            'Seeder tidak boleh menanam password polos "password"'
+        );
+    }
+
+    public function test_seeder_menolak_jalan_di_produksi(): void
+    {
+        app()->detectEnvironment(fn (): string => 'production');
+
+        $this->artisan('db:seed', [
+            '--class' => DatabaseSeeder::class,
+            '--force' => true,
+        ])->assertSuccessful();
+
+        // Tidak ada akun yang dibuat (seeder menolak jalan di produksi).
+        $this->assertSame(0, Pengguna::count());
+
+        app()->detectEnvironment(fn (): string => 'testing');
+    }
+
     public function test_seeder_bisa_dijalankan_dua_kali_tanpa_merusak(): void
     {
         // Seeder tidak idempoten (data sudah ada -> duplicate), tapi harus

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Spks\Pages;
 
 use App\Enums\StatusTagihan;
+use App\Filament\Concerns\AksiFormMenempel;
 use App\Filament\Resources\MonitoringSpk\StatusSpkResource;
 use App\Filament\Resources\MonitoringSpk\TagihanSelesaiSpkResource;
 use App\Filament\Resources\MonitoringSpk\TagihanSpkResource;
@@ -36,6 +37,8 @@ use Filament\Schemas\Schema;
  */
 class UbahStatusTagihan extends EditRecord
 {
+    use AksiFormMenempel;
+
     protected static string $resource = SpkResource::class;
 
     protected static ?string $title = 'Ubah Status Tagihan';

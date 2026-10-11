@@ -70,6 +70,9 @@
                 ['Uang Masuk', \App\Support\Format::rupiah($totalMasuk), \App\Support\Format::rupiah($masukDariSpk).' dari SPK · '.\App\Support\Format::rupiah($masukLuarSpk).' luar SPK', 'success'],
                 ['Uang Keluar', \App\Support\Format::rupiah($totalKeluar), 'Pengeluaran periode ini', 'danger'],
                 ['Belum Diterima', \App\Support\Format::rupiah($belumDiterima), 'Nilai SPK − sudah diterima', 'warning'],
+                ['Saldo Kas', \App\Support\Format::rupiah($saldoKas), 'Uang tunai tersedia', $saldoKas < 0 ? 'danger' : 'success'],
+                ['Saldo Bank', \App\Support\Format::rupiah($saldoBank), 'Saldo rekening bank', $saldoBank < 0 ? 'danger' : 'info'],
+                ['Total Saldo', \App\Support\Format::rupiah($saldoTotal), 'Kas + bank', $saldoTotal < 0 ? 'danger' : 'primary'],
             ] as [$judul, $angka, $ket, $warna])
                 <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
                     <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $judul }}</p>
@@ -244,6 +247,74 @@
                 @endforeach
             </div>
         @endif
+    </x-filament::section>
+
+    {{-- ============================================================
+         3b. BUKU KAS & BANK (B2-11) — format template atasan
+         ============================================================
+         ⚠️ Format persis template perusahaan: TANGGAL | REF | KETERANGAN |
+         DEBET | KREDIT | SALDO berjalan. Bisa diekspor per akun.
+         ============================================================ --}}
+    <x-filament::section collapsible collapsed>
+        <x-slot name="heading">Buku Kas &amp; Bank</x-slot>
+        <x-slot name="description">
+            Mutasi per akun dengan saldo berjalan — format persis template perusahaan (Debet/Kredit/Saldo).
+        </x-slot>
+
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            @foreach (['kas' => $bukuKas, 'bank' => $bukuBank] as $kunci => $buku)
+                <div>
+                    <div class="mb-2 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                            Buku {{ $buku['label'] }}
+                        </h3>
+                        @include('filament.pages.partials.ekspor-laporan', ['jenis' => 'buku-'.$kunci])
+                    </div>
+
+                    <div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                        Saldo awal: <strong>{{ \App\Support\Format::rupiah($buku['saldo_awal']) }}</strong> ·
+                        Saldo akhir: <strong>{{ \App\Support\Format::rupiah($buku['saldo_akhir']) }}</strong>
+                    </div>
+
+                    @if ($buku['baris']->isEmpty())
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Tidak ada mutasi pada periode ini.</p>
+                    @else
+                        <div class="max-h-80 overflow-auto">
+                            <table class="w-full text-xs">
+                                <thead class="sticky top-0 bg-gray-50 dark:bg-gray-800">
+                                    <tr class="text-left text-gray-500 dark:text-gray-400">
+                                        <th class="px-2 py-1">Tanggal</th>
+                                        <th class="px-2 py-1">Keterangan</th>
+                                        <th class="px-2 py-1 text-right">Debet</th>
+                                        <th class="px-2 py-1 text-right">Kredit</th>
+                                        <th class="px-2 py-1 text-right">Saldo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($buku['baris'] as $b)
+                                        <tr class="border-b border-gray-100 dark:border-gray-800">
+                                            <td class="px-2 py-1 whitespace-nowrap">{{ $b['tanggal']->format('d/m/Y') }}</td>
+                                            <td class="px-2 py-1">{{ \Illuminate\Support\Str::limit($b['keterangan'], 32) }}</td>
+                                            <td class="px-2 py-1 text-right tabular-nums">{{ $b['debet'] ? \App\Support\Format::angka($b['debet']) : '' }}</td>
+                                            <td class="px-2 py-1 text-right tabular-nums">{{ $b['kredit'] ? \App\Support\Format::angka($b['kredit']) : '' }}</td>
+                                            <td class="px-2 py-1 text-right tabular-nums font-medium">{{ \App\Support\Format::angka($b['saldo']) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-t-2 border-gray-300 font-semibold dark:border-gray-600">
+                                        <td class="px-2 py-1" colspan="2">Total</td>
+                                        <td class="px-2 py-1 text-right tabular-nums">{{ \App\Support\Format::angka($buku['total_debet']) }}</td>
+                                        <td class="px-2 py-1 text-right tabular-nums">{{ \App\Support\Format::angka($buku['total_kredit']) }}</td>
+                                        <td class="px-2 py-1 text-right tabular-nums">{{ \App\Support\Format::angka($buku['saldo_akhir']) }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
     </x-filament::section>
 
     {{-- ============================================================

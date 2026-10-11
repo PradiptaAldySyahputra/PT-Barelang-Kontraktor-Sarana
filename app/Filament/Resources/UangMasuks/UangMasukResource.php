@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace App\Filament\Resources\UangMasuks;
 
 use App\Filament\Concerns\BolehUbahData;
+use App\Filament\Concerns\PencarianGlobal;
 use App\Filament\Resources\UangMasuks\Pages\CreateUangMasuk;
 use App\Filament\Resources\UangMasuks\Pages\EditUangMasuk;
 use App\Filament\Resources\UangMasuks\Pages\ListUangMasuks;
 use App\Filament\Resources\UangMasuks\Schemas\UangMasukForm;
 use App\Filament\Resources\UangMasuks\Tables\UangMasuksTable;
 use App\Models\UangMasuk;
+use App\Support\Format;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 /**
@@ -30,6 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class UangMasukResource extends Resource
 {
     use BolehUbahData;
+    use PencarianGlobal;
 
     protected static ?string $model = UangMasuk::class;
 
@@ -65,6 +69,31 @@ class UangMasukResource extends Resource
             'index' => ListUangMasuks::route('/'),
             'create' => CreateUangMasuk::route('/create'),
             'edit' => EditUangMasuk::route('/{record}/edit'),
+        ];
+    }
+
+    // ---------------------------------------------------------
+    // Pencarian global (topbar "Cari")
+    // ---------------------------------------------------------
+
+    /**
+     * @return array<int, string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['nomor_spk', 'nama_pekerjaan', 'keterangan'];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        /** @var UangMasuk $record */
+        return [
+            'Tanggal' => $record->tanggal?->format('d/m/Y') ?? '—',
+            'Jumlah' => Format::rupiah($record->jumlah),
+            'Sumber' => $record->isDariSpk() ? 'Dari SPK' : 'Luar SPK',
         ];
     }
 

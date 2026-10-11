@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Spks\Pages;
 
+use App\Filament\Concerns\AksiFormMenempel;
 use App\Filament\Resources\Spks\SpkResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateSpk extends CreateRecord
 {
+    use AksiFormMenempel;
+
     protected static string $resource = SpkResource::class;
 
     protected static ?string $title = 'Tambah SPK';

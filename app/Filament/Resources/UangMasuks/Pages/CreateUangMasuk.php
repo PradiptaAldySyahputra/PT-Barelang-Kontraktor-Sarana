@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UangMasuks\Pages;
 
+use App\Filament\Concerns\AksiFormMenempel;
 use App\Filament\Resources\UangMasuks\UangMasukResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateUangMasuk extends CreateRecord
 {
+    use AksiFormMenempel;
+
     protected static string $resource = UangMasukResource::class;
 
     protected static ?string $title = 'Tambah Uang Masuk';

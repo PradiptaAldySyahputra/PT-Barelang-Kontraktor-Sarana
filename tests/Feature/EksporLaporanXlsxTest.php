@@ -156,4 +156,78 @@ class EksporLaporanXlsxTest extends TestCase
         $respons->assertSuccessful();
         $respons->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
+
+    /**
+     * ⚠️ SARAN USER (9 Okt 2026): "header rapi, tanpa merge cell, ada baris
+     * total, freeze pane — supaya bisa di-sort/filter di Excel".
+     */
+    public function test_xlsx_punya_baris_total(): void
+    {
+        $respons = $this->actingAs($this->admin)
+            ->get(route('laporan.ekspor', ['jenis' => 'spk', 'format' => 'xlsx']));
+
+        $respons->assertSuccessful();
+
+        $path = tempnam(sys_get_temp_dir(), 'xlsx').'.xlsx';
+        file_put_contents($path, $respons->streamedContent());
+
+        $adaLabelTotal = false;
+
+        try {
+            $reader = new XlsxReader;
+            $reader->open($path);
+
+            foreach ($reader->getSheetIterator() as $sheet) {
+                foreach ($sheet->getRowIterator() as $row) {
+                    foreach ($row->getCells() as $cell) {
+                        if ((string) $cell->getValue() === 'TOTAL') {
+                            $adaLabelTotal = true;
+                        }
+                    }
+                }
+            }
+
+            $reader->close();
+        } finally {
+            @unlink($path);
+        }
+
+        $this->assertTrue($adaLabelTotal, 'Ekspor Excel harus punya baris TOTAL.');
+    }
+
+    public function test_xlsx_header_dibekukan_dan_tebal(): void
+    {
+        $respons = $this->actingAs($this->admin)
+            ->get(route('laporan.ekspor', ['jenis' => 'spk', 'format' => 'xlsx']));
+
+        $respons->assertSuccessful();
+
+        $path = tempnam(sys_get_temp_dir(), 'xlsx').'.xlsx';
+        file_put_contents($path, $respons->streamedContent());
+
+        try {
+            // Periksa XML mentah: freeze pane + font bold pada header.
+            $zip = new \ZipArchive;
+            $zip->open($path);
+
+            $sheetXml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+            $styleXml = (string) $zip->getFromName('xl/styles.xml');
+
+            $zip->close();
+        } finally {
+            @unlink($path);
+        }
+
+        $this->assertStringContainsString(
+            'pane',
+            $sheetXml,
+            'Worksheet harus punya <pane> (freeze pane) supaya header tetap terlihat saat menggulir.',
+        );
+
+        $this->assertStringContainsString(
+            '<b/>',
+            $styleXml,
+            'Header Excel harus tebal (font bold).',
+        );
+    }
 }

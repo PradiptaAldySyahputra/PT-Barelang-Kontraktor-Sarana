@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UangKeluars\Pages;
 
+use App\Filament\Concerns\AksiFormMenempel;
 use App\Filament\Resources\UangKeluars\UangKeluarResource;
 use App\Support\Format;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUangKeluar extends EditRecord
 {
+    use AksiFormMenempel;
+
     protected static string $resource = UangKeluarResource::class;
 
     protected static ?string $title = 'Ubah Uang Keluar';
@@ -37,10 +39,24 @@ class EditUangKeluar extends EditRecord
 
     protected function getHeaderActions(): array
     {
+        /*
+         * ⚠️ HAPUS PERMANEN DIBUANG (survei 10 Okt 2026).
+         *
+         * `Rules.md` §2 butir 9 — WAJIB DIPATUHI:
+         *   "Transaksi tidak boleh dihapus permanen — gunakan soft delete
+         *    dengan jejak audit."
+         *
+         * Sebelumnya halaman ini menyediakan `ForceDeleteAction` (tombol
+         * "Hapus Permanen") yang membuat baris `uang_keluar` HILANG dari
+         * database tanpa bisa dipulihkan — melanggar aturan di atas dan
+         * berisiko saat audit/pajak. Sudah dibuktikan bisa dieksekusi.
+         *
+         * Yang TETAP ada: Hapus (soft delete) + Pulihkan. Data tidak pernah
+         * benar-benar lenyap.
+         */
         return [
             DeleteAction::make(),
             RestoreAction::make(),
-            ForceDeleteAction::make(),
         ];
     }
 

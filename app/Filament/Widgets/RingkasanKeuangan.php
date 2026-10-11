@@ -6,11 +6,14 @@ namespace App\Filament\Widgets;
 
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
+use App\Filament\Widgets\Concerns\HanyaAdmin;
 use App\Models\Mitra;
 use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
 use App\Support\Format;
+use App\Support\Perbandingan;
+use App\Support\SaldoKas;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -27,12 +30,17 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
  *             sisa berapa.
  *   Baris 2 — PEKERJAAN: berapa SPK, mana yang lewat tenggat.
  *   Baris 3 — TAGIHAN: berapa yang belum ditagih, sedang ditagih, sudah dibayar.
- *   Baris 4 — MASTER: mitra & subkon.
+ *   Baris 4 — SALDO: saldo kas, saldo bank, dan totalnya.
+ *   Baris 5 — MASTER: mitra & subkon.
  *
  * Tiap kartu diberi keterangan yang menjelaskan ARTINYA, bukan hanya angkanya.
  */
 class RingkasanKeuangan extends StatsOverviewWidget
 {
+    // ⚠️ B3-12: dashboard lengkap hanya untuk Admin; Direktur punya
+    // RingkasanDirektur sendiri.
+    use HanyaAdmin;
+
     protected static ?int $sort = 1;
 
     protected int|string|array $columnSpan = 'full';
@@ -49,6 +57,17 @@ class RingkasanKeuangan extends StatsOverviewWidget
 
         $masukBulanIni = (float) UangMasuk::where('tanggal', '>=', now()->startOfMonth())->sum('jumlah');
         $keluarBulanIni = (float) UangKeluar::where('tanggal', '>=', now()->startOfMonth())->sum('jumlah');
+
+        // ⚠️ PEMBANDING (saran user 9 Okt 2026): angka bulan ini tanpa
+        // pembanding tidak memberi konteks. Hitung juga BULAN LALU.
+        $awalBulanLalu = now()->subMonthNoOverflow()->startOfMonth();
+        $akhirBulanLalu = now()->subMonthNoOverflow()->endOfMonth();
+
+        $masukBulanLalu = (float) UangMasuk::whereBetween('tanggal', [$awalBulanLalu, $akhirBulanLalu])->sum('jumlah');
+        $keluarBulanLalu = (float) UangKeluar::whereBetween('tanggal', [$awalBulanLalu, $akhirBulanLalu])->sum('jumlah');
+
+        $bandingMasuk = Perbandingan::bulanLalu($masukBulanIni, $masukBulanLalu);
+        $bandingKeluar = Perbandingan::bulanLalu($keluarBulanIni, $keluarBulanLalu);
 
         // ---------------------------------------------------------
         // PEKERJAAN
@@ -76,6 +95,12 @@ class RingkasanKeuangan extends StatsOverviewWidget
         $mitra = Mitra::where('kategori', 'mitra')->count();
         $subkon = Mitra::where('kategori', 'subkon')->count();
 
+        // ---------------------------------------------------------
+        // SALDO KAS & BANK (fitur T2 — permintaan user 10 Okt 2026).
+        // Berapa uang yang SEBENARNYA ada di kas & di bank saat ini.
+        // ---------------------------------------------------------
+        $saldo = SaldoKas::ringkasan();
+
         return [
             // ============ BARIS 1 — UANG ============
             Stat::make('Nilai SPK', Format::rupiah($nilaiSpk))
@@ -85,14 +110,14 @@ class RingkasanKeuangan extends StatsOverviewWidget
 
             Stat::make('Sudah Diterima', Format::rupiah($masuk))
                 ->description($masuk > 0
-                    ? number_format($masuk / max($nilaiSpk, 1) * 100, 1).'% dari nilai SPK · '.Format::rupiah($masukBulanIni).' bulan ini'
+                    ? number_format($masuk / max($nilaiSpk, 1) * 100, 1).'% dari nilai SPK · '.Format::rupiah($masukBulanIni).' bulan ini · '.$bandingMasuk['teks']
                     : 'Belum ada penerimaan')
                 ->descriptionIcon('heroicon-m-arrow-down-tray')
                 ->color('success'),
 
             Stat::make('Uang Keluar', Format::rupiah($keluar))
                 ->description($keluar > 0
-                    ? Format::rupiah($keluarBulanIni).' bulan ini'
+                    ? Format::rupiah($keluarBulanIni).' bulan ini · '.$bandingKeluar['teks']
                     : 'Belum ada pengeluaran')
                 ->descriptionIcon('heroicon-m-arrow-up-tray')
                 ->color('danger'),
@@ -138,7 +163,23 @@ class RingkasanKeuangan extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-check-badge')
                 ->color('success'),
 
-            // ============ BARIS 4 — MASTER ============
+            // ============ BARIS 4 — SALDO KAS & BANK ============
+            Stat::make('Saldo Kas', Format::rupiah($saldo['kas']))
+                ->description('Uang tunai yang tersedia saat ini')
+                ->descriptionIcon('heroicon-m-wallet')
+                ->color($saldo['kas'] < 0 ? 'danger' : 'success'),
+
+            Stat::make('Saldo Bank', Format::rupiah($saldo['bank']))
+                ->description('Saldo rekening bank')
+                ->descriptionIcon('heroicon-m-building-library')
+                ->color($saldo['bank'] < 0 ? 'danger' : 'info'),
+
+            Stat::make('Total Saldo', Format::rupiah($saldo['total']))
+                ->description('Kas + bank')
+                ->descriptionIcon('heroicon-m-calculator')
+                ->color($saldo['total'] < 0 ? 'danger' : 'primary'),
+
+            // ============ BARIS 5 — MASTER ============
             Stat::make('Mitra', (string) $mitra)
                 ->description('Pemberi kerja terdaftar')
                 ->descriptionIcon('heroicon-m-building-office')

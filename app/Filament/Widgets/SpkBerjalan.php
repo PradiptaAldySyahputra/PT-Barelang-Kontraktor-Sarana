@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\HanyaAdmin;
 use App\Models\Spk;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -22,6 +23,9 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class SpkBerjalan extends TableWidget
 {
+    // B3-12: dashboard lengkap hanya untuk Admin.
+    use HanyaAdmin;
+
     protected static ?int $sort = 5;
 
     protected int|string|array $columnSpan = 'full';

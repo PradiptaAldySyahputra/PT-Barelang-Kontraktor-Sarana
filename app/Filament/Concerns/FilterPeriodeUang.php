@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Concerns;
 
+use App\Support\RentangPeriode;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\ToggleButtons;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -37,6 +40,26 @@ trait FilterPeriodeUang
         return Filter::make('periode')
             ->label('Periode')
             ->form([
+                /*
+                 * ⚠️ PRESET SEKALI-KLIK (saran user 9 Okt 2026):
+                 * "Filter periode sekali klik: Hari ini · Bulan ini · Bulan lalu ·
+                 *  Tahun ini · Pilih rentang".
+                 *
+                 * Preset MENGISI otomatis Dari/Sampai Tanggal di bawah. Admin tetap
+                 * bisa menyesuaikan manual setelahnya (preset hanya jalan pintas).
+                 */
+                ToggleButtons::make('preset')
+                    ->label('Pilih cepat')
+                    ->options(RentangPeriode::opsi())
+                    ->inline()
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, ?string $state): void {
+                        $rentang = RentangPeriode::hitung((string) $state);
+                        $set('dari', $rentang['dari']);
+                        $set('sampai', $rentang['sampai']);
+                    })
+                    ->columnSpanFull(),
+
                 Select::make('tahun')
                     ->label('Tahun')
                     ->options(fn (): array => static::daftarTahun())

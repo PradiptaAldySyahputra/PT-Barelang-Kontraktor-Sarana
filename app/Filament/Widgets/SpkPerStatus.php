@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Enums\StatusSpk;
+use App\Filament\Widgets\Concerns\HanyaAdmin;
 use App\Models\Spk;
 use Filament\Widgets\ChartWidget;
 
@@ -13,6 +14,9 @@ use Filament\Widgets\ChartWidget;
  */
 class SpkPerStatus extends ChartWidget
 {
+    // B3-12: dashboard lengkap hanya untuk Admin.
+    use HanyaAdmin;
+
     protected static ?int $sort = 3;
 
     /**

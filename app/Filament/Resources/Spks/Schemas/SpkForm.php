@@ -64,6 +64,15 @@ use Filament\Support\RawJs;
  */
 class SpkForm
 {
+    /**
+     * Batas atas nominal untuk menahan salah ketik.
+     *
+     * ⚠️ DISAMAKAN dengan `UangKeluarForm::BATAS_NOMINAL` supaya konsisten:
+     * nilai SPK yang lebih besar dari ini hampir pasti salah ketik dan akan
+     * merusak laporan piutang.
+     */
+    private const BATAS_NOMINAL = 10_000_000_000;
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -132,6 +141,14 @@ class SpkForm
                             ->required()
                             ->numeric()
                             ->minValue(0)
+                            /*
+                             * ⚠️ TEMUAN AUDIT (9 Okt 2026): sebelumnya TIDAK ada
+                             * batas atas — beda dengan Uang Keluar yang punya
+                             * `BATAS_NOMINAL`. Salah ketik (20 miliar alih-alih
+                             * 200 juta) langsung merusak laporan piutang tanpa
+                             * peringatan. Batas disamakan dengan Uang Keluar.
+                             */
+                            ->maxValue(self::BATAS_NOMINAL)
                             ->prefix('Rp')
                             // ⚠️ BUG-02: cast `decimal:2` = "10000.00"; tanpa
                             // normalisasi ini mask `$money` membacanya 100× lipat

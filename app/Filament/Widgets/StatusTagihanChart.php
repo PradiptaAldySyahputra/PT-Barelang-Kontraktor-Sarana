@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Enums\StatusTagihan;
+use App\Filament\Widgets\Concerns\HanyaAdmin;
 use App\Models\Spk;
 use Filament\Widgets\ChartWidget;
 
@@ -18,6 +19,9 @@ use Filament\Widgets\ChartWidget;
  */
 class StatusTagihanChart extends ChartWidget
 {
+    // B3-12: dashboard lengkap hanya untuk Admin.
+    use HanyaAdmin;
+
     protected static ?int $sort = 4;
 
     protected ?string $heading = 'Status Tagihan';

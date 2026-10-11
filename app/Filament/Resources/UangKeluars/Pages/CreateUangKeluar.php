@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UangKeluars\Pages;
 
+use App\Filament\Concerns\AksiFormMenempel;
 use App\Filament\Resources\UangKeluars\Schemas\UangKeluarForm;
 use App\Filament\Resources\UangKeluars\UangKeluarResource;
 use App\Models\UangKeluar;
@@ -30,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  */
 class CreateUangKeluar extends CreateRecord
 {
+    use AksiFormMenempel;
+
     protected static string $resource = UangKeluarResource::class;
 
     protected static ?string $title = 'Tambah Uang Keluar';

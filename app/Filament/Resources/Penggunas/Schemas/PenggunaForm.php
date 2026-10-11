@@ -10,6 +10,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Form Pengguna — akun Admin & Direktur.
@@ -56,10 +57,14 @@ class PenggunaForm
                             ->label('Password')
                             ->password()
                             ->revealable()
-                            ->minLength(8)
+                            // ⚠️ PAKAI aturan TERPUSAT (`Password::default()`) —
+                            // jangan `->minLength(8)` sendiri. Sebelumnya password
+                            // "12345678" (angka saja) LOLOS di sini padahal ditolak
+                            // di Profil/Lupa Password → kebijakan jadi tidak seragam.
+                            ->rule(Password::default())
                             ->required(fn (string $operation): bool => $operation === 'create')
                             ->dehydrated(fn (?string $state): bool => filled($state))
-                            ->helperText('Minimal 8 karakter.')
+                            ->helperText('Minimal 8 karakter, kombinasi huruf & angka.')
                             ->columnSpanFull(),
                     ]),
             ]);

@@ -32,6 +32,11 @@
 | 4 | `uang_masuk` | Uang masuk (dari SPK / luar SPK) |
 | 5 | `uang_keluar` | Uang keluar (terkait SPK / umum) |
 
+> **Tabel infrastruktur (bukan tabel domain ke-6):** `sessions`, `cache`, `jobs`,
+> `failed_jobs`, `job_batches`, `exports`, `notifications`. Ini bawaan
+> framework/Filament, bukan domain — tidak melanggar aturan "5 tabel" (`Rules.md` §1).
+> `notifications` ditambahkan 11 Okt 2026 untuk notifikasi unduhan ekspor (B1-2).
+
 ## 3. Konvensi Umum
 
 - Primary key: `BIGINT UNSIGNED` auto increment (konvensi Laravel).
@@ -56,6 +61,9 @@ CREATE TABLE pengguna (
     password       VARCHAR(255) NOT NULL,
     peran          VARCHAR(50)  NOT NULL,        -- admin | direktur
     is_aktif       BOOLEAN DEFAULT TRUE,
+    avatar         VARCHAR(255) NULL,            -- path disk privat 'nota' (foto profil)
+    tanda_tangan   VARCHAR(255) NULL,            -- path disk privat 'nota' (ttd di PDF)
+    terakhir_masuk TIMESTAMP NULL,               -- diisi otomatis saat login
     remember_token VARCHAR(100) NULL,
     created_at     TIMESTAMP NULL,
     updated_at     TIMESTAMP NULL

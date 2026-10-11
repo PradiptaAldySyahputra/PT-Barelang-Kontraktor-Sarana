@@ -6,6 +6,8 @@ namespace App\Providers\Filament;
 
 use App\Enums\Peran;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\LupaPassword;
+use App\Filament\Pages\ProfilAkun;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -48,6 +50,18 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
+            // ---------------------------------------------------------
+            // MANAJEMEN AKUN — permintaan user (9 Okt 2026):
+            // "Aplikasi BELUM punya pengelolaan akun yang layak."
+            //
+            //   ->profile(ProfilAkun::class)  → menu pengguna (pojok kanan atas)
+            //        berisi lihat/ubah nama & email + GANTI PASSWORD
+            //        (verifikasi password lama, min 8 karakter huruf+angka).
+            //   ->passwordReset(LupaPassword::class) → tautan "Lupa password?"
+            //        di halaman login, memakai email + token kedaluwarsa 60 menit.
+            // ---------------------------------------------------------
+            ->profile(ProfilAkun::class)
+            ->passwordReset(LupaPassword::class)
             ->brandName('Barelang Kontraktor Sarana')
             ->favicon(asset('favicon.svg'))
 
@@ -65,6 +79,17 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_LOGO_BEFORE,
                 fn (): View => view('filament.sidebar-toggle'),
+            )
+            // ---------------------------------------------------------
+            // NAVIGASI KEYBOARD — Enter pindah ke field berikutnya.
+            //
+            // ⚠️ SARAN USER (9 Okt 2026): "Enter pindah ke field berikutnya;
+            // mempercepat input 2–3× lipat". Panel hanya memuat theme.css
+            // (bukan app.js), jadi skrip disuntik lewat render hook ini.
+            // ---------------------------------------------------------
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): View => view('filament.enter-navigasi'),
             )
             // ---------------------------------------------------------
             // Warna — MONOKROM (tema Clean Minimalist Enterprise)
@@ -107,6 +132,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Keuangan'),
                 NavigationGroup::make('Master Data'),
                 NavigationGroup::make('Laporan'),
+                NavigationGroup::make('Sistem'),
             ])
 
             // Layout

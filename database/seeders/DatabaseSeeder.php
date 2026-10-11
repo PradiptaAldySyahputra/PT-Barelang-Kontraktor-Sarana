@@ -11,6 +11,7 @@ use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 /**
  * Seeder utama — data awal sistem.
@@ -28,20 +29,42 @@ class DatabaseSeeder extends Seeder
     {
         // ---------------------------------------------------------
         // 1. Akun pengguna
+        //
+        // ⚠️ KEAMANAN (checklist hardening B1-5):
+        // Seeder ini untuk DATA DEMO/PENGEMBANGAN saja. Sebelumnya ia menanam
+        // password harfiah `password` — siapa pun yang membaca repo tahu
+        // password default server. Sekarang:
+        //
+        //   - DI PRODUKSI: seeder MENOLAK jalan. Buat admin lewat
+        //     `php artisan app:buat-admin` (password diminta, tidak di kode).
+        //   - Di pengembangan: password diambil dari env SEEDER_PASSWORD, atau
+        //     dibuat ACAK lalu DICETAK — bukan `password` polos.
         // ---------------------------------------------------------
+        if (app()->environment('production')) {
+            $this->command->error(
+                'Seeder ini untuk pengembangan saja. Di produksi, buat akun '
+                .'lewat: php artisan app:buat-admin'
+            );
+
+            return;
+        }
+
+        $passwordDemo = (string) (env('SEEDER_PASSWORD') ?: Str::password(12));
+
         $admin = Pengguna::factory()->admin()->create([
             'nama' => 'Admin BKS',
             'email' => 'admin@bks.test',
-            'password' => 'password',
+            'password' => $passwordDemo,
         ]);
 
         Pengguna::factory()->direktur()->create([
             'nama' => 'Direktur BKS',
             'email' => 'direktur@bks.test',
-            'password' => 'password',
+            'password' => $passwordDemo,
         ]);
 
-        $this->command->info('✓ Akun: admin@bks.test & direktur@bks.test (password: password)');
+        $this->command->info('✓ Akun demo: admin@bks.test & direktur@bks.test');
+        $this->command->warn('  Password demo: '.$passwordDemo.' (hanya untuk pengembangan)');
 
         // ---------------------------------------------------------
         // 2. Mitra

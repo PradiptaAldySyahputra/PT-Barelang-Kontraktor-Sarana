@@ -137,9 +137,19 @@ class KompresiUntukOcrTest extends TestCase
 
         $hasil = app(PenyimpanBerkas::class)->kompres($tmp, 'png');
 
-        if ($hasil !== null) {
+        // Dua keluaran sah: TIDAK dikompres (null) — tetap tidak diperbesar —
+        // atau dikompres dengan dimensi ≤ aslinya. Keduanya harus dinyatakan
+        // eksplisit, kalau tidak PHPUnit menandai tes ini "risky" (tanpa asersi).
+        if ($hasil === null) {
+            $this->assertNull($hasil, 'Gambar kecil boleh tidak dikompres (tidak diperbesar).');
+        } else {
             $gambar = imagecreatefromstring($hasil[0]);
-            $this->assertLessThanOrEqual(800, max(imagesx($gambar), imagesy($gambar)));
+            $this->assertNotFalse($gambar, 'Hasil kompresi harus berupa gambar yang sah.');
+            $this->assertLessThanOrEqual(
+                800,
+                max(imagesx($gambar), imagesy($gambar)),
+                'Gambar kecil TIDAK boleh diperbesar.',
+            );
             imagedestroy($gambar);
         }
 

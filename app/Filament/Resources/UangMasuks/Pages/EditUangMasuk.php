@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UangMasuks\Pages;
 
+use App\Filament\Concerns\AksiFormMenempel;
 use App\Filament\Resources\UangMasuks\UangMasukResource;
 use App\Support\Format;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUangMasuk extends EditRecord
 {
+    use AksiFormMenempel;
+
     protected static string $resource = UangMasukResource::class;
 
     protected static ?string $title = 'Ubah Uang Masuk';
@@ -37,10 +39,17 @@ class EditUangMasuk extends EditRecord
 
     protected function getHeaderActions(): array
     {
+        /*
+         * ⚠️ HAPUS PERMANEN DIBUANG (survei 10 Okt 2026).
+         *
+         * `Rules.md` §2 butir 9: "Transaksi tidak boleh dihapus permanen —
+         * gunakan soft delete dengan jejak audit." `ForceDeleteAction`
+         * membuat baris `uang_masuk` hilang tanpa bisa dipulihkan, sekaligus
+         * memutus rantai jejak piutang. Cukup Hapus (soft delete) + Pulihkan.
+         */
         return [
             DeleteAction::make(),
             RestoreAction::make(),
-            ForceDeleteAction::make(),
         ];
     }
 

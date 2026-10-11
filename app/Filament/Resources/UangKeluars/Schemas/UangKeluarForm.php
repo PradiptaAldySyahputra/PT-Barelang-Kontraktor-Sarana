@@ -12,6 +12,7 @@ use App\Services\PembacaNota;
 use App\Services\PenyimpanBerkas;
 use App\Support\Format;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
@@ -21,6 +22,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -374,14 +376,24 @@ class UangKeluarForm
     private static function aturanJumlah(): array
     {
         return [
-            fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get): void {
+            /*
+             * ⚠️ `$record` disuntik Filament (bukan validator). Saat halaman
+             * UBAH, record yang sedang diedit HARUS dikecualikan dari
+             * penjumlahan — kalau tidak, nilai LAMA-nya ikut terhitung dan
+             * ditambah nilai BARU, sehingga total membengkak & validasi menolak
+             * secara PALSU (mis. 90jt → 95jt dilaporkan 185jt). Pola yang sama
+             * sudah dipakai di UangMasukForm (`whereKeyNot`).
+             */
+            fn (Get $get, ?object $record): Closure => function (string $attribute, $value, Closure $fail) use ($get, $record): void {
                 $spk = self::spkTerkait($get);
 
                 if ($spk === null) {
                     return;
                 }
 
-                $total = (float) $spk->uangKeluar()->sum('jumlah') + (float) $value;
+                $total = (float) $spk->uangKeluar()
+                    ->when($record?->id, fn ($q) => $q->whereKeyNot($record->id))
+                    ->sum('jumlah') + (float) $value;
                 $nilai = (float) $spk->nilai_spk;
 
                 if ($nilai > 0 && $total > $nilai * 1.5) {
@@ -993,6 +1005,51 @@ class UangKeluarForm
     }
 
     /**
+     * Salin isian "struktur" dari SATU baris ke baris-baris yang masih KOSONG.
+     *
+     * ⚠️ SARAN USER (9 Okt 2026): "Duplikat baris — tombol 'salin baris ini'
+     * untuk nota sejenis (beda nominal saja)."
+     *
+     * Dipisah dari komponen agar logika bisa diuji tanpa browser.
+     * HANYA kolom yang biasanya sama antar-nota sejenis yang disalin —
+     * `jumlah` (nominal) SENGAJA TIDAK disalin karena itu yang berbeda.
+     *
+     * @param  array<int|string, mixed>  $items
+     * @return array{items: array<int|string, mixed>, jumlah: int}
+     */
+    public static function salinIsianKeBarisKosong(array $items, mixed $dari): array
+    {
+        if ($dari === null || ! isset($items[$dari])) {
+            return ['items' => $items, 'jumlah' => 0];
+        }
+
+        $kolomSalin = ['kategori', 'penerima', 'spk_id', 'akun', 'tanggal'];
+        $sumber = is_array($items[$dari]) ? $items[$dari] : [];
+        $jumlah = 0;
+
+        foreach ($items as $kunci => $baris) {
+            if ((string) $kunci === (string) $dari || ! is_array($baris)) {
+                continue;
+            }
+
+            // Baris "kosong" = belum ada nominal.
+            if (filled($baris['jumlah'] ?? null)) {
+                continue;
+            }
+
+            foreach ($kolomSalin as $kolom) {
+                if (filled($sumber[$kolom] ?? null)) {
+                    $items[$kunci][$kolom] = $sumber[$kolom];
+                }
+            }
+
+            $jumlah++;
+        }
+
+        return ['items' => $items, 'jumlah' => $jumlah];
+    }
+
+    /**
      * Ambil HANYA isian admin dari satu baris lama, untuk disalin ke baris baru.
      *
      * ⚠️ INI KUNCI PERBAIKAN BUG "isian hilang".
@@ -1508,6 +1565,53 @@ class UangKeluarForm
                             ->addable(false)
                             ->deletable(false)
                             ->reorderable(false)
+                            /*
+                             * SALIN KE BARIS KOSONG (saran user 9 Okt 2026):
+                             * "Duplikat baris — tombol 'salin baris ini' untuk
+                             *  nota sejenis (beda nominal saja)."
+                             *
+                             * Banyak nota dalam satu berkas berasal dari TOKO
+                             * yang sama (kategori, penerima, SPK sama) — beda
+                             * hanya nominalnya. Aksi ini menyalin isian
+                             * kategori/penerima/SPK/akun/tanggal ke baris
+                             * berikutnya yang masih KOSONG, jadi admin tidak
+                             * mengetik ulang hal yang sama.
+                             *
+                             * Nominal SENGAJA tidak disalin (itu yang beda).
+                             */
+                            ->extraItemActions([
+                                Action::make('salinKeKosong')
+                                    ->label('Salin ke baris kosong')
+                                    ->icon('heroicon-m-document-duplicate')
+                                    ->tooltip('Salin kategori, penerima & SPK ke baris berikutnya yang masih kosong')
+                                    ->action(function (array $arguments, Repeater $component): void {
+                                        $items = $component->getRawState();
+                                        $dari = $arguments['item'] ?? null;
+
+                                        $hasil = self::salinIsianKeBarisKosong(
+                                            is_array($items) ? $items : [],
+                                            $dari,
+                                        );
+
+                                        if ($hasil['jumlah'] === 0) {
+                                            Notification::make()
+                                                ->title('Tidak ada baris kosong')
+                                                ->body('Semua baris sudah terisi nominal.')
+                                                ->warning()
+                                                ->send();
+
+                                            return;
+                                        }
+
+                                        $component->rawState($hasil['items']);
+                                        $component->callAfterStateUpdated();
+
+                                        Notification::make()
+                                            ->title('Disalin ke '.$hasil['jumlah'].' baris kosong')
+                                            ->success()
+                                            ->send();
+                                    }),
+                            ])
                             ->columnSpanFull(),
                     ])
                     ->columnSpanFull(),
