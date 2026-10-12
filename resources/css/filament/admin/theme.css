@@ -7,21 +7,38 @@
    TEMA: Clean Minimalist Enterprise (Vercel / Linear style)
    ---------------------------------------------------------
    Prinsip:
-   1. MONOKROM  — dominasi putih/#fafafa, border tipis, teks arang
-   2. TIPOGRAFI — font sistem (system-ui), tajam, proporsional
-   3. BORDER    — garis tipis halus sebagai pembatas (bukan shadow)
-   4. SHADOW    — seminimal mungkin, tidak norak
-   5. TINT      — latar sangat lembut untuk membedakan seksi
-   6. TOMBOL    — solid gelap, hover halus
+   1. MONOKROM  - dominasi putih/#fafafa, border tipis, teks arang
+   2. TIPOGRAFI - font sistem (system-ui), tajam, proporsional
+   3. BORDER    - garis tipis halus sebagai pembatas (bukan shadow)
+   4. SHADOW    - seminimal mungkin, tidak norak
+   5. TINT      - latar sangat lembut untuk membedakan seksi
+   6. TOMBOL    - solid gelap, hover halus
 
    Semua override memakai !important secukupnya karena tema Filament
    memakai CSS variable yang di-inject inline di <head>.
    ========================================================= */
 
 /* ---------------------------------------------------------
-   1. TIPOGRAFI — font sistem
+   1. TIPOGRAFI - font sistem
+   ---------------------------------------------------------
+   ⚠️ PERBAIKAN (12 Okt 2026) - BUG FONT:
+   Filament 5 menyuntik `<style>:root{--font-family:'Inter Variable'}</style>`
+   INLINE di <head> dan memuat berkas Inter (preload + @font-face + unduhan
+   woff2). Override lama hanya menimpa `--font-sans`, sehingga:
+     - `<html>` (via `--default-font-family`) tetap memakai Inter, dan
+     - berkas Inter tetap diunduh walau tidak pernah benar-benar dipakai.
+   Design.md mengklaim "font sistem (system-ui)" - dokumen itu berbohong.
+
+   Perbaikan dua lapis:
+     1. `--font-family` ditimpa di sini (non-layered, dimuat SETELAH <style>
+        inline Filament) agar resolusi variabel ikut jadi font sistem.
+     2. Panel memakai `->font('system-ui', provider: LocalFontProvider::class)`
+        (lihat AdminPanelProvider) supaya Filament BERHENTI memuat Inter
+        (preload kosong, tanpa link CDN) - bukan sekadar menimpanya.
    --------------------------------------------------------- */
 :root {
+    --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+        Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
     --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
         Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
 }
@@ -49,29 +66,33 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   2. WARNA — monokrom netral (zinc) + 1 AKSEN BRAND
+   2. WARNA - netral zinc + 1 AKSEN BIRU ENTERPRISE
    ---------------------------------------------------------
-   Identitas: "Industrial Monochrome".
-   Basis tetap netral zinc (Vercel/Linear), ditambah SATU aksen
-   amber industrial (--brand-accent) yang dipakai HEMAT:
+   ⚠️ DIUBAH 11 Okt 2026 (sistem desain v1.1 Bagian A.1):
+   "Aksen primer biru enterprise #2563eb menggantikan Zinc monokrom
+    (tombol utama, menu aktif, link). Satu warna aksen saja -
+    jangan warna-warni."
+
+   Basis tetap netral zinc (Vercel/Linear) untuk permukaan & teks,
+   ditambah SATU aksen biru (#2563eb) yang dipakai:
+     · tombol utama & link
      · garis kiri item sidebar aktif
-     · ikon grup navigasi
-     · aksen angka kunci & focus ring halus
+     · ikon stat & header seksi
    Semantik tetap: hijau = masuk, merah = keluar, abu = arsip.
    --------------------------------------------------------- */
 :root {
-    /* primary = hampir hitam (tombol & aksen aktif) */
-    --primary-50: #fafafa;
-    --primary-100: #f4f4f5;
-    --primary-200: #e4e4e7;
-    --primary-300: #d4d4d8;
-    --primary-400: #a1a1aa;
-    --primary-500: #52525b;
-    --primary-600: #18181b;
-    --primary-700: #09090b;
-    --primary-800: #18181b;
-    --primary-900: #09090b;
-    --primary-950: #09090b;
+    /* primary = BIRU ENTERPRISE (#2563eb = blue-600) */
+    --primary-50: #eff6ff;
+    --primary-100: #dbeafe;
+    --primary-200: #bfdbfe;
+    --primary-300: #93c5fd;
+    --primary-400: #60a5fa;
+    --primary-500: #3b82f6;
+    --primary-600: #2563eb;
+    --primary-700: #1d4ed8;
+    --primary-800: #1e40af;
+    --primary-900: #1e3a8a;
+    --primary-950: #172554;
 
     /* gray = zinc netral */
     --gray-50: #fafafa;
@@ -86,12 +107,12 @@ textarea {
     --gray-900: #18181b;
     --gray-950: #09090b;
 
-    /* ==== AKSEN BRAND (amber industrial) ==== */
-    --brand-accent: #d97706;        /* amber-600 — teks/ikon di terang */
-    --brand-accent-hover: #b45309;  /* amber-700 */
-    --brand-accent-soft: #fffbeb;   /* amber-50 — tint sangat lembut */
-    --brand-accent-soft-dark: #291b06; /* tint gelap untuk mode malam */
-    --brand-accent-bright: #fbbf24; /* amber-400 — agar terbaca di gelap */
+    /* ==== AKSEN BRAND (biru enterprise) ==== */
+    --brand-accent: #2563eb;        /* blue-600 - teks/ikon di terang */
+    --brand-accent-hover: #1d4ed8;  /* blue-700 */
+    --brand-accent-soft: #eff6ff;   /* blue-50 - tint sangat lembut */
+    --brand-accent-soft-dark: #0b1a33; /* tint gelap untuk mode malam */
+    --brand-accent-bright: #60a5fa; /* blue-400 - agar terbaca di gelap */
 }
 
 /* ---------------------------------------------------------
@@ -106,7 +127,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   4. SIDEBAR — bersih, border kanan tipis
+   4. SIDEBAR - bersih, border kanan tipis
    --------------------------------------------------------- */
 .fi-sidebar {
     background-color: #ffffff !important;
@@ -136,7 +157,7 @@ textarea {
     transition: background-color 120ms ease, color 120ms ease !important;
 }
 
-/* Ikon item navigasi — sedikit lebih tegas, sejajar dengan label */
+/* Ikon item navigasi - sedikit lebih tegas, sejajar dengan label */
 .fi-sidebar-item-icon {
     width: 1.125rem !important;
     height: 1.125rem !important;
@@ -218,7 +239,7 @@ textarea {
     color: #a1a1aa !important;
 }
 
-/* Ikon grup navigasi — aksen amber, memberi "peta" visual antar modul */
+/* Ikon grup navigasi - aksen biru (penanda struktural) */
 .fi-sidebar-group-icon {
     color: var(--brand-accent) !important;
     width: 1rem !important;
@@ -243,7 +264,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   5. TOPBAR — border bawah tipis, tanpa shadow
+   5. TOPBAR - border bawah tipis, tanpa shadow
    --------------------------------------------------------- */
 .fi-topbar {
     background-color: #ffffff !important;
@@ -268,7 +289,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   6. SECTION / KARTU — border tipis, tanpa shadow
+   6. SECTION / KARTU - border tipis, tanpa shadow
    --------------------------------------------------------- */
 .fi-section {
     background-color: #ffffff !important;
@@ -309,7 +330,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   7. TOMBOL — solid gelap, hover halus
+   7. TOMBOL - solid gelap, hover halus
    --------------------------------------------------------- */
 .fi-btn {
     border-radius: 0.375rem !important;
@@ -365,7 +386,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   8. INPUT / FORM — border tipis, fokus netral
+   8. INPUT / FORM - border tipis, fokus netral
    --------------------------------------------------------- */
 .fi-input-wrp {
     border-radius: 0.375rem !important;
@@ -381,15 +402,15 @@ textarea {
 
 .fi-input-wrp:focus-within {
     border-color: var(--brand-accent) !important;
-    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
 }
 
 .dark .fi-input-wrp:focus-within {
     border-color: var(--brand-accent-bright) !important;
-    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15) !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18) !important;
 }
 
-/* Field WAJIB: tanda bintang aksen amber (jelas, bukan merah menyala) */
+/* Field WAJIB: tanda bintang aksen biru (jelas, bukan merah menyala) */
 .fi-fo-field-wrp-label .fi-fo-field-wrp-label-required,
 .fi-fo-field-wrp-required {
     color: var(--brand-accent) !important;
@@ -425,7 +446,7 @@ textarea {
     border-color: #52525b !important;
 }
 
-/* Area unggah berkas (drag & drop) — garis putus-putus harus terlihat */
+/* Area unggah berkas (drag & drop) - garis putus-putus harus terlihat */
 .fi-fo-file-upload .filepond--drop-label,
 .fi-fo-file-upload .filepond--panel-root {
     background-color: #fafafa !important;
@@ -449,7 +470,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   9. TABEL — bersih, header subtle, border tipis
+   9. TABEL - bersih, header subtle, border tipis
    --------------------------------------------------------- */
 .fi-ta-header-cell {
     background-color: #fafafa !important;
@@ -489,7 +510,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   10. BADGE — pill kecil, subtle
+   10. BADGE - pill kecil, subtle
    --------------------------------------------------------- */
 .fi-badge {
     border-radius: 0.3125rem !important;
@@ -499,7 +520,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   11. DROPDOWN & MODAL — border tipis, shadow sangat halus
+   11. DROPDOWN & MODAL - border tipis, shadow sangat halus
    --------------------------------------------------------- */
 .fi-dropdown-panel {
     border: 1px solid #e4e4e7 !important;
@@ -519,7 +540,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   12. STAT WIDGET — kartu ringkas, angka tegas
+   12. STAT WIDGET - kartu ringkas, angka tegas
    --------------------------------------------------------- */
 .fi-wi-stats-overview-stat {
     background-color: #ffffff !important;
@@ -558,7 +579,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   13. HEADER HALAMAN — judul tegas
+   13. HEADER HALAMAN - judul tegas
    --------------------------------------------------------- */
 .fi-header-heading {
     font-size: 1.375rem !important;
@@ -577,7 +598,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   14. PAGINATION & TAB — minimalis
+   14. PAGINATION & TAB - minimalis
    --------------------------------------------------------- */
 .fi-pagination {
     border-top: 1px solid #f4f4f5 !important;
@@ -596,7 +617,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   15. BATAS ANTAR BARIS FORM (REPEATER) — WAJIB JELAS
+   15. BATAS ANTAR BARIS FORM (REPEATER) - WAJIB JELAS
    ---------------------------------------------------------
    Permintaan user:
      "untuk semua form dibuat jelas lagi batasnya karna ketika mode
@@ -604,7 +625,7 @@ textarea {
 
    Masalah: tiap baris (nota) hanya dipisah border tipis 1px, sehingga
    admin sulit tahu di mana satu pengeluaran berakhir dan yang berikutnya
-   mulai — terutama saat mengisi 4 nota sekaligus.
+   mulai - terutama saat mengisi 4 nota sekaligus.
 
    Solusi: tiap baris jadi KARTU dengan border 2px + judul baris tegas +
    nomor urut. Warna kontras di KEDUA mode (terang & gelap).
@@ -620,7 +641,7 @@ textarea {
 }
 
 /*
-   MODE GELAP — batas jelas tapi tenang:
+   MODE GELAP - batas jelas tapi tenang:
      halaman #09090b  <  kartu #131316  <  judul baris #1c1c1f
    Border #3f3f46 cukup terlihat tanpa terasa "norak".
 */
@@ -648,7 +669,7 @@ textarea {
     border-bottom-color: #3f3f46 !important;
 }
 
-/* Label judul baris — tegas & mudah dibaca */
+/* Label judul baris - tegas & mudah dibaca */
 .fi-fo-repeater-item-header-label {
     font-size: 0.8125rem !important;
     font-weight: 600 !important;
@@ -672,12 +693,12 @@ textarea {
 /* ---------------------------------------------------------
    17. PEMBEDA VISUAL ANTAR BARIS NOTA
    ---------------------------------------------------------
-   ⚠️ PEROMBAKAN DESAIN (8 Okt 2026) — hilangkan "AI slop":
+   ⚠️ PEROMBAKAN DESAIN (8 Okt 2026) - hilangkan "AI slop":
    Versi lama memakai GARIS KIRI 6px WARNA-WARNA (hijau, biru, ungu,
    oranye, ...) per berkas. Terlalu ramai dan tidak profesional.
 
    Sekarang: garis aksen TIPIS MONOKROM di kiri (2px, abu netral) sebagai
-   penanda baris — cukup untuk navigasi, tenang untuk mata. Pembeda antar
+   penanda baris - cukup untuk navigasi, tenang untuk mata. Pembeda antar
    baris yang sebenarnya adalah NOMOR ("Nota 3 / 50") di header, bukan warna.
    --------------------------------------------------------- */
 
@@ -699,7 +720,7 @@ textarea {
 }
 
 /* ---------------------------------------------------------
-   16. KOTAK PRATINJAU NOTA — jelas batasnya
+   16. KOTAK PRATINJAU NOTA - jelas batasnya
    --------------------------------------------------------- */
 .nota-kotak {
     border: 1px solid #e4e4e7 !important;
@@ -716,7 +737,7 @@ textarea {
 }
 
 /* =========================================================
-   18. AKSEN BRAND — Dashboard, header section & login
+   18. AKSEN BRAND - Dashboard, header section & login
    ========================================================= */
 
 /* Kartu stat: garis aksen atas sangat tipis + angkat halus saat hover.
@@ -749,7 +770,7 @@ textarea {
     border-color: #3f3f46 !important;
 }
 
-/* Ikon deskripsi pada stat: aksen amber agar terbaca sebagai "sorotan" */
+/* Ikon deskripsi pada stat: aksen biru agar terbaca sebagai "sorotan" */
 .fi-wi-stats-overview-stat-description-icon {
     color: var(--brand-accent) !important;
 }
@@ -758,7 +779,7 @@ textarea {
     color: var(--brand-accent-bright) !important;
 }
 
-/* Ikon pada header section: aksen amber (penanda seksi form) */
+/* Ikon pada header section: aksen biru (penanda seksi form) */
 .fi-section-header > .fi-icon {
     color: var(--brand-accent) !important;
 }
@@ -790,11 +811,11 @@ textarea {
 }
 
 /* =========================================================
-   19. TOP PROGRESS BAR — indikator navigasi Livewire
+   19. TOP PROGRESS BAR - indikator navigasi Livewire
    ---------------------------------------------------------
    Muncul tipis di atas saat Livewire memuat. Murni CSS
    (tanpa JavaScript) memakai animasi saat atribut Livewire
-   sibuk — ringan, tidak membebani.
+   sibuk - ringan, tidak membebani.
    ========================================================= */
 .fi-body[wire\:loading]::before {
     content: '' !important;
@@ -821,31 +842,17 @@ textarea {
 }
 
 /* =========================================================
-   20. WARNA NAVIGASI PER MODUL (navigasi saja, bukan dekorasi)
+   20. AKSEN NAVIGASI - SATU WARNA BIRU (bukan warna-warni)
    ---------------------------------------------------------
-   Permintaan user (9 Okt 2026):
-     "sepertinya boleh menggunakan warna tapi untuk navigasi saja
-      yang jelas desain tidak ai slop"
+   ⚠️ DIUBAH 11 Okt 2026 (sistem desain v1.1 Bagian A.1):
+   "Satu warna aksen saja - jangan warna-warni."
+   Sebelumnya tiap grup menu punya warna sendiri (biru/hijau/violet/
+   amber) = pelangi. Sekarang SEMUA penanda navigasi memakai SATU aksen
+   biru (#2563eb) supaya tenang & konsisten. Titik kecil di label grup
+   tetap ada sebagai penanda struktural (bukan pembeda warna).
+   ========================================================= */
 
-   Aturan: warna HANYA dipakai sebagai PENANDA MODUL di sidebar, bukan
-   menghias isi halaman. Tiap grup menu punya SATU warna desaturated yang
-   konsisten — memberi "peta" modul, bukan pelangi.
-
-   Teknik: pilih berdasarkan atribut `data-group-label` yang memang
-   dirender Filament, jadi tidak perlu ikon grup (Filament 5 melarang grup
-   & item sama-sama berikon). Warna tampil sebagai:
-     · titik kecil di kiri label grup
-     · warna teks label grup
-     · garis kiri item aktif (menggantikan amber generik)
-
-   Palet desaturated agar tetap profesional (bukan neon):
-     SPK         → biru    #2563eb
-     Keuangan    → hijau   #059669
-     Master Data → violet  #7c3aed
-     Laporan     → amber   #d97706
-   --------------------------------------------------------- */
-
-/* Titik penanda modul sebelum label grup */
+/* Titik penanda modul sebelum label grup - warna aksen seragam */
 .fi-sidebar-group-label::before {
     content: '' !important;
     display: inline-block !important;
@@ -854,76 +861,110 @@ textarea {
     border-radius: 9999px !important;
     margin-right: 0.5rem !important;
     vertical-align: middle !important;
-    background-color: currentColor !important;
+    background-color: var(--brand-accent) !important;
     opacity: 0.9 !important;
 }
 
-/* Warna per modul — teks label + titik memakai warna yang sama */
-.fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-group-label {
-    color: #2563eb !important;
-}
-.fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-group-label {
-    color: #059669 !important;
-}
-.fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-group-label {
-    color: #7c3aed !important;
-}
-.fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-group-label {
-    color: #d97706 !important;
+.dark .fi-sidebar-group-label::before {
+    background-color: var(--brand-accent-bright) !important;
 }
 
-/* Mode gelap: versi lebih terang agar terbaca di latar #09090b */
-.dark .fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-group-label {
-    color: #60a5fa !important;
-}
-.dark .fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-group-label {
-    color: #34d399 !important;
-}
-.dark .fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-group-label {
-    color: #a78bfa !important;
-}
-.dark .fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-group-label {
-    color: #fbbf24 !important;
+/* =========================================================
+   21. DASHBOARD - BLOK LOGIS & KARTU URGENT
+   ---------------------------------------------------------
+   ⚠️ PEROMBAKAN (12 Okt 2026) - hilangkan "card soup":
+   Dulu 15 kartu stat ukuran/border sama disusun 3x3 seragam, tanpa hierarki.
+   Sekarang kartu dikelompokkan jadi 4 blok berjudul (Uang / Perlu Perhatian /
+   Pekerjaan & Tagihan / Saldo & Mitra).
+
+   Seksi pembungkus blok dibuat TANPA kartu (`.fi-section` dibuat transparan)
+   supaya judul blok berfungsi sebagai pemisah ringan, bukan menambah kotak
+   di dalam kotak. Kartu stat tetap punya border tipis seperti biasa.
+   ========================================================= */
+
+/* Judul blok dashboard: kecil, tegas, huruf kapital - pemisah antar blok. */
+.fi-wi-stats-overview .fi-section-header {
+    padding: 0 !important;
+    margin-bottom: 0.625rem !important;
 }
 
-/* Garis kiri item AKTIF mengikuti warna modulnya — penanda "kamu di sini" */
-.fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-item.fi-active .fi-sidebar-item-btn::before {
-    background-color: #2563eb !important;
-}
-.fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-item.fi-active .fi-sidebar-item-btn::before {
-    background-color: #059669 !important;
-}
-.fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-item.fi-active .fi-sidebar-item-btn::before {
-    background-color: #7c3aed !important;
-}
-.fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-item.fi-active .fi-sidebar-item-btn::before {
-    background-color: #d97706 !important;
+.fi-wi-stats-overview .fi-section-header-heading {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    color: #71717a !important;
 }
 
-/* Ikon item aktif juga ikut warna modul (bukan amber generik) */
-.fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
-    color: #2563eb !important;
-}
-.fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
-    color: #059669 !important;
-}
-.fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
-    color: #7c3aed !important;
-}
-.fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
-    color: #d97706 !important;
+.dark .fi-wi-stats-overview .fi-section-header-heading {
+    color: #a1a1aa !important;
 }
 
-/* Mode gelap: ikon aktif versi terang */
-.dark .fi-sidebar-group[data-group-label='SPK'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
-    color: #60a5fa !important;
+/* Seksi blok TIDAK dibungkus kotak - kartunya sendiri yang berkotak. */
+.fi-wi-stats-overview .fi-section {
+    background-color: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
 }
-.dark .fi-sidebar-group[data-group-label='Keuangan'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
-    color: #34d399 !important;
+
+/* Jarak antar blok supaya "bernapas". */
+.fi-wi-stats-overview .fi-section + .fi-section {
+    margin-top: 1.5rem !important;
 }
-.dark .fi-sidebar-group[data-group-label='Master Data'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
-    color: #a78bfa !important;
+
+/* Kartu stat: sedikit lebih ringkas & konsisten. */
+.fi-wi-stats-overview-stat {
+    padding: 0.875rem 1rem !important;
 }
-.dark .fi-sidebar-group[data-group-label='Laporan'] .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
-    color: #fbbf24 !important;
+
+/* Kartu URGENT (Lewat Tenggat): tint merah tipis + garis kiri merah tegas.
+   HANYA muncul saat ada item lewat tenggat - warna di sini bermakna. */
+.bks-stat-urgent {
+    border-color: #fecdd3 !important;
+    background-color: #fff5f6 !important;
+    border-left-width: 3px !important;
+    border-left-color: #e11d48 !important;
+}
+
+.dark .bks-stat-urgent {
+    border-color: #4c0519 !important;
+    background-color: #1c0a0e !important;
+    border-left-color: #fb7185 !important;
+}
+
+.bks-stat-urgent .fi-wi-stats-overview-stat-value {
+    color: #be123c !important;
+}
+
+.dark .bks-stat-urgent .fi-wi-stats-overview-stat-value {
+    color: #fda4af !important;
+}
+
+/* Hover kartu urgent jangan menimpa penanda merahnya. */
+.bks-stat-urgent:hover {
+    border-color: #fda4af !important;
+    border-left-color: #e11d48 !important;
+}
+
+/* =========================================================
+   22. STICKY ACTION BAR - JANGAN MENUTUPI KONTEN TERAKHIR
+   ---------------------------------------------------------
+   ⚠️ PERBAIKAN (12 Okt 2026):
+   Bar aksi "Simpan/Batal" menempel (fixed) di bawah viewport. Karena
+   `.fi-page-content` tidak punya padding bawah, teks TERAKHIR form
+   (mis. "Total") tertutup bar saat di-scroll sampai bawah.
+
+   Solusi: beri jarak bawah pada konten halaman HANYA bila halaman itu
+   memang punya bar aksi menempel (`:has()`), supaya halaman tanpa bar
+   sticky tidak ikut terdorong. Tinggi bar (~67px) + jarak bawah (16px)
+   + margin aman.
+   ========================================================= */
+.fi-page-content:has(.fi-sc-actions.fi-sticky) {
+    padding-bottom: 6.5rem !important;
+}
+
+/* Area konten yang bisa digulir: sisakan ruang di bawah juga. */
+.fi-main:has(.fi-sc-actions.fi-sticky) {
+    padding-bottom: 1rem !important;
 }

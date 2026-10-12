@@ -38,9 +38,7 @@ class TemaTest extends TestCase
         return $this->actingAs($this->admin)->get('/admin')->assertOk()->getContent();
     }
 
-    // ---------------------------------------------------------
     // Tema terpasang
-    // ---------------------------------------------------------
 
     public function test_tema_vite_terdaftar_di_panel(): void
     {
@@ -79,34 +77,38 @@ class TemaTest extends TestCase
         );
     }
 
-    // ---------------------------------------------------------
-    // Skema warna monokrom
-    // ---------------------------------------------------------
+    // Skema warna - AKSEN BIRU ENTERPRISE (sistem desain v1.1)
+    //
+    // ⚠️ DIUBAH 11 Okt 2026 (prompt desain Bagian A.1): aksen utama sekarang
+    //    BIRU enterprise #2563eb - sebelumnya Zinc monokrom + amber.
+    //    "Satu warna aksen saja - jangan warna-warni."
 
-    public function test_primary_bukan_biru(): void
+    public function test_primary_adalah_biru_enterprise(): void
     {
         $primary = filament()->getPanel('admin')->getColors()['primary'][600];
 
         // Blue Filament = oklch(0.546 0.245 262.881)
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString(
             '262.881',
             $primary,
-            'Primary masih biru — tema harus monokrom (Zinc)'
+            'Primary harus biru enterprise (#2563eb) sesuai sistem desain v1.1'
         );
     }
 
-    public function test_primary_dan_gray_sama_sama_monokrom(): void
+    public function test_primary_dan_gray_berbeda_peran(): void
     {
         $colors = filament()->getPanel('admin')->getColors();
 
-        $this->assertSame(
+        // Gray tetap Zinc netral (bukan biru) agar permukaan & teks tetap netral;
+        // biru hanya sebagai AKSEN (tombol utama, menu aktif, link).
+        $this->assertNotSame(
             $colors['primary'][600],
             $colors['gray'][600],
-            'Primary dan gray harus sama-sama Zinc agar konsisten monokrom'
+            'Gray harus tetap netral (Zinc), hanya primary yang biru.'
         );
     }
 
-    public function test_css_tema_memakai_palet_monokrom(): void
+    public function test_css_tema_memakai_palet_netral(): void
     {
         $css = $this->cssTema();
 
@@ -119,9 +121,14 @@ class TemaTest extends TestCase
         }
     }
 
-    // ---------------------------------------------------------
     // Tipografi font sistem
-    // ---------------------------------------------------------
+    //
+    // ⚠️ DIPERKETAT (12 Okt 2026) - BUG FONT: dulu tes hanya memastikan string
+    //    'system-ui' ada di CSS, padahal `<html>` tetap meresolusi ke Inter
+    //    (Filament menyuntik `--font-family: 'Inter Variable'` inline) dan
+    //    berkas Inter tetap diunduh. Sekarang diuji PERILAKU: variabel
+    //    `--font-family` juga ditimpa, dan panel tidak lagi memakai font
+    //    bawaan Filament (Inter).
 
     public function test_tema_memakai_font_sistem(): void
     {
@@ -131,6 +138,43 @@ class TemaTest extends TestCase
             'system-ui, -apple-system',
             $css,
             'Tema harus memakai font sistem (system-ui, -apple-system)'
+        );
+    }
+
+    public function test_variabel_font_family_ditimpa_jadi_font_sistem(): void
+    {
+        $css = $this->cssTema();
+
+        // Filament meresolusi font lewat `--font-family` (bukan hanya
+        // `--font-sans`). Kalau variabel ini tidak ditimpa, `<html>` tetap
+        // memakai Inter. Pastikan override-nya ada.
+        $this->assertMatchesRegularExpression(
+            '/--font-family:\s*system-ui/',
+            $css,
+            '--font-family harus ditimpa ke font sistem, bukan Inter bawaan Filament'
+        );
+    }
+
+    public function test_panel_tidak_lagi_memakai_font_bawaan_inter(): void
+    {
+        $panel = filament()->getPanel('admin');
+
+        $this->assertTrue(
+            $panel->hasCustomFontFamily(),
+            'Panel harus menetapkan font sendiri agar Filament berhenti memakai Inter.'
+        );
+
+        $this->assertStringContainsString(
+            'system-ui',
+            $panel->getFontFamily(),
+            'Font panel harus font sistem (system-ui), bukan "Inter Variable".'
+        );
+
+        // Berkas font bawaan (Inter) TIDAK boleh dipreload lagi.
+        $this->assertSame(
+            [],
+            $panel->getFontPreload(),
+            'Font Inter tidak boleh dipreload karena panel memakai font sistem.'
         );
     }
 
@@ -147,9 +191,7 @@ class TemaTest extends TestCase
         );
     }
 
-    // ---------------------------------------------------------
     // Shadow minimal
-    // ---------------------------------------------------------
 
     public function test_shadow_dihilangkan_di_komponen_utama(): void
     {
@@ -160,13 +202,11 @@ class TemaTest extends TestCase
         $this->assertGreaterThanOrEqual(
             8,
             $jumlah,
-            "Hanya $jumlah aturan box-shadow:none — komponen utama harus tanpa shadow"
+            "Hanya $jumlah aturan box-shadow:none - komponen utama harus tanpa shadow"
         );
     }
 
-    // ---------------------------------------------------------
     // Komponen utama ditata
-    // ---------------------------------------------------------
 
     public function test_komponen_utama_punya_aturan_tema(): void
     {
@@ -197,15 +237,13 @@ class TemaTest extends TestCase
         $this->assertStringContainsString('tabular-nums', $this->cssTema());
     }
 
-    // ---------------------------------------------------------
     // Helper
-    // ---------------------------------------------------------
 
     private function cssTema(): string
     {
         $files = glob(base_path('public/build/assets/theme-*.css'));
 
-        $this->assertNotEmpty($files, 'CSS tema belum di-build — jalankan npm run build');
+        $this->assertNotEmpty($files, 'CSS tema belum di-build - jalankan npm run build');
 
         return file_get_contents(end($files));
     }
