@@ -34,7 +34,7 @@ use Illuminate\Database\Eloquent\Builder;
  *   - Perubahan lewat tombol "Ubah Status Pekerjaan" → form TERPISAH
  *   - Data lain (nomor, nilai, mitra) tetap di menu List SPK
  *
- * Status tagihan TIDAK diubah dari sini — ada menu & form sendiri
+ * Status tagihan TIDAK diubah dari sini - ada menu & form sendiri
  * (Tagihan SPK) supaya jelas bedanya.
  */
 class StatusSpkResource extends MonitoringSpkResource
@@ -51,119 +51,17 @@ class StatusSpkResource extends MonitoringSpkResource
     {
         return $table
             ->defaultSort('tanggal_akhir')
-            ->columns([
-                // ---- STATUS DI DEPAN (tampil saja) ----
-                TextColumn::make('status_spk')
-                    ->label('Status Pekerjaan')
-                    ->badge()
-                    ->formatStateUsing(fn (?StatusSpk $state): string => $state?->label() ?? '—')
-                    ->color(fn (?StatusSpk $state): string => $state?->warnaBadge() ?? 'gray')
-                    ->sortable(),
-
-                TextColumn::make('tenggat')
-                    ->label('Tenggat')
-                    ->state(fn (Spk $r): ?string => $r->labelTenggat())
-                    ->description(fn (Spk $r): ?string => $r->tanggal_akhir?->format('d/m/Y'))
-                    ->badge()
-                    ->color(fn (Spk $r): string => match (true) {
-                        $r->sudahLewatTenggat() => 'danger',
-                        $r->isMendekatiTenggat() => 'warning',
-                        default => 'gray',
-                    })
-                    ->placeholder('—'),
-
-                TextColumn::make('nomor_spk')
-                    ->label('Nomor SPK')
-                    ->searchable()
-                    ->copyable()
-                    ->weight('medium')
-                    ->wrap(),
-
-                TextColumn::make('nama_pekerjaan')
-                    ->label('Pekerjaan')
-                    ->searchable()
-                    ->wrap()
-                    ->lineClamp(3)
-                    ->description(fn (Spk $r): ?string => $r->lokasi),
-
-                TextColumn::make('mitra.nama')
-                    ->label('Mitra')
-                    ->placeholder('—'),
-
-                TextColumn::make('dikerjakan_oleh')
-                    ->label('Pelaksana')
-                    ->badge()
-                    ->formatStateUsing(fn ($state): string => $state instanceof DikerjakanOleh
-                        ? $state->labelPendek()
-                        : '—')
-                    ->color(fn ($state): string => $state === DikerjakanOleh::Subkon ? 'warning' : 'gray')
-                    ->description(fn (Spk $r): ?string => $r->subkon?->nama)
-                    ->placeholder('—')
-                    ->toggleable(),
-
-                TextColumn::make('nilai_spk')
-                    ->label('Nilai SPK')
-                    ->money('IDR', locale: 'id')
-                    ->sortable()
-                    ->alignEnd(),
-            ])
-            ->filters([
-                SelectFilter::make('status_spk')
-                    ->label('Status')
-                    ->options(StatusSpk::opsi())
-                    ->multiple(),
-
-                SelectFilter::make('mitra_id')
-                    ->label('Mitra')
-                    ->relationship('mitra', 'nama')
-                    ->searchable()
-                    ->preload(),
-
-                Filter::make('belum_selesai')
-                    ->label('Belum Selesai')
-                    ->query(fn (Builder $q): Builder => $q->whereNotIn('status_spk', [
-                        StatusSpk::Selesai->value,
-                        StatusSpk::SudahDitagihkan->value,
-                        StatusSpk::Dibatalkan->value,
-                    ]))
-                    ->toggle(),
-
-                Filter::make('lewat_tenggat')
-                    ->label('Lewat Tenggat')
-                    ->query(fn (Builder $q): Builder => $q->lewatTenggat())
-                    ->toggle(),
-
-                Filter::make('mendekati_tenggat')
-                    ->label('Mendekati Tenggat (14 hari)')
-                    ->query(fn (Builder $q): Builder => $q->mendekatiTenggat())
-                    ->toggle(),
-
-                SelectFilter::make('dikerjakan_oleh')
-                    ->label('Pelaksana')
-                    ->options(DikerjakanOleh::opsi()),
-
-                Filter::make('disubkonkan')
-                    ->label('Disubkonkan')
-                    ->query(fn (Builder $q): Builder => $q->disubkonkan())
-                    ->toggle(),
-            ])
+            ->searchPlaceholder('Cari di tabel ini')
+            ->columns(self::kolom())
+            ->filters(self::filter())
             /*
-             * ⚠️ SATU JALAN MASUK (perbaikan 2 Okt 2026):
+             * SATU JALAN MASUK (perbaikan 2 Okt 2026):
              * Klik baris membuka PREVIEW (aksi `view`, kini tanpa tombol di
              * baris). Menu monitoring tidak punya halaman detail, jadi tidak
-             * ada `recordUrl` — cukup `recordAction('view')`.
+             * ada `recordUrl` - cukup `recordAction('view')`.
              */
             ->recordAction('view')
             ->recordActions([
-                /*
-                 * ⚠️ PERBAIKAN UI (2 Okt 2026) — permintaan pengguna:
-                 *   "untuk button edit, hapus, kelola, dan lainya itu
-                 *    diletakkan pada preview dari data spk yang dipilih"
-                 *
-                 * Dulu tiap baris punya menu "Kelola SPK" (Catat Pembayaran +
-                 * Ubah Status). Sekarang satu preview berisi data lengkap,
-                 * dan aksi-aksinya ada DI DALAM preview.
-                 */
                 PreviewSpk::make(
                     aksi: [
                         CatatPembayaran::make(),
@@ -191,6 +89,117 @@ class StatusSpkResource extends MonitoringSpkResource
 
                 EksporPdf::make(SpkExporter::class, 'Status SPK'),
             ]);
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private static function kolom(): array
+    {
+        return [
+            // STATUS DI DEPAN (tampil saja)
+            TextColumn::make('status_spk')
+                ->label('Status Pekerjaan')
+                ->badge()
+                ->formatStateUsing(fn (?StatusSpk $state): string => $state?->label() ?? '-')
+                ->color(fn (?StatusSpk $state): string => $state?->warnaBadge() ?? 'gray')
+                ->sortable(),
+
+            TextColumn::make('tenggat')
+                ->label('Tenggat')
+                ->state(fn (Spk $r): ?string => $r->labelTenggat())
+                ->description(fn (Spk $r): ?string => $r->tanggal_akhir?->format('d/m/Y'))
+                ->badge()
+                ->color(fn (Spk $r): string => match (true) {
+                    $r->sudahLewatTenggat() => 'danger',
+                    $r->isMendekatiTenggat() => 'warning',
+                    default => 'gray',
+                })
+                ->placeholder('-'),
+
+            TextColumn::make('nomor_spk')
+                ->label('Nomor SPK')
+                ->searchable()
+                ->copyable()
+                ->weight('medium')
+                ->wrap(),
+
+            TextColumn::make('nama_pekerjaan')
+                ->label('Pekerjaan')
+                ->searchable()
+                ->wrap()
+                ->lineClamp(2)
+                ->description(fn (Spk $r): ?string => $r->lokasi),
+
+            TextColumn::make('mitra.nama')
+                ->label('Mitra')
+                ->placeholder('-'),
+
+            TextColumn::make('dikerjakan_oleh')
+                ->label('Pelaksana')
+                ->badge()
+                ->formatStateUsing(fn ($state): string => $state instanceof DikerjakanOleh
+                    ? $state->labelPendek()
+                    : '-')
+                ->color(fn ($state): string => ($state ?? DikerjakanOleh::Sendiri)->warnaBadge())
+                ->description(fn (Spk $r): ?string => $r->subkon?->nama)
+                ->placeholder('-')
+                ->toggleable(),
+
+            TextColumn::make('nilai_spk')
+                ->label('Nilai SPK')
+                ->money('IDR', locale: 'id')
+                ->weight('medium')
+                ->sortable()
+                ->alignEnd(),
+        ];
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private static function filter(): array
+    {
+        return [
+            SelectFilter::make('status_spk')
+                ->label('Status')
+                ->options(StatusSpk::opsi())
+                ->multiple(),
+
+            SelectFilter::make('mitra_id')
+                ->label('Mitra')
+                ->relationship('mitra', 'nama')
+                ->searchable()
+                ->preload(),
+
+            Filter::make('belum_selesai')
+                ->label('Belum Selesai')
+                ->query(fn (Builder $q): Builder => $q->whereNotIn('status_spk', [
+                    StatusSpk::Selesai->value,
+                    StatusSpk::SudahDitagihkan->value,
+                    StatusSpk::Dibatalkan->value,
+                ]))
+                ->toggle(),
+
+            Filter::make('lewat_tenggat')
+                ->label('Lewat Tenggat')
+                ->query(fn (Builder $q): Builder => $q->lewatTenggat())
+                ->toggle(),
+
+            Filter::make('mendekati_tenggat')
+                ->label('Mendekati Tenggat (14 hari)')
+                ->query(fn (Builder $q): Builder => $q->mendekatiTenggat())
+                ->toggle(),
+
+            SelectFilter::make('dikerjakan_oleh')
+                ->label('Pelaksana')
+                ->options(DikerjakanOleh::opsi()),
+
+            Filter::make('disubkonkan')
+                ->label('Disubkonkan')
+                ->query(fn (Builder $q): Builder => $q->disubkonkan())
+                ->toggle(),
+        ];
     }
 
     public static function getPages(): array

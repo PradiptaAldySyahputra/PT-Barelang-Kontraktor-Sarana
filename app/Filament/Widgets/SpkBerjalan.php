@@ -30,7 +30,7 @@ class SpkBerjalan extends TableWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $heading = 'Perlu Perhatian — SPK Berjalan';
+    protected static ?string $heading = 'Perlu Perhatian - SPK Berjalan';
 
     public function table(Table $table): Table
     {
@@ -53,7 +53,10 @@ class SpkBerjalan extends TableWidget
                 TextColumn::make('nama_pekerjaan')
                     ->label('Pekerjaan')
                     ->wrap()
-                    ->lineClamp(3)
+                    // DIKETATKAN (12 Okt 2026): 2 baris cukup untuk mengenali
+                    // pekerjaan; detail lengkap ada di preview. Tabel keuangan
+                    // dibaca baris-per-baris, tinggi berlebih = scroll.
+                    ->lineClamp(2)
                     ->description(fn (Spk $record): ?string => $record->mitra?->nama),
 
                 TextColumn::make('tenggat')
@@ -71,6 +74,7 @@ class SpkBerjalan extends TableWidget
                 TextColumn::make('nilai_spk')
                     ->label('Nilai SPK')
                     ->money('IDR', locale: 'id')
+                    ->weight('medium')
                     ->alignEnd(),
 
                 TextColumn::make('total_masuk')
@@ -78,6 +82,7 @@ class SpkBerjalan extends TableWidget
                     ->state(fn (Spk $record): float => (float) ($record->total_masuk ?? 0))
                     ->money('IDR', locale: 'id')
                     ->color('success')
+                    ->weight('medium')
                     ->alignEnd(),
 
                 TextColumn::make('sisa')

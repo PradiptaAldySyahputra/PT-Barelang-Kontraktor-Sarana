@@ -6,19 +6,13 @@ namespace App\Filament\Resources\UangKeluars\Tables;
 
 use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
-use App\Filament\Actions\EksporPdf;
 use App\Filament\Concerns\FilterPeriodeUang;
-use App\Filament\Exports\UangKeluarExporter;
 use App\Filament\Resources\UangKeluars\UangKeluarResource;
 use App\Models\UangKeluar;
 use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ExportAction;
 use Filament\Actions\RestoreAction;
-use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -26,6 +20,8 @@ use Filament\Tables\Table;
 
 /**
  * Tabel daftar Uang Keluar.
+ *
+ * Cara membaca: `configure()` memanggil `kolom()`, `filter()`, dan `aksi()`.
  */
 class UangKeluarsTable
 {
@@ -36,22 +32,15 @@ class UangKeluarsTable
         return $table
             ->defaultSort('tanggal', 'desc')
             /*
-             * SATU baris total saja (keputusan user 8 Okt 2026).
-             *
-             * ⚠️ MASALAH YANG DIPERBAIKI:
-             * Bawaan Filament menampilkan DUA baris total — "Halaman ini"
-             * (hanya baris halaman aktif) DAN "Semua Uang Keluar" (seluruh
-             * data terfilter). Dua angka berbeda berlabel "Total" yang sama
-             * membingungkan & memakan ruang. Baris "Halaman ini" dihapus.
-             *
-             * `summaries(pageCondition: false)` → HANYA total seluruh data
-             * terfilter yang tampil, tetap menghormati filter aktif.
+             * Total bawaan Filament (bawah tabel) DIMATIKAN TOTAL - total
+             * ditampilkan di bar ATAS tabel (lihat `->header()` di bawah).
+             * Ini menghapus total ganda.
              */
-            ->summaries(pageCondition: false)
-            /*
-             * ⚠️ BARIS TOTAL TERFILTER DI ATAS TABEL (saran user 9 Okt 2026):
-             * total + rincian per kategori dalam satu baris, mengikuti filter.
-             */
+            ->summaries(pageCondition: false, allTableCondition: false)
+            // Kotak cari tabel ini dibedakan dari pencarian GLOBAL topbar.
+            ->searchPlaceholder('Cari di tabel ini')
+            // Cukup SATU baris total (11 Okt 2026 - keputusan user): dulu ada
+            // bar atas + `summarize(Sum)` bawah kolom = dua angka total.
             ->header(function ($livewire) {
                 $rincian = (clone $livewire->getFilteredTableQuery())
                     ->selectRaw('kategori, SUM(jumlah) as total')
@@ -73,164 +62,141 @@ class UangKeluarsTable
                     'nada' => 'keluar',
                 ]);
             })
-            ->columns([
-                TextColumn::make('tanggal')
-                    ->label('Tanggal')
-                    ->date('d/m/Y')
-                    ->sortable(),
+            ->columns(self::kolom())
+            ->filters(self::filter())
+            ->recordActions(self::aksi());
+    }
 
-                TextColumn::make('akun')
-                    ->label('Kas/Bank')
-                    ->badge()
-                    ->formatStateUsing(fn (?AkunKas $state): string => ($state ?? AkunKas::Kas)->label())
-                    ->color(fn (?AkunKas $state): string => ($state ?? AkunKas::Kas)->warnaBadge()),
+    /**
+     * @return array<int, mixed>
+     */
+    private static function kolom(): array
+    {
+        return [
+            TextColumn::make('tanggal')
+                ->label('Tanggal')
+                ->date('d/m/Y')
+                ->sortable(),
 
-                TextColumn::make('kategori')
-                    ->label('Kategori')
-                    ->badge()
-                    ->formatStateUsing(fn (?KategoriPengeluaran $state): string => $state?->label() ?? '—')
-                    ->color(fn (?KategoriPengeluaran $state): string => match ($state) {
-                        KategoriPengeluaran::Material => 'primary',
-                        KategoriPengeluaran::Upah => 'warning',
-                        KategoriPengeluaran::Transportasi => 'info',
-                        KategoriPengeluaran::Operasional => 'gray',
-                        KategoriPengeluaran::Gaji => 'success',
-                        KategoriPengeluaran::Nota => 'info',
-                        KategoriPengeluaran::Lainnya => 'gray',
-                        default => 'gray',
-                    })
-                    ->sortable(),
+            TextColumn::make('akun')
+                ->label('Kas/Bank')
+                ->badge()
+                ->formatStateUsing(fn (?AkunKas $state): string => ($state ?? AkunKas::Kas)->label())
+                ->color(fn (?AkunKas $state): string => ($state ?? AkunKas::Kas)->warnaBadge()),
 
-                TextColumn::make('spk.nomor_spk')
-                    ->label('Nomor SPK')
-                    ->placeholder('Umum')
-                    ->badge()
-                    ->color(fn ($state): string => $state ? 'primary' : 'gray')
-                    ->searchable()
-                    ->toggleable(),
+            TextColumn::make('kategori')
+                ->label('Kategori')
+                ->badge()
+                ->formatStateUsing(fn (?KategoriPengeluaran $state): string => $state?->label() ?? '-')
+                ->color(fn (?KategoriPengeluaran $state): string => ($state ?? KategoriPengeluaran::Lainnya)->warnaBadge())
+                ->sortable(),
 
-                TextColumn::make('penerima')
-                    ->label('Penerima')
-                    ->placeholder('—')
-                    ->searchable()
-                    ->wrap(),
+            TextColumn::make('spk.nomor_spk')
+                ->label('Nomor SPK')
+                ->placeholder('Umum')
+                ->badge()
+                ->color(fn ($state): string => $state ? 'primary' : 'gray')
+                ->searchable()
+                ->toggleable(),
 
-                TextColumn::make('jumlah')
-                    ->label('Jumlah')
-                    ->money('IDR', locale: 'id')
-                    ->sortable()
-                    ->weight('medium')
-                    ->color('danger')
-                    ->alignEnd()
-                    /*
-                     * ⚠️ RINGKASAN TOTAL — keluhan pengguna 29 Sep 2026:
-                     *   "admin perlu itu kemudahan untuk mengelolanya"
-                     *
-                     * Sebelumnya admin harus menjumlahkan sendiri atau membuka
-                     * Excel untuk tahu total pengeluaran periode terpilih.
-                     *
-                     * `Sum` dihitung oleh DATABASE dan MENGHORMATI FILTER aktif:
-                     * menyaring "Kas" → totalnya hanya Kas.
-                     */
-                    ->summarize(Sum::make()->label('Total')),
+            TextColumn::make('penerima')
+                ->label('Penerima')
+                ->placeholder('-')
+                ->searchable()
+                ->wrap(),
 
-                TextColumn::make('jumlah_bukti')
-                    ->label('Bukti')
-                    ->state(fn ($record): string => $record->jumlahFileBukti() > 0
-                        ? $record->jumlahFileBukti().' file'
-                        : '—')
-                    ->badge()
-                    ->color(fn ($state): string => $state === '—' ? 'gray' : 'info')
-                    ->alignCenter(),
+            TextColumn::make('jumlah')
+                ->label('Jumlah')
+                ->money('IDR', locale: 'id')
+                ->sortable()
+                ->weight('medium')
+                ->color('danger')
+                ->alignEnd(),
 
-                TextColumn::make('keterangan')
-                    ->label('Keterangan')
-                    ->placeholder('—')
-                    ->limit(35)
-                    ->tooltip(fn ($record): ?string => $record->keterangan)
-                    ->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('jumlah_bukti')
+                ->label('Bukti')
+                ->state(fn ($record): string => $record->jumlahFileBukti() > 0
+                    ? $record->jumlahFileBukti().' file'
+                    : '-')
+                ->badge()
+                ->color(fn ($state): string => $state === '-' ? 'gray' : 'info')
+                ->alignCenter(),
 
-                TextColumn::make('created_at')
-                    ->label('Dicatat')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                // SATU filter periode (Tahun/Bulan/Tanggal) — bukan tiga
-                // terpisah, supaya panel filter pendek & tidak ribet.
-                self::filterPeriode(),
+            TextColumn::make('keterangan')
+                ->label('Keterangan')
+                ->placeholder('-')
+                ->limit(35)
+                ->tooltip(fn ($record): ?string => $record->keterangan)
+                ->toggleable(isToggledHiddenByDefault: true),
 
-                SelectFilter::make('akun')
-                    ->label('Kas/Bank')
-                    ->options(AkunKas::opsi()),
+            TextColumn::make('created_at')
+                ->label('Dicatat')
+                ->dateTime('d/m/Y H:i')
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+        ];
+    }
 
-                SelectFilter::make('kategori')
-                    ->label('Kategori')
-                    ->options(KategoriPengeluaran::opsi()),
+    /**
+     * @return array<int, mixed>
+     */
+    private static function filter(): array
+    {
+        return [
+            // SATU filter periode (Tahun/Bulan/Tanggal) - bukan tiga
+            // terpisah, supaya panel filter pendek & tidak ribet.
+            self::filterPeriode(),
 
-                /*
-                 * FILTER SPK — PRD FR-OUT-004 ("Filter & pencarian uang keluar
-                 * per periode/kategori/SPK").
-                 *
-                 * Biaya langsung pekerjaan dikaitkan ke SPK (Rules §2 butir 6).
-                 * Saat ada selisih atau bagian pajak meminta rincian satu
-                 * pekerjaan, admin harus bisa menyaring HANYA SPK itu.
-                 */
-                SelectFilter::make('spk_id')
-                    ->label('SPK')
-                    ->relationship('spk', 'nomor_spk')
-                    ->getOptionLabelFromRecordUsing(fn ($record): string => $record->nomor_spk.' — '.$record->nama_pekerjaan)
-                    ->searchable()
-                    ->preload(),
+            SelectFilter::make('akun')
+                ->label('Kas/Bank')
+                ->options(AkunKas::opsi()),
 
-                TrashedFilter::make()->label('Data Terhapus'),
-            ])
-            ->recordActions([
-                /*
-                 * ⚠️ LIHAT BUKTI — keluhan pengguna 29 Sep 2026:
-                 *   "admin perlu itu kemudahan untuk mengelolanya, mencari
-                 *    bukti dari uang tersebut"
-                 *
-                 * Uang keluar paling butuh ini: satu transaksi bisa punya
-                 * beberapa nota (nota digabung jadi 1 PDF/bulan), dan admin
-                 * sering harus menunjukkan buktinya.
-                 */
-                Action::make('lihatBukti')
-                    ->label('Lihat Bukti')
-                    ->icon('heroicon-m-paper-clip')
-                    ->color('info')
-                    ->visible(fn (UangKeluar $r): bool => $r->jumlahFileBukti() > 0)
-                    ->modalHeading('Bukti Transaksi')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Tutup')
-                    ->modalContent(fn (UangKeluar $r) => view('filament.components.daftar-bukti', [
-                        'berkas' => $r->bukti ?? [],
-                    ])),
+            SelectFilter::make('kategori')
+                ->label('Kategori')
+                ->options(KategoriPengeluaran::opsi()),
 
-                EditAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
-                DeleteAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
+            // Filter SPK - PRD FR-OUT-004. Biaya langsung pekerjaan dikaitkan
+            // ke SPK (Rules §2 butir 6); admin harus bisa menyaring HANYA SPK
+            // itu saat ada selisih atau pemeriksaan pajak.
+            SelectFilter::make('spk_id')
+                ->label('SPK')
+                ->relationship('spk', 'nomor_spk')
+                ->getOptionLabelFromRecordUsing(fn ($record): string => $record->nomor_spk.' - '.$record->nama_pekerjaan)
+                ->searchable()
+                ->preload(),
 
-                /*
-                 * ⚠️ BUG YANG DICEGAH (temuan uji deploy 7 Okt 2026):
-                 * `->visible()` MENIMPA visibility bawaan RestoreAction, yang
-                 * seharusnya hanya tampil untuk record terhapus (`trashed()`).
-                 * Tanpa cek `trashed()`, tombol "Pulihkan data" muncul di
-                 * SEMUA baris — menyesatkan, karena baris aktif tidak bisa
-                 * dipulihkan. Jadi syaratnya digabung: boleh ubah DAN terhapus.
-                 */
-                RestoreAction::make()->visible(fn (UangKeluar $r): bool => UangKeluarResource::bolehUbahData() && $r->trashed()),
-            ])
-            ->toolbarActions([
-                ExportAction::make()
-                    ->label('Ekspor Excel')
-                    ->icon('heroicon-m-table-cells')
-                    ->exporter(UangKeluarExporter::class),
+            TrashedFilter::make()->label('Data Terhapus'),
+        ];
+    }
 
-                EksporPdf::make(UangKeluarExporter::class, 'Daftar Uang Keluar'),
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ])->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
-            ]);
+    /**
+     * @return array<int, mixed>
+     */
+    private static function aksi(): array
+    {
+        return [
+            // LIHAT BUKTI - keluhan pengguna 29 Sep 2026: admin perlu cara
+            // cepat mencari bukti transaksi. Satu transaksi bisa punya
+            // beberapa nota yang digabung jadi 1 PDF/bulan.
+            Action::make('lihatBukti')
+                ->label('Lihat Bukti')
+                ->icon('heroicon-m-paper-clip')
+                ->color('info')
+                ->visible(fn (UangKeluar $r): bool => $r->jumlahFileBukti() > 0)
+                ->modalHeading('Bukti Transaksi')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Tutup')
+                ->modalContent(fn (UangKeluar $r) => view('filament.components.daftar-bukti', [
+                    'berkas' => $r->bukti ?? [],
+                ])),
+
+            EditAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
+            DeleteAction::make()->visible(fn (): bool => UangKeluarResource::bolehUbahData()),
+
+            // `->visible()` MENIMPA visibility bawaan RestoreAction, yang
+            // hanya tampil untuk record terhapus (`trashed()`). Tanpa cek
+            // `trashed()`, tombol "Pulihkan data" muncul di SEMUA baris.
+            RestoreAction::make()->visible(fn (UangKeluar $r): bool => UangKeluarResource::bolehUbahData() && $r->trashed()),
+        ];
     }
 }

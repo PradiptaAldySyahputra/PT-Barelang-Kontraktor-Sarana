@@ -26,6 +26,7 @@ class MitrasTable
     {
         return $table
             ->defaultSort('nama')
+            ->searchPlaceholder('Cari di tabel ini')
             ->columns([
                 TextColumn::make('nama')
                     ->label('Nama Mitra')
@@ -37,17 +38,13 @@ class MitrasTable
                 TextColumn::make('kategori')
                     ->label('Kategori')
                     ->badge()
-                    ->formatStateUsing(fn (?KategoriMitra $state): string => $state?->label() ?? '—')
-                    ->color(fn (?KategoriMitra $state): string => match ($state) {
-                        KategoriMitra::Mitra => 'primary',
-                        KategoriMitra::Subkon => 'warning',
-                        default => 'gray',
-                    })
+                    ->formatStateUsing(fn (?KategoriMitra $state): string => $state?->label() ?? '-')
+                    ->color(fn (?KategoriMitra $state): string => ($state ?? KategoriMitra::Mitra)->warnaBadge())
                     ->sortable(),
 
                 TextColumn::make('kontak')
                     ->label('Kontak')
-                    ->placeholder('—')
+                    ->placeholder('-')
                     ->searchable()
                     ->toggleable(),
 
@@ -60,7 +57,7 @@ class MitrasTable
 
                 TextColumn::make('alamat')
                     ->label('Alamat')
-                    ->placeholder('—')
+                    ->placeholder('-')
                     ->limit(40)
                     ->toggleable(isToggledHiddenByDefault: true),
 
@@ -77,7 +74,7 @@ class MitrasTable
             ])
             ->filters([
                 /*
-                 * ⚠️ FILTER DIHAPUS — sudah diwakili TAB (permintaan pengguna:
+                 * ⚠️ FILTER DIHAPUS - sudah diwakili TAB (permintaan pengguna:
                  * "filter dropdown terlalu banyak dan panjang susah user").
                  *
                  * Dulu di sini ada TernaryFilter 'Aktif' + SelectFilter
@@ -88,7 +85,7 @@ class MitrasTable
                  *
                  * Sekarang cukup satu tempat: TAB.
                  *
-                 * Filter yang TETAP dipertahankan: pencarian (search) — itu
+                 * Filter yang TETAP dipertahankan: pencarian (search) - itu
                  * tidak duplikat dengan tab dan justru cara tercepat mencari.
                  */
             ])
