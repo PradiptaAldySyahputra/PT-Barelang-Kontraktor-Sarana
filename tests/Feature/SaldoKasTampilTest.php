@@ -15,7 +15,7 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * SALDO KAS/BANK MUNCUL DI DASHBOARD & LAPORAN — fitur T2.
+ * SALDO KAS/BANK MUNCUL DI DASHBOARD & LAPORAN - fitur T2.
  *
  * Memastikan angka saldo benar-benar ditampilkan, bukan hanya dihitung.
  */
@@ -36,14 +36,22 @@ class SaldoKasTampilTest extends TestCase
 
         $this->actingAs($this->admin());
 
+        /*
+         * ⚠️ DIUBAH 12 Okt 2026 (perbaikan "card soup" dashboard):
+         * Dulu ada TIGA kartu terpisah (Saldo Kas / Saldo Bank / Total Saldo).
+         * Kartu Kas & Bank kini DIGABUNG ke dalam SATU kartu "Total Saldo",
+         * dengan rincian Kas & Bank di baris keterangan - menghapus kartu
+         * yang berulang tanpa menambah informasi.
+         *
+         * Angka saldo TETAP harus tampil (fitur T2), hanya bentuknya berubah:
+         * nilai total di kartu, rincian kas/bank di description.
+         */
         Livewire::test(RingkasanKeuangan::class)
             ->assertOk()
-            ->assertSee('Saldo Kas')
-            ->assertSee('Saldo Bank')
             ->assertSee('Total Saldo')
-            ->assertSee('Rp 3.000.000')   // saldo kas
-            ->assertSee('Rp 20.000.000')  // saldo bank
-            ->assertSee('Rp 23.000.000'); // total
+            ->assertSee('Rp 23.000.000')       // total saldo
+            ->assertSee('Kas Rp 3.000.000')     // rincian kas (kas 4jt - keluar 1jt)
+            ->assertSee('Bank Rp 20.000.000');  // rincian bank
     }
 
     public function test_halaman_laporan_menampilkan_saldo(): void

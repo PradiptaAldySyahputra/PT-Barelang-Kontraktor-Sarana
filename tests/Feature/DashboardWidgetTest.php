@@ -37,9 +37,7 @@ class DashboardWidgetTest extends TestCase
         ]);
     }
 
-    // ---------------------------------------------------------
     // Kartu ringkasan
-    // ---------------------------------------------------------
 
     public function test_kartu_ringkasan_menampilkan_semua_stat(): void
     {
@@ -83,9 +81,58 @@ class DashboardWidgetTest extends TestCase
         $this->assertStringContainsString('80.000.000', $html, 'Belum diterima salah');
     }
 
-    // ---------------------------------------------------------
+    // Pengelompokan blok & kartu urgent (perombakan 12 Okt 2026 - "card soup")
+
+    public function test_kartu_dikelompokkan_jadi_blok_logis(): void
+    {
+        $this->actingAs($this->admin);
+
+        $html = Livewire::test(RingkasanKeuangan::class)->html();
+
+        // Empat blok logis menggantikan satu grid 3x3 seragam.
+        // (Judul memakai "&" yang di HTML menjadi "&amp;".)
+        foreach (['Uang', 'Perlu Perhatian', 'Pekerjaan &amp; Tagihan', 'Saldo &amp; Mitra'] as $judul) {
+            $this->assertStringContainsString($judul, $html, "Blok '$judul' tidak tampil");
+        }
+    }
+
+    public function test_kartu_lewat_tenggat_diberi_penanda_urgent(): void
+    {
+        $spk = Spk::factory()->berjalan()->create([
+            'nomor_spk' => 'WIDGET-TENGGAT-001',
+            'mitra_id' => Mitra::factory(),
+            'dibuat_oleh' => $this->admin->id,
+            'tanggal_akhir' => now()->subDays(3),
+        ]);
+
+        $this->assertSame(1, Spk::lewatTenggat()->count(), 'prasyarat: SPK harus lewat tenggat');
+
+        $this->actingAs($this->admin);
+
+        $html = Livewire::test(RingkasanKeuangan::class)->html();
+
+        // Kartu paling urgent HARUS punya penanda khusus, bukan tampil sama
+        // seperti kartu biasa.
+        $this->assertStringContainsString(
+            'bks-stat-urgent',
+            $html,
+            'Kartu "Lewat Tenggat" harus diberi penanda urgent (class bks-stat-urgent)'
+        );
+    }
+
+    public function test_saldo_dan_mitra_digabung_satu_kartu(): void
+    {
+        $this->actingAs($this->admin);
+
+        $html = Livewire::test(RingkasanKeuangan::class)->html();
+
+        // Kas/Bank/Total digabung jadi "Total Saldo" (bukan tiga kartu).
+        $this->assertStringContainsString('Total Saldo', $html);
+        // Mitra & Subkon digabung jadi satu kartu.
+        $this->assertStringContainsString('Mitra &amp; Subkon', $html);
+    }
+
     // Grafik arus kas
-    // ---------------------------------------------------------
 
     public function test_grafik_arus_kas_tampil(): void
     {
@@ -117,9 +164,7 @@ class DashboardWidgetTest extends TestCase
             ->assertSee('Arus Kas');
     }
 
-    // ---------------------------------------------------------
     // Tabel SPK berjalan
-    // ---------------------------------------------------------
 
     public function test_tabel_spk_berjalan_menampilkan_data(): void
     {
@@ -160,9 +205,7 @@ class DashboardWidgetTest extends TestCase
         $this->assertStringNotContainsString('WIDGET-LUNAS-002', $html, 'SPK lunas seharusnya tidak muncul');
     }
 
-    // ---------------------------------------------------------
     // Widget tampil di dashboard
-    // ---------------------------------------------------------
 
     public function test_widget_terdaftar_di_panel(): void
     {
