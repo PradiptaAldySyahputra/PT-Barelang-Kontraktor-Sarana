@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-use Filament\Actions\Exports\Models\Export;
+use App\Models\Export;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * RIWAYAT EKSPOR (peta menu C — "Ekspor & Unduhan").
+ * RIWAYAT EKSPOR (peta menu C - "Ekspor & Unduhan").
  *
  * ⚠️ KENAPA PERLU:
  * B1-2 menambah tabel `notifications` + notifikasi unduhan, tetapi belum ada
@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
  * (sedang diproses / selesai / gagal) dan mengunduhnya kembali tanpa menunggu
  * notifikasi.
  *
- * ⚠️ Data diambil dari tabel `exports` bawaan Filament — TIDAK ada tabel baru.
+ * ⚠️ Data diambil dari tabel `exports` bawaan Filament - TIDAK ada tabel baru.
  */
 final class RiwayatEkspor
 {
@@ -80,11 +80,14 @@ final class RiwayatEkspor
             && $e->file_name !== null
             && $e->getFileDisk()->exists($e->getFileDirectory().DIRECTORY_SEPARATOR.$e->file_name);
 
+        $jenisSlug = self::slugEksportir((string) $e->exporter);
+
         return [
             'id' => (int) $e->getKey(),
             'jenis' => self::labelEksportir((string) $e->exporter),
             'jenis_asli' => (string) $e->exporter,
-            'nama_berkas' => (string) ($e->file_name ?? '—'),
+            'jenis_slug' => $jenisSlug,
+            'nama_berkas' => (string) ($e->file_name ?? '-'),
             'disk' => (string) $e->file_disk,
             'status' => $status,
             'status_label' => $statusLabel,
@@ -95,9 +98,25 @@ final class RiwayatEkspor
             'baris_gagal' => $e->getFailedRowsCount(),
             'selesai' => $selesai,
             'waktu' => $e->created_at,
-            'pengguna' => $e->user?->name ?? null,
+            'pengguna' => $e->user?->nama ?? null,
             'bisa_unduh' => $berkasAda,
+            'ekspor_baru_url' => $jenisSlug ? route('laporan.ekspor', ['jenis' => $jenisSlug, 'format' => 'xlsx']) : null,
         ];
+    }
+
+    /**
+     * Slug jenis laporan yang kompatibel dengan LaporanEkspor.
+     */
+    public static function slugEksportir(string $exporter): ?string
+    {
+        $pendek = class_basename($exporter);
+
+        return match (true) {
+            str_contains($pendek, 'Spk') => 'spk',
+            str_contains($pendek, 'UangMasuk') => 'masuk',
+            str_contains($pendek, 'UangKeluar') => 'keluar',
+            default => null,
+        };
     }
 
     /**

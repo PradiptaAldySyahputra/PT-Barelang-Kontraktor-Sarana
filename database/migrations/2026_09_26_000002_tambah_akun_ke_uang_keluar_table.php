@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Tambah kolom `akun` (kas | bank) pada uang_keluar.
  *
- * Lihat catatan di migrasi uang_masuk — alasan & keputusan sama.
+ * Lihat catatan di migrasi uang_masuk - alasan & keputusan sama.
  */
 return new class extends Migration
 {

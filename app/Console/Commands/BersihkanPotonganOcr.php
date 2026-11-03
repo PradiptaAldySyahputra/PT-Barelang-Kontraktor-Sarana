@@ -13,20 +13,18 @@ use Illuminate\Support\Facades\Storage;
  * Bersihkan potongan nota hasil OCR yang sudah tidak dipakai.
  *
  * KENAPA PERINTAH INI ADA
- * -----------------------
  * Setiap kali OCR membaca satu berkas nota, ia menyimpan gambar potongan
  * (satu per nota) di `storage/app/public/uang_keluar/potongan/<hash>/`.
  *
  * Masalahnya: potongan TIDAK PERNAH dihapus. Terbukti di mesin pengembangan,
- * folder potongan mencapai 177 MB / 36 folder — sebagian besar sudah tidak
+ * folder potongan mencapai 177 MB / 36 folder - sebagian besar sudah tidak
  * dipakai (berkas sumbernya sudah hilang). Kalau dibiarkan, disk server kantor
  * akan penuh dan aplikasi berhenti bisa menyimpan nota.
  *
  * CARA KERJA
- * ----------
  * Nama folder potongan = md5(path berkas sumber). Jadi kita bisa tahu folder
  * mana yang masih dipakai (ada berkas sumbernya) dan mana yang yatim
- * (berkas sumbernya sudah tidak ada) — lalu buang yang yatim saja.
+ * (berkas sumbernya sudah tidak ada) - lalu buang yang yatim saja.
  *
  * Pakai:
  *     php artisan ocr:bersihkan          # buang potongan yatim
@@ -53,7 +51,7 @@ class BersihkanPotonganOcr extends Command
         $disk = Storage::disk('nota');
 
         if (! $disk->exists(self::FOLDER)) {
-            $this->info('Tidak ada folder potongan — tidak ada yang perlu dibersihkan.');
+            $this->info('Tidak ada folder potongan - tidak ada yang perlu dibersihkan.');
 
             return self::SUCCESS;
         }

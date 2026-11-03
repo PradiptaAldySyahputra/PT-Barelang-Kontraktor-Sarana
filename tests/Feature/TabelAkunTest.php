@@ -26,7 +26,7 @@ class TabelAkunTest extends TestCase
         UangMasuk::factory()->create(['akun' => 'bank', 'keterangan' => 'Setoran bank']);
         $this->actingAs($admin);
 
-        $html = $this->get('/admin/uang-masuks')->assertSuccessful()->getContent();
+        $html = $this->get('/panel/cash-in')->assertSuccessful()->getContent();
 
         $this->assertStringContainsString('Kas/Bank', $html);
     }
@@ -37,7 +37,7 @@ class TabelAkunTest extends TestCase
         UangKeluar::factory()->create(['akun' => 'kas', 'keterangan' => 'Belanja material']);
         $this->actingAs($admin);
 
-        $html = $this->get('/admin/uang-keluars')->assertSuccessful()->getContent();
+        $html = $this->get('/panel/cash-out')->assertSuccessful()->getContent();
 
         $this->assertStringContainsString('Kas/Bank', $html);
     }

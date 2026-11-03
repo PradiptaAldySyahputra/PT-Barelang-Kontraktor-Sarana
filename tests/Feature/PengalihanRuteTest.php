@@ -10,14 +10,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Uji PENGALIHAN rute lama -> Filament.
- *
- * ⚠️ BUG YANG DICEGAH:
- * Di v3.5 halaman Blade lama dihapus, TAPI rute /login tidak disisakan
- * pengalihannya. Akibatnya membuka /login menghasilkan 404 — membingungkan
- * karena sebelumnya di situ ada halaman login.
- *
- * Test ini memastikan semua URL lama tetap mengarah ke tempat yang benar.
+ * Uji PENGALIHAN rute lama -> Panel Blade baru.
  */
 class PengalihanRuteTest extends TestCase
 {
@@ -29,11 +22,13 @@ class PengalihanRuteTest extends TestCase
     public static function ruteLamaProvider(): array
     {
         return [
-            'login lama' => ['/login', '/admin/login'],
-            'dashboard lama' => ['/dashboard', '/admin'],
-            'home' => ['/home', '/admin'],
-            'admin dashboard' => ['/admin/dashboard', '/admin'],
-            'beranda' => ['/', '/admin'],
+            'login lama' => ['/login', '/panel/login'],
+            'dashboard lama' => ['/dashboard', '/panel'],
+            'home' => ['/home', '/panel'],
+            'admin' => ['/admin', '/panel'],
+            'admin dashboard' => ['/admin/dashboard', '/panel'],
+            'admin login' => ['/admin/login', '/panel/login'],
+            'beranda' => ['/', '/panel'],
         ];
     }
 
@@ -43,38 +38,36 @@ class PengalihanRuteTest extends TestCase
         $this->get($dari)->assertRedirect($ke);
     }
 
-    public function test_halaman_login_filament_bisa_dibuka(): void
+    public function test_halaman_login_panel_bisa_dibuka(): void
     {
-        $this->get('/admin/login')->assertOk();
+        $this->get('/panel/login')->assertOk();
     }
 
     public function test_pengguna_sudah_login_dialihkan_dari_login_ke_dashboard(): void
     {
         $admin = Pengguna::factory()->admin()->create();
 
-        // /login -> /admin/login -> /admin (oleh Filament)
         $this->actingAs($admin)
-            ->get('/admin/login')
-            ->assertRedirect('/admin');
+            ->get('/panel/login')
+            ->assertRedirect('/dashboard');
     }
 
     public function test_url_yang_benar_benar_tidak_ada_tetap_404(): void
     {
-        // Pengalihan TIDAK boleh menelan semua URL — halaman ngawur tetap 404
         $this->get('/halaman-yang-tidak-ada')->assertNotFound();
     }
 
-    public function test_semua_halaman_utama_dapat_dijangkau(): void
+    public function test_semua_halaman_utama_panel_dapat_dijangkau(): void
     {
         $admin = Pengguna::factory()->admin()->create();
 
         foreach ([
-            '/admin',
-            '/admin/spks',
-            '/admin/mitras',
-            '/admin/uang-masuks',
-            '/admin/uang-keluars',
-            '/admin/laporan',
+            '/panel',
+            '/panel/spk',
+            '/panel/partners',
+            '/panel/cash-in',
+            '/panel/cash-out',
+            '/panel/reports',
         ] as $url) {
             $this->actingAs($admin)->get($url)->assertOk();
         }
@@ -82,8 +75,7 @@ class PengalihanRuteTest extends TestCase
 
     public function test_rute_lama_tidak_bisa_dipakai_masuk_tanpa_login(): void
     {
-        // /dashboard mengarah ke /admin, yang lalu minta login.
-        $this->get('/dashboard')->assertRedirect('/admin');
-        $this->get('/admin')->assertRedirect('/admin/login');
+        $this->get('/dashboard')->assertRedirect('/panel');
+        $this->get('/panel')->assertRedirect('/panel/login');
     }
 }

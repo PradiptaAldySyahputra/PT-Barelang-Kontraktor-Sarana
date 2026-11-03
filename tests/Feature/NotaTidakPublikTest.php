@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * KEAMANAN — berkas nota TIDAK BOLEH bisa diakses publik.
+ * KEAMANAN - berkas nota TIDAK BOLEH bisa diakses publik.
  *
  * ⚠️ TEMUAN AUDIT (26 Sep 2026):
  * Semua berkas nota tersimpan di disk `public` (storage/app/public) yang
@@ -44,7 +44,7 @@ class NotaTidakPublikTest extends TestCase
         $this->assertNotSame(
             $rootPublik,
             $rootNota,
-            'Berkas nota TIDAK boleh disimpan di disk publik — bisa diunduh tanpa login.',
+            'Berkas nota TIDAK boleh disimpan di disk publik - bisa diunduh tanpa login.',
         );
 
         $this->assertStringNotContainsString(
@@ -87,12 +87,12 @@ class NotaTidakPublikTest extends TestCase
 
     public function test_form_uang_keluar_memakai_disk_nota(): void
     {
-        $sumber = file_get_contents(app_path('Filament/Resources/UangKeluars/Schemas/UangKeluarForm.php'));
+        $sumber = file_get_contents(app_path('Livewire/CashOut/CashOutForm.php'));
 
         $this->assertStringNotContainsString(
-            "default_filesystem_disk', 'public'",
+            "'public'",
             $sumber,
-            'Form uang keluar masih menunjuk disk publik — nota bisa bocor.',
+            'Form uang keluar masih menunjuk disk publik - nota bisa bocor.',
         );
     }
 
@@ -108,7 +108,7 @@ class NotaTidakPublikTest extends TestCase
      * Halaman form TIDAK boleh membocorkan URL publik /storage/...
      *
      * FileUpload bawaan Filament menaruh `url: /storage/...` di state preview.
-     * URL itu sudah ditutup (403), jadi pratinjau akan rusak — dan lebih
+     * URL itu sudah ditutup (403), jadi pratinjau akan rusak - dan lebih
      * penting, membocorkan bentuk URL lama yang tidak lagi boleh dipakai.
      */
     public function test_halaman_edit_tidak_membocorkan_url_storage(): void
@@ -123,14 +123,14 @@ class NotaTidakPublikTest extends TestCase
         ]);
 
         $html = $this->actingAs($admin)
-            ->get("/admin/uang-keluars/{$record->id}/edit")
+            ->get("/panel/cash-out/{$record->id}/edit")
             ->assertSuccessful()
             ->getContent();
 
         $this->assertStringNotContainsString(
             '/storage/uang_keluar',
             $html,
-            'Form masih membocorkan URL publik /storage/ — berkas nota harus lewat rute ber-otentikasi.',
+            'Form masih membocorkan URL publik /storage/ - berkas nota harus lewat rute ber-otentikasi.',
         );
     }
 }

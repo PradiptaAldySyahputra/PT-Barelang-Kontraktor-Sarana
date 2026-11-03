@@ -21,10 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'peran' => PastikanPeran::class,
         ]);
 
-        // Tamu yang membuka rute ber-middleware `auth` diarahkan LANGSUNG
-        // ke halaman login Filament — bukan lewat /login dulu (2 hop).
-        // Ini berlaku untuk rute biasa seperti /admin/laporan/ekspor/{jenis}.
-        $middleware->redirectGuestsTo(fn () => '/admin/login');
+        // Tamu yang membuka rute ber-middleware `auth` diarahkan ke login panel.
+        $middleware->redirectGuestsTo(fn () => '/panel/login');
 
         // Header keamanan dasar (X-Frame-Options, nosniff, Referrer-Policy).
         // ⚠️ Ditambahkan setelah audit 26 Sep 2026 — sebelumnya aplikasi tidak

@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tabel `pengguna` — akun pengguna sistem.
+ * Tabel `pengguna` - akun pengguna sistem.
  *
  * Asal: skema awal (`pengguna`) + SRS.
  * Kolom `peran` divalidasi memakai App\Enums\Peran (admin | direktur).

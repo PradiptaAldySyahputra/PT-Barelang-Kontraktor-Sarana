@@ -7,18 +7,16 @@ namespace App\Support;
 use App\Enums\KategoriPengeluaran;
 
 /**
- * PEMBACA ISI NOTA — mengurai TEKS hasil OCR menjadi field yang bisa dipakai.
+ * PEMBACA ISI NOTA - mengurai TEKS hasil OCR menjadi field yang bisa dipakai.
  *
  * ⚠️ KENAPA DIPISAH DARI SKRIP PYTHON
- * -----------------------------------
  * Skrip Python hanya tahu koordinat & teks mentah. Mengurai teks jadi
  * "nominal / tanggal / penerima / kategori" adalah pekerjaan LOGIKA, bukan
- * gambar — jadi ditaruh di PHP supaya:
+ * gambar - jadi ditaruh di PHP supaya:
  *   - bisa diuji unit dengan cepat (tanpa Python/model OCR);
  *   - bisa diperbaiki tanpa menyentuh pipeline gambar.
  *
  * ⚠️ HASILNYA SELALU "DRAF", BUKAN KEBENARAN
- * ------------------------------------------
  * Nota proyek ini banyak yang TULISAN TANGAN. OCR tulisan tangan sering salah
  * baca (contoh nyata: "580m", "y59r000", "42 8a0"). Karena itu:
  *   - parser mengembalikan `keyakinan` ('tinggi'/'sedang'/'rendah');
@@ -127,10 +125,10 @@ final class PembacaIsiNota
     private static function cariNominal(array $baris): ?int
     {
         /*
-         * ⚠️ PERBAIKAN BUG "nominal halu" (temuan 8 Okt 2026).
+         * PERBAIKAN BUG "nominal halu" (temuan 8 Okt 2026).
          *
          * Pada nota kuitansi proyek ini (layout 2 kolom), nilai TOTAL sering
-         * tercetak di baris SEBELUM label "Total Rp." — bukan sesudahnya.
+         * tercetak di baris SEBELUM label "Total Rp." - bukan sesudahnya.
          * Contoh nyata dari berkas 57-nota:
          *     '3375000'                       <- nilai total
          *     'tidak dapat dikembalikan...'
@@ -154,38 +152,10 @@ final class PembacaIsiNota
                 continue;
             }
 
-            // 1) Angka di baris total itu sendiri.
-            $v = self::angkaTerbesar($t);
+            $nominal = self::angkaDiSekitarLabel($baris, $i);
 
-            if ($v !== null && $v >= 1000) {
-                return $v;
-            }
-
-            // 2) Baris SESUDAH label (format "Total Rp." lalu angkanya).
-            for ($j = $i + 1; $j <= min($i + 2, count($baris) - 1); $j++) {
-                if (self::barisPengecuali($baris[$j])) {
-                    continue;
-                }
-
-                $v = self::angkaTerbesar($baris[$j]);
-
-                if ($v !== null && $v >= 1000) {
-                    return $v;
-                }
-            }
-
-            // 3) Baris SEBELUM label (layout 2 kolom: nilai di kiri, label di
-            //    kanan-bawah). Ini yang paling sering benar di nota proyek.
-            for ($j = $i - 1; $j >= max(0, $i - 2); $j--) {
-                if (self::barisPengecuali($baris[$j])) {
-                    continue;
-                }
-
-                $v = self::angkaTerbesar($baris[$j]);
-
-                if ($v !== null && $v >= 1000) {
-                    return $v;
-                }
+            if ($nominal !== null) {
+                return $nominal;
             }
         }
 
@@ -205,6 +175,51 @@ final class PembacaIsiNota
         }
 
         return $kandidat === [] ? null : max($kandidat);
+    }
+
+    /**
+     * Cari nominal di sekitar baris label total: baris label itu sendiri,
+     * lalu 2 baris sesudahnya, lalu 2 baris sebelumnya (layout 2 kolom).
+     *
+     * @param  array<int, string>  $baris
+     */
+    private static function angkaDiSekitarLabel(array $baris, int $i): ?int
+    {
+        // 1) Angka di baris total itu sendiri.
+        $v = self::angkaTerbesar($baris[$i]);
+
+        if ($v !== null && $v >= 1000) {
+            return $v;
+        }
+
+        // 2) Baris SESUDAH label (format "Total Rp." lalu angkanya).
+        for ($j = $i + 1; $j <= min($i + 2, count($baris) - 1); $j++) {
+            if (self::barisPengecuali($baris[$j])) {
+                continue;
+            }
+
+            $v = self::angkaTerbesar($baris[$j]);
+
+            if ($v !== null && $v >= 1000) {
+                return $v;
+            }
+        }
+
+        // 3) Baris SEBELUM label (layout 2 kolom: nilai di kiri, label di
+        //    kanan-bawah). Ini yang paling sering benar di nota proyek.
+        for ($j = $i - 1; $j >= max(0, $i - 2); $j--) {
+            if (self::barisPengecuali($baris[$j])) {
+                continue;
+            }
+
+            $v = self::angkaTerbesar($baris[$j]);
+
+            if ($v !== null && $v >= 1000) {
+                return $v;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -242,7 +257,7 @@ final class PembacaIsiNota
     }
 
     /**
-     * Nama penerima / toko — teks setelah label "Kepada Yth".
+     * Nama penerima / toko - teks setelah label "Kepada Yth".
      *
      * @param  array<int, string>  $baris
      */
@@ -294,7 +309,7 @@ final class PembacaIsiNota
     }
 
     /**
-     * Keterangan ringkas — gabungan beberapa baris item (dibersihkan).
+     * Keterangan ringkas - gabungan beberapa baris item (dibersihkan).
      *
      * @param  array<int, string>  $baris
      */
@@ -357,7 +372,7 @@ final class PembacaIsiNota
      *
      * ⚠️ PERBAIKAN BUG "nominal halu" (temuan 8 Okt 2026):
      * Dulu regex `\d[\d.,\s\-]*\d` memakai SPASI sebagai pemisah bebas,
-     * sehingga deret angka tak berhubungan tergabung jadi satu angka raksasa —
+     * sehingga deret angka tak berhubungan tergabung jadi satu angka raksasa -
      * contoh nyata dari berkas 57-nota: "26 20" → 2620, dan sebuah nota
      * menghasilkan 2.600.030.000 (miliaran) dari potongan nomor nota + qty.
      *

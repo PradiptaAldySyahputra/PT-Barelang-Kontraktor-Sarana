@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
  * ⚠️ KENAPA DATA URI (base64), BUKAN URL:
  * dompdf menjalankan render di sisi server TANPA sesi login. Kalau memakai URL
  * ber-otentikasi `/admin/nota/...`, gambarnya akan gagal dimuat (401). Dengan
- * menempelkan isi gambar sebagai data URI, PDF selalu bisa dirender — sekaligus
+ * menempelkan isi gambar sebagai data URI, PDF selalu bisa dirender - sekaligus
  * TIDAK membuat berkas tanda tangan bisa diunduh publik.
  */
 final class TandaTangan
@@ -55,7 +55,7 @@ final class TandaTangan
      * Ubah berkas gambar di disk privat `nota` menjadi data URI base64.
      *
      * Mengembalikan null bila path kosong, berkas tidak ada, atau isinya gagal
-     * dibaca — supaya PDF tetap bisa terbit tanpa gambar.
+     * dibaca - supaya PDF tetap bisa terbit tanpa gambar.
      */
     private static function dataUri(?string $path): ?string
     {

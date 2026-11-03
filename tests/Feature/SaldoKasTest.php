@@ -12,18 +12,18 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * SALDO BERJALAN KAS/BANK — fitur T2 (permintaan user 10 Okt 2026).
+ * SALDO BERJALAN KAS/BANK - fitur T2 (permintaan user 10 Okt 2026).
  *
  * ⚠️ KENAPA PERLU:
  * Sistem sudah bisa memisahkan transaksi per akun (kas | bank), tetapi belum
- * pernah menunjukkan SALDO — berapa uang yang sebenarnya ada di kas & di bank.
+ * pernah menunjukkan SALDO - berapa uang yang sebenarnya ada di kas & di bank.
  * Tanpa saldo, admin tidak tahu posisi uang berjalan; laporan hanya menampilkan
  * total masuk/keluar tanpa memperhitungkan AKUN.
  *
  * Saldo = total uang MASUK − total uang KELUAR untuk akun tersebut.
  *
  * ⚠️ UANG BUKAN ENTITAS BARU: saldo dihitung on-the-fly dari transaksi yang
- * sudah ada (tidak menambah tabel — aturan skema Rules.md §1).
+ * sudah ada (tidak menambah tabel - aturan skema Rules.md §1).
  */
 class SaldoKasTest extends TestCase
 {

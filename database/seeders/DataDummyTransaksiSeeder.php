@@ -15,10 +15,10 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * DATA DUMMY TRANSAKSI — untuk menguji SELURUH bagian aplikasi.
+ * DATA DUMMY TRANSAKSI - untuk menguji SELURUH bagian aplikasi.
  *
  * ⚠️ TUJUAN
- * Data SPK asli dari Excel hanya memuat daftar SPK — tidak ada uang masuk
+ * Data SPK asli dari Excel hanya memuat daftar SPK - tidak ada uang masuk
  * maupun uang keluar. Akibatnya banyak bagian tidak bisa diuji:
  *   - Kartu dashboard "Sudah Diterima", "Uang Keluar", "Belum Diterima"
  *   - Grafik arus kas (kosong, hanya garis nol)
@@ -36,13 +36,13 @@ use Illuminate\Support\Facades\Storage;
  *   - 30% SPK  : dibayar lunas             -> "Dibayar" (pindah ke Tagihan Selesai)
  *
  * Biaya per SPK dijaga DI BAWAH nilai SPK supaya tidak memicu peringatan
- * "biaya melebihi nilai SPK" — peringatan itu hanya untuk salah ketik.
+ * "biaya melebihi nilai SPK" - peringatan itu hanya untuk salah ketik.
  *
  * Jalankan:  php artisan db:seed --class=DataDummyTransaksiSeeder
  */
 class DataDummyTransaksiSeeder extends Seeder
 {
-    /** Benih acak tetap — supaya hasilnya sama tiap kali dijalankan. */
+    /** Benih acak tetap - supaya hasilnya sama tiap kali dijalankan. */
     private const BENIH = 20260920;
 
     /** Folder bukti (relatif terhadap disk `public`). */
@@ -57,7 +57,7 @@ class DataDummyTransaksiSeeder extends Seeder
         $admin = Pengguna::where('peran', 'admin')->first() ?? Pengguna::first();
 
         if (! $admin) {
-            $this->command?->warn('Tidak ada pengguna — jalankan seeder pengguna dulu.');
+            $this->command?->warn('Tidak ada pengguna - jalankan seeder pengguna dulu.');
 
             return;
         }
@@ -65,7 +65,7 @@ class DataDummyTransaksiSeeder extends Seeder
         $spks = Spk::orderBy('id')->get();
 
         if ($spks->isEmpty()) {
-            $this->command?->warn('Tidak ada SPK — jalankan DatabaseSeeder dulu.');
+            $this->command?->warn('Tidak ada SPK - jalankan DatabaseSeeder dulu.');
 
             return;
         }
@@ -98,9 +98,7 @@ class DataDummyTransaksiSeeder extends Seeder
         ));
     }
 
-    // =========================================================
     // TRANSAKSI PER SPK
-    // =========================================================
 
     /**
      * @return array{int, int} jumlah uang masuk & keluar yang dibuat
@@ -117,9 +115,7 @@ class DataDummyTransaksiSeeder extends Seeder
         $masuk = 0;
         $keluar = 0;
 
-        // ---------------------------------------------------------
-        // UANG MASUK — pola pembayaran
-        // ---------------------------------------------------------
+        // UANG MASUK - pola pembayaran
         $pola = $urutan % 10;
 
         $termin = match (true) {
@@ -141,20 +137,18 @@ class DataDummyTransaksiSeeder extends Seeder
                 'tanggal' => $tanggal->toDateString(),
                 'jumlah' => $jumlah,
                 'mitra_id' => $spk->mitra_id,
-                'keterangan' => 'Pembayaran '.number_format($porsi * 100, 0).'% — '.$spk->nomor_spk,
+                'keterangan' => 'Pembayaran '.number_format($porsi * 100, 0).'% - '.$spk->nomor_spk,
                 'bukti' => [$porsi >= 1.0 ? $pdf : $png],
             ]);
 
             $masuk++;
         }
 
-        // ---------------------------------------------------------
-        // UANG KELUAR — biaya pekerjaan
+        // UANG KELUAR - biaya pekerjaan
         //
         // SPK subkon: mayoritas dibayarkan ke subkon.
         // SPK sendiri: material + upah + transportasi.
         // Total selalu < nilai SPK.
-        // ---------------------------------------------------------
         $komponen = $spk->isDisubkonkan()
             ? [
                 [KategoriPengeluaran::Upah, 0.72, 'Pembayaran ke '.($spk->subkon?->nama ?? 'subkon')],
@@ -180,7 +174,7 @@ class DataDummyTransaksiSeeder extends Seeder
                 'penerima' => $kategori === KategoriPengeluaran::Upah
                     ? ($spk->subkon?->nama ?? 'Mandor')
                     : 'Toko Material',
-                'keterangan' => $ket.' — '.$spk->nomor_spk,
+                'keterangan' => $ket.' - '.$spk->nomor_spk,
                 'bukti' => [$png],
             ]);
 
@@ -197,9 +191,7 @@ class DataDummyTransaksiSeeder extends Seeder
         return [$masuk, $keluar];
     }
 
-    // =========================================================
     // TRANSAKSI TANPA SPK (biaya kantor & penerimaan lain)
-    // =========================================================
 
     /**
      * @return array{int, int}
@@ -208,7 +200,7 @@ class DataDummyTransaksiSeeder extends Seeder
     {
         $mitra = Mitra::query()->where('kategori', 'mitra')->first();
 
-        // Biaya kantor bulanan — tidak terkait SPK.
+        // Biaya kantor bulanan - tidak terkait SPK.
         $bulanIni = now()->startOfMonth();
         $biayaKantor = [
             [KategoriPengeluaran::Gaji, 18_500_000, 'Gaji staf kantor'],
@@ -228,7 +220,7 @@ class DataDummyTransaksiSeeder extends Seeder
             ]);
         }
 
-        // Penerimaan di luar SPK — mis. jasa sewa alat.
+        // Penerimaan di luar SPK - mis. jasa sewa alat.
         $penerimaanUmum = [
             [5_500_000, 'Sewa alat berat (di luar SPK)'],
             [1_750_000, 'Penjualan material sisa'],
@@ -248,9 +240,7 @@ class DataDummyTransaksiSeeder extends Seeder
         return [count($penerimaanUmum), count($biayaKantor)];
     }
 
-    // =========================================================
     // FILE BUKTI CONTOH
-    // =========================================================
 
     private function bersihkanTransaksiLama(): void
     {
@@ -258,7 +248,7 @@ class DataDummyTransaksiSeeder extends Seeder
          * ⚠️ SEEDER INI HANYA UNTUK LINGKUNGAN UJI/DUMMY.
          *
          * forceDelete() tanpa `where` menghapus SELURUH baris permanen. Aman di
-         * sini karena seeder memang bertujuan mengisi ulang data dummy — TAPI
+         * sini karena seeder memang bertujuan mengisi ulang data dummy - TAPI
          * JANGAN pernah meniru pola ini di luar seeder (pernah menyebabkan
          * seluruh data produksi terhapus). Untuk pembersihan manual, SELALU
          * pakai klausa `where`.
@@ -267,7 +257,7 @@ class DataDummyTransaksiSeeder extends Seeder
         UangKeluar::withTrashed()->forceDelete();
 
         // File bukti lama ikut dibersihkan supaya tidak menumpuk.
-        // ⚠️ DISK `nota` (privat), bukan `public` — bukti tidak boleh publik.
+        // ⚠️ DISK `nota` (privat), bukan `public` - bukti tidak boleh publik.
         foreach ([self::DIR_MASUK, self::DIR_KELUAR] as $dir) {
             foreach (Storage::disk('nota')->files($dir) as $file) {
                 Storage::disk('nota')->delete($file);
@@ -296,7 +286,7 @@ class DataDummyTransaksiSeeder extends Seeder
     }
 
     /**
-     * Gambar contoh (JPEG) — meniru foto nota.
+     * Gambar contoh (JPEG) - meniru foto nota.
      */
     private function buatPngContoh(): string
     {

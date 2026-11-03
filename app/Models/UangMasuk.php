@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * Model `uang_masuk` — penerimaan dana.
+ * Model `uang_masuk` - penerimaan dana.
  *
  * Sumber uang masuk DISIMPULKAN dari spk_id:
  *   - spk_id terisi -> dari SPK
@@ -71,9 +71,7 @@ class UangMasuk extends Model
         ];
     }
 
-    // ---------------------------------------------------------
     // Relasi
-    // ---------------------------------------------------------
 
     /**
      * @return BelongsTo<Spk, $this>
@@ -91,15 +89,13 @@ class UangMasuk extends Model
         return $this->belongsTo(Mitra::class, 'mitra_id');
     }
 
-    // ---------------------------------------------------------
     // Helper
-    // ---------------------------------------------------------
 
     /**
      * Apakah uang masuk ini berasal dari SPK?
      *
      * CATATAN: nama method diawali `is` agar TIDAK bertabrakan dengan
-     * scope `scopeDariSpk` — kalau namanya sama (`dariSpk`), PHP akan
+     * scope `scopeDariSpk` - kalau namanya sama (`dariSpk`), PHP akan
      * menolak `UangMasuk::dariSpk()` dengan "Non-static method cannot be
      * called statically".
      */
@@ -118,9 +114,7 @@ class UangMasuk extends Model
         return count($this->bukti ?? []);
     }
 
-    // ---------------------------------------------------------
     // Scope
-    // ---------------------------------------------------------
 
     /**
      * @param  Builder<UangMasuk>  $query

@@ -322,12 +322,14 @@ def simpan_potongan(
 
             bagian = asli.crop((kiri, atas, kanan, bawah))
 
-            # Perbesar 1.5x supaya teks tulisan tangan lebih mudah dibaca
-            # saat ditampilkan di form.
-            bagian = bagian.resize((int(bagian.width * 1.5), int(bagian.height * 1.5)))
+            # Simpan potongan tajam berkualitas tinggi (JPEG 90) dengan ukuran nyaman dibaca admin
+            lebar_asli, tinggi_asli = bagian.size
+            if lebar_asli < 800:
+                faktor = min(2.5, 900 / max(1, lebar_asli))
+                bagian = bagian.resize((int(lebar_asli * faktor), int(tinggi_asli * faktor)), Image.Resampling.LANCZOS)
 
-            path = os.path.join(dir_keluar, f"nota_{i}.png")
-            bagian.save(path, "PNG", optimize=True)
+            path = os.path.join(dir_keluar, f"nota_{i}.jpg")
+            bagian.convert("RGB").save(path, "JPEG", quality=90, optimize=True)
             hasil.append(path)
         except Exception:
             hasil.append(None)

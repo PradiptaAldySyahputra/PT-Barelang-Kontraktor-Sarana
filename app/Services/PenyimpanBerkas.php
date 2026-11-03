@@ -10,20 +10,18 @@ use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
- * Simpan berkas nota — dengan KOMPRESI otomatis untuk gambar.
+ * Simpan berkas nota - dengan KOMPRESI otomatis untuk gambar.
  *
  * ⚠️ KENAPA SEMUA JALUR DI SINI MENGEMBALIKAN PATH RELATIF STORAGE
- * ---------------------------------------------------------------
  * Bug yang pernah terjadi: berkas sementara (`livewire-tmp/...`) dikembalikan
  * sebagai path berkas. Akibatnya `Storage::disk('public')->exists()` gagal
  * ("File tidak ditemukan") dan OCR tidak bisa membaca berkasnya.
  *
  * Karena itu berkas SELALU disimpan lebih dulu ke disk, dan yang dikembalikan
  * adalah path RELATIF yang benar (mis. "uang_keluar/nota-abc.jpg"). Satu
- * unggah menghasilkan SATU berkas — tidak ada penyimpanan ganda.
+ * unggah menghasilkan SATU berkas - tidak ada penyimpanan ganda.
  *
  * KOMPRESI
- * --------
  * Foto dari HP sering 2–10 MB. Terbukti: PNG 9,5 MB → 1,3 MB (14%), foto
  * 612 KB → 79 KB (13%), tanpa kehilangan keterbacaan. PDF TIDAK dikompres
  * (sudah padat; resolusinya penting untuk membaca tulisan tangan).
@@ -129,7 +127,7 @@ class PenyimpanBerkas
          * Berkas LAMA (uang_keluar/nota-<hash>.jpg tanpa sub-folder tanggal)
          * TETAP terbaca: Arsip Nota & pratinjau membaca PATH dari kolom `bukti`
          * di database, bukan dari nama folder. Jadi kedua struktur hidup
-         * berdampingan — TIDAK ada migrasi berkas yang berisiko.
+         * berdampingan - TIDAK ada migrasi berkas yang berisiko.
          *
          * `$tanggal` default = waktu unggah (dokumen: "tersimpan otomatis saat
          * upload"). Bisa diisi tanggal transaksi bila pemanggil punya.
@@ -183,7 +181,6 @@ class PenyimpanBerkas
             $tinggi = imagesy($gambar);
 
             if ($lebar < 1 || $tinggi < 1) {
-                imagedestroy($gambar);
 
                 return null;
             }
@@ -202,14 +199,12 @@ class PenyimpanBerkas
                 imagefilledrectangle($kecil, 0, 0, $lebarBaru, $tinggiBaru, $putih);
                 imagecopyresampled($kecil, $gambar, 0, 0, 0, 0, $lebarBaru, $tinggiBaru, $lebar, $tinggi);
 
-                imagedestroy($gambar);
                 $gambar = $kecil;
             }
 
             ob_start();
             imagejpeg($gambar, null, self::KUALITAS);
             $isi = (string) ob_get_clean();
-            imagedestroy($gambar);
 
             if ($isi === '') {
                 return null;
@@ -220,14 +215,13 @@ class PenyimpanBerkas
              *
              * Kalau hasil kompresi lebih kecil dari MIN_PIKSEL_OCR, tulisan
              * nota bisa tidak terbaca OCR. Dalam kasus itu berkas ASLI dipakai
-             * (null = "tidak dikompres") — admin lebih baik mengunggah berkas
+             * (null = "tidak dikompres") - admin lebih baik mengunggah berkas
              * agak besar daripada nota-nya tidak terbaca.
              */
             $gambarCek = @imagecreatefromstring($isi);
 
             if ($gambarCek !== false) {
                 $sisiCek = max(imagesx($gambarCek), imagesy($gambarCek));
-                imagedestroy($gambarCek);
 
                 if ($sisiCek < self::MIN_PIKSEL_OCR) {
                     return null;
@@ -246,11 +240,11 @@ class PenyimpanBerkas
     }
 
     /**
-     * Batas ukuran unggah (KB) — dari .env supaya bisa disesuaikan dengan
+     * Batas ukuran unggah (KB) - dari .env supaya bisa disesuaikan dengan
      * php.ini server tanpa mengubah kode.
      */
     public static function maksUkuranKb(): int
     {
-        return (int) env('NOTA_MAKS_UKURAN_KB', 25600);
+        return (int) config('filesystems.nota_maks_ukuran_kb');
     }
 }

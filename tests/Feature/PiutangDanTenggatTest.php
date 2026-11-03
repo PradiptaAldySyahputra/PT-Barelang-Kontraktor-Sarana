@@ -46,9 +46,7 @@ class PiutangDanTenggatTest extends TestCase
         ], $atribut));
     }
 
-    // =========================================================
     // PIUTANG SEDERHANA
-    // =========================================================
 
     public function test_piutang_adalah_nilai_spk_dikurangi_diterima(): void
     {
@@ -119,14 +117,12 @@ class PiutangDanTenggatTest extends TestCase
         $this->assertSame(60_000_000.0, $spk->piutangDari(40_000_000));
     }
 
-    // =========================================================
     // TENGGAT
-    // =========================================================
 
     public function test_scope_lewat_tenggat(): void
     {
         // ⚠️ Scope lewatTenggat() hanya berlaku untuk SPK yang MASIH BERJALAN.
-        // SPK yang sudah selesai TIDAK dihitung — supaya tidak muncul alarm
+        // SPK yang sudah selesai TIDAK dihitung - supaya tidak muncul alarm
         // palsu (pernah terjadi: 67 dari 90 SPK asli dianggap lewat tenggat).
         $this->buatSpk([
             'nomor_spk' => 'L-1',

@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Batasi akses berdasarkan peran pengguna.
  *
- * PENTING: ini bukan sekadar menyembunyikan menu — request yang tidak
+ * PENTING: ini bukan sekadar menyembunyikan menu - request yang tidak
  * berhak akan DITOLAK dengan 403. Sesuai Rules.md §4.
  *
  * Pemakaian di route:

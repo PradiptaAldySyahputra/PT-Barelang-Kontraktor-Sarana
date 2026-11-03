@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * Kategori mitra — HANYA 2 (revisi user).
+ * Kategori mitra - HANYA 2 (revisi user).
  *
  * | Kategori | Arti |
  * |---|---|
@@ -16,7 +16,7 @@ namespace App\Enums;
  * User memutuskan PLN masuk ke **mitra**, sehingga hanya tersisa 2 kategori.
  * Data lama dimigrasi lewat `2026_09_20_000001_ubah_kategori_mitra_table.php`.
  *
- * Sesuai Schema.md — kolom `mitra.kategori`.
+ * Sesuai Schema.md - kolom `mitra.kategori`.
  */
 enum KategoriMitra: string
 {
@@ -37,8 +37,8 @@ enum KategoriMitra: string
     public function keterangan(): string
     {
         return match ($this) {
-            self::Mitra => 'Pemberi kerja / pihak luar — termasuk PT PLN Batam & pelanggan',
-            self::Subkon => 'Penerima pekerjaan dari kita — kita bayar mereka',
+            self::Mitra => 'Pemberi kerja / pihak luar - termasuk PT PLN Batam & pelanggan',
+            self::Subkon => 'Penerima pekerjaan dari kita - kita bayar mereka',
         };
     }
 
@@ -51,6 +51,17 @@ enum KategoriMitra: string
     public function pemberiKerja(): bool
     {
         return $this === self::Mitra;
+    }
+
+    /**
+     * Warna badge Filament - konsisten di seluruh halaman.
+     */
+    public function warnaBadge(): string
+    {
+        return match ($this) {
+            self::Mitra => 'primary',
+            self::Subkon => 'warning',
+        };
     }
 
     /**

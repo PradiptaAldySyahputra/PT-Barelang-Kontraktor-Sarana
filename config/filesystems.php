@@ -15,6 +15,9 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    // Batas unggah nota (KB). Dibaca lewat config() agar tetap jalan setelah config:cache.
+    'nota_maks_ukuran_kb' => (int) env('NOTA_MAKS_UKURAN_KB', 25600),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
@@ -40,10 +43,10 @@ return [
 
         /*
         |----------------------------------------------------------------------
-        | DISK `nota` — PRIVAT, khusus berkas nota & bukti keuangan
+        | DISK `nota` - PRIVAT, khusus berkas nota & bukti keuangan
         |----------------------------------------------------------------------
         |
-        | ⚠️ TEMUAN AUDIT KEAMANAN (26 Sep 2026) — JANGAN digabung ke `public`:
+        | ⚠️ TEMUAN AUDIT KEAMANAN (26 Sep 2026) - JANGAN digabung ke `public`:
         | Sebelumnya nota disimpan di disk `public` (storage/app/public) yang
         | disajikan langsung lewat symlink `public/storage`. Akibatnya SEMUA
         | nota (175 berkas, 536 MB) bisa diunduh SIAPA PUN TANPA LOGIN:
@@ -54,7 +57,7 @@ return [
         | Sekarang disimpan di luar `public` dan hanya bisa dibaca lewat rute
         | ber-otentikasi `/admin/nota/{path}` (lihat routes/web.php).
         |
-        | Disk ini TIDAK punya 'url' — memang tidak boleh diakses langsung.
+        | Disk ini TIDAK punya 'url' - memang tidak boleh diakses langsung.
         */
         'nota' => [
             'driver' => 'local',
@@ -67,7 +70,7 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             /*
-            | URL RELATIF — SENGAJA, JANGAN diganti jadi absolut.
+            | URL RELATIF - SENGAJA, JANGAN diganti jadi absolut.
             |
             | Kalau diisi absolut (mis. APP_URL + '/storage'), maka SEMUA tautan
             | gambar & PDF nota akan menunjuk ke host itu saja. Aplikasi ini

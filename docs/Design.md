@@ -1,19 +1,19 @@
 # Design — UI/UX & Design Guidelines
 ## Sistem Informasi SPK & Kontrol Keuangan — PT Barelang Kontraktor Sarana
 
-> Panel admin Filament (`/admin`). Role 2 · tanpa halaman approval · tanpa menu
-> Proyek/Master Data · form uang masuk 2 mode.
+> Panel admin TailAdmin (`/panel`). Role 2 · tanpa halaman approval · tanpa menu
+> Proyek/Master Data · form uang masuk 2 mode · Direktur memiliki hak Super Admin.
 
 ---
 
 ## 1. Prinsip Desain UI/UX
 
-1. **Dashboard admin sederhana dan bersih** — fokus pada angka dan tabel.
-2. **Kejelasan data finansial** — **hijau = pemasukan/untung**, **merah = pengeluaran/rugi**,
-   konsisten di seluruh aplikasi.
+1. **Dashboard admin sederhana dan bersih** — fokus pada angka, tindakan yang perlu ditindaklanjuti, dan tabel.
+2. **Kejelasan data finansial** — biru menjadi aksen antarmuka; hijau/merah hanya untuk makna finansial atau peringatan,
+   selalu disertai label teks.
 3. **Navigasi sidebar tetap**, mengikuti modul utama: **Dashboard, Master Data, Transaksi, Laporan**.
 4. **Mobile-friendly** untuk halaman input transaksi — Admin sering input dari lokasi pekerjaan.
-5. **Istilah operasional perusahaan** — form memakai istilah sehari-hari (SPK, termin, retensi,
+5. **Istilah operasional perusahaan** — form memakai istilah sehari-hari (SPK, termin,
    BAST) agar Admin tidak perlu pelatihan kompleks.
 6. **Selalu sediakan kolom Keterangan** pada setiap form transaksi agar konteks tidak hilang.
 
@@ -21,10 +21,11 @@
 
 | Aspek | Ketentuan |
 |---|---|
-| **Primary color** | Blue-700 atau token warna institusi yang disepakati |
+| **Primary color** | **Biru enterprise `#2563eb`** (blue-600) — tombol utama, menu aktif, link. SATU aksen saja, jangan warna-warni (sistem desain v1.1, 11 Okt 2026) |
 | **Warna semantik** | Hijau = pemasukan/untung; Merah = pengeluaran/rugi; Abu = arsip/dibatalkan |
-| **Warna netral** | `slate` untuk teks dan elemen netral; putih untuk permukaan utama |
-| **Typography** | Inter atau Poppins dengan fallback sans-serif |
+| **Warna netral** | `zinc` untuk teks dan elemen netral; putih untuk permukaan utama |
+| **Mode gelap** | Aktif (bawaan Filament 5). Latar `#09090b`, teks `#fafafa`, aksen biru terang `#60a5fa` |
+| **Typography** | Font sistem (`system-ui`, `-apple-system`, …) — benar-benar dimuat, bukan Inter. Diperbaiki 12 Okt 2026 (lihat §14) |
 | **Komponen** | Kartu radius moderat, whitespace cukup, ikon sederhana, hierarki heading konsisten |
 | **Prinsip** | Mobile-first, jelas, ramah pengguna, konsisten, aksesibel |
 
@@ -51,7 +52,7 @@ Transaksi
     └── Uang Keluar
 
 Laporan
-    └── Laporan Keuangan    (satu halaman, 7 bagian + 7 ekspor CSV)
+    └── Laporan             (satu halaman dengan ringkasan, tindakan, transaksi, SPK, tenggat, saldo, dan ekspor per jenis data)
 
 Pengaturan
     └── Pengguna
@@ -61,16 +62,18 @@ Pengaturan
 
 | Bagian | Isi |
 |---|---|
-| Ringkasan | Uang masuk · keluar · saldo · **piutang lancar** · retensi ditahan |
-| Peringatan Tenggat | SPK lewat tenggat & mendekati tenggat |
-| **Umur Piutang (Aging)** | 0-30 · 31-60 · 61-90 · >90 · tanpa tanggal |
-| Arus Kas per Bulan | Masuk, keluar, selisih |
-| Laba-Rugi per SPK | Penerimaan − biaya, + piutang lancar & retensi |
-| Pengeluaran per Kategori | Total + bar proporsi |
-| Piutang SPK | Umur hari, retensi, diterima, piutang lancar |
+| Ringkasan | Nilai SPK, uang masuk, uang keluar, saldo, dan konteks jumlah data |
+| Perlu Perhatian | Jumlah SPK lewat tenggat, mendekati tenggat, dan belum lunas |
+| Arus Kas per Bulan | Masuk, keluar, selisih, serta bulan yang hanya memiliki satu jenis transaksi |
+| Pengeluaran per Kategori | Total pengeluaran menurut kategori |
+| Piutang SPK | Nilai SPK, penerimaan, dan sisa piutang |
+| Daftar SPK | Nilai, penerimaan, sisa piutang, dan status |
+| Tenggat SPK | SPK lewat atau mendekati tenggat |
 
-**Ekspor CSV (7 jenis):** Daftar SPK · Laba-Rugi · Piutang · **Aging** ·
-**Tenggat** · Arus Kas · Kategori.
+Filter periode hanya memengaruhi transaksi uang masuk dan uang keluar. Nilai SPK,
+piutang, saldo, daftar SPK, dan tenggat menunjukkan posisi saat ini.
+
+Ekspor tersedia per bagian laporan dalam format CSV, Excel, atau PDF sesuai kebutuhan.
 
 > 📌 **Tidak ada menu Master Data** untuk Status SPK / Status Tagihan / Kategori Pengeluaran.
 > Karena schema hanya 5 tabel, nilainya dikelola lewat **PHP Enum** dan muncul sebagai
@@ -94,11 +97,9 @@ Pengaturan
 | Input Uang Masuk | Transaksi | Form 2 mode (dari SPK / manual) + upload bukti |
 | Daftar Uang Keluar | Transaksi | Tabel pengeluaran + filter periode/kategori/SPK |
 | Input Uang Keluar | Transaksi | Form pengeluaran + upload bukti |
-| Master Mitra | Data Mitra | Tabel + form mitra (PLN, vendor, subkon, pelanggan) |
-| Laporan SPK | Laporan | Daftar SPK + filter + total |
-| Laporan Cashflow | Laporan | Perbandingan uang masuk vs keluar per periode |
-| Laporan SPK Belum Dibayar | Laporan | Piutang per SPK + umur piutang |
-| Laporan Laba-Rugi per SPK | Laporan | Penerimaan − biaya per SPK |
+| Master Mitra | Master Data | Tabel + form mitra sesuai enum kategori |
+| Kelola Pengguna | Master Data | Akun Admin dan Direktur |
+| Laporan | Laporan | Ringkasan, tindakan, transaksi, piutang, SPK, tenggat, kas/bank; ekspor per jenis data |
 
 ## 5. Halaman SPK (Entitas Inti)
 
@@ -116,8 +117,6 @@ Pengaturan
 | Sumber / Sheet Lama | Select | Asal pengelompokan data lama (referensi migrasi) | Opsional |
 | Status SPK | Select (Enum) | Draft, Terbit, Berjalan, Selesai, Sudah Ditagihkan, Dibatalkan | Wajib |
 | Status Tagihan | Select (Enum) | Belum Ditagihkan, Sudah Ditagihkan, Revisi Dokumen, Menunggu Pembayaran, Dibayar | Disarankan |
-| **Retensi (%)** | Number | Default 5% untuk SPK subkon/vendor | Opsional |
-| **Nilai Retensi** | Currency | Terhitung otomatis dari nilai SPK × persentase | Read-only |
 
 > 📌 **Keputusan user:** field **PIC** dan **Keterangan** **tidak ada** di form SPK.
 >
@@ -130,7 +129,7 @@ Pengaturan
 |---|---|
 | **Table View** | Daftar seluruh SPK, filter nomor/tanggal/lokasi/nilai/status |
 | **Board Status SPK** | Kartu SPK dikelompokkan per status: Draft, Terbit, Berjalan, Selesai, Sudah Ditagihkan |
-| **Detail SPK** | Data lengkap + uang masuk terkait + pengeluaran terkait + perhitungan laba-rugi |
+| **Detail SPK** | Data SPK + uang masuk terkait + pengeluaran terkait; tidak menghitung laba-rugi |
 | **Filter Tagihan** | Belum ditagihkan, sudah ditagihkan, revisi dokumen, menunggu pembayaran |
 | **Dashboard Ringkas** | Total nilai SPK, jumlah per status, nilai sudah ditagihkan, dibayar, outstanding |
 
@@ -189,19 +188,17 @@ Form memiliki **pilihan mode** di bagian atas:
 | Total Nilai SPK | `SUM(spk.nilai_spk)` |
 | Total Uang Masuk | `SUM(uang_masuk.jumlah)` |
 | Total Uang Keluar | `SUM(uang_keluar.jumlah)` |
-| Saldo Bersih | Uang masuk − uang keluar |
-| Total Piutang SPK | Nilai SPK − penerimaan |
+| Total Saldo | Saldo kas + saldo bank, ditampilkan pada widget sesuai peran |
 
 ### 7.2 Grafik
 
-- **Line/Bar:** Uang masuk vs uang keluar per bulan (6–12 bulan terakhir).
-- **Bar:** Perbandingan nilai SPK, penerimaan, biaya, estimasi margin.
+Dashboard Admin menampilkan arus kas per bulan, status SPK, dan pengeluaran menurut kategori. Dashboard Direktur berfokus pada indikator ringkas tanpa grafik.
 
 ### 7.3 Tabel
 
-- Daftar SPK berjalan beserta status tagihan, penerimaan, biaya, estimasi laba/rugi.
+Dashboard Admin menampilkan aktivitas terbaru dan SPK berjalan. Data ditarik dari transaksi/SPK aktual, bukan angka contoh.
 
-### 7.4 Rumus Dashboard
+### 7.4 Rumus Dashboard (dipakai sesuai peran)
 
 | Komponen | Sumber | Rumus |
 |---|---|---|
@@ -212,27 +209,33 @@ Form memiliki **pilihan mode** di bagian atas:
 | Uang Masuk dari Luar | `uang_masuk` | `SUM(jumlah) WHERE spk_id IS NULL` |
 | Total Uang Keluar | `uang_keluar` | `SUM(jumlah)` |
 | Pengeluaran per Kategori | `uang_keluar` | `SUM(jumlah)` GROUP BY `kategori` |
-| Saldo Bersih | keduanya | Uang masuk − uang keluar |
-| Piutang per SPK | `spk` + `uang_masuk` | `nilai_spk` − penerimaan SPK tsb |
-| Laba-Rugi per SPK | `uang_masuk` + `uang_keluar` | Penerimaan − Biaya SPK tsb |
+| Total Saldo | `uang_masuk` + `uang_keluar` | Saldo kas + saldo bank, tanpa membatasi periode |
 
 ## 8. Desain Laporan
 
-> ✅ **SUDAH DIIMPLEMENTASI** di `/admin/laporan` (satu halaman, 7 bagian).
+> Implementasi saat ini berada di `/admin/laporan`; bagian dan ekspor mengikuti tabel di bawah.
 
-- Semua laporan memiliki **filter periode**: Bulan Ini · 3 Bulan · 12 Bulan · Semua.
-- **Ekspor CSV** (7 jenis) lewat dropdown — bukan tombol PDF/Excel terpisah.
-  CSV dipilih karena bisa langsung dibuka di **Excel**, aplikasi yang selama ini
-  dipakai perusahaan. Pemisah `;` + BOM UTF-8 agar Excel membaca karakter benar.
-- **Laporan Piutang** — memakai **piutang LANCAR** (retensi ditahan dikurangi),
-  dilengkapi **umur piutang (aging)**: 0-30 · 31-60 · 61-90 · >90 hari.
-- **Peringatan Tenggat** — SPK lewat tenggat (merah) & mendekati tenggat (kuning).
-- **Laporan Cashflow** — perbandingan uang masuk vs keluar per bulan.
-- **Laporan Laba-Rugi per SPK** — Penerimaan − Pengeluaran = Estimasi Laba/Rugi,
-  plus kolom **Piutang Lancar** dan **Retensi Ditahan**.
-- Format tampilan rupiah **tidak boleh** mengubah nilai asli di database.
-- **Responsif**: kartu 1→2→4 kolom; tabel punya **versi kartu** untuk layar kecil.
-- Angka memakai **tabular-nums** agar mudah dibandingkan; selisih/laba bertanda **+ / −**.
+- Filter yang tersedia: Bulan Ini, 3 Bulan, 12 Bulan, dan Semua. Ringkasan arus transaksi mengikuti periode; nilai SPK, piutang, saldo, serta daftar SPK menunjukkan posisi saat ini.
+- Urutan halaman: pemilih periode, Ringkasan, Perlu Perhatian, arus kas bulanan, tren arus kas, kategori pengeluaran, piutang, daftar SPK, tenggat, buku kas, dan buku bank.
+- Piutang memakai rumus `nilai SPK − penerimaan yang terkait SPK`. Uang masuk luar SPK tidak mengurangi piutang.
+- Tidak ada laporan laba-rugi, retensi, atau umur piutang.
+- Format ekspor per bagian tersedia dalam CSV, XLSX, dan PDF.
+
+| Ekspor | Kolom yang disertakan |
+|---|---|
+| Uang masuk | Tanggal, nomor SPK, pekerjaan, sumber (SPK/luar SPK), akun, jumlah, keterangan |
+| Uang keluar | Tanggal, nomor SPK, pekerjaan, kategori, penerima, akun, jumlah, keterangan |
+| Pengeluaran per kategori | Kategori, jumlah transaksi, total |
+| Daftar SPK | Nomor SPK, pekerjaan, mitra, tanggal, nilai, diterima, belum diterima, status SPK, status tagihan |
+| Piutang | Nomor SPK, pekerjaan, mitra, nilai SPK, diterima, belum diterima, status tagihan, tenggat |
+| Tenggat | Nomor SPK, pekerjaan, mitra, tenggat, sisa hari, keterangan tenggat, nilai SPK |
+| Buku kas/bank | Tanggal, referensi, keterangan, debet, kredit, saldo berjalan; termasuk saldo awal dan total |
+| Arus kas bulanan | Bulan, jumlah transaksi masuk, total masuk, total keluar, selisih |
+
+- Semua ekspor mengikuti filter periode transaksi; daftar SPK/piutang/tenggat memakai posisi terkini sesuai makna datanya.
+- Format rupiah di UI/ekspor tidak mengubah nominal tersimpan.
+- Tabel panjang dapat digulir horizontal pada layar sempit; seluruh isi tetap tersedia.
+- Tampilan harus diuji pada desktop, tablet, mobile, tema terang/gelap, serta keadaan kosong.
 
 ## 9. Desain Upload Bukti
 
@@ -240,18 +243,16 @@ Karena bukti disimpan sebagai kolom di tabel transaksi (bukan tabel terpisah):
 
 | Field | Tipe | Deskripsi | Validasi |
 |---|---|---|---|
-| Bukti | File Upload | Transfer (TF), gambar, PDF | JPG/PNG/PDF; maks 10 MB per file |
-| **Jumlah file** | — | ✅ **BEBAS** — bisa 1, bisa banyak sesuai kebutuhan | Tidak dibatasi |
-| Preview | Thumbnail | Pratinjau gambar setelah upload | — |
-| Hapus | Tombol | Hapus file yang salah upload | Konfirmasi modal |
+| Bukti | File Upload | Bukti transfer, gambar, PDF | MIME yang diizinkan form, batas ukuran sesuai konfigurasi form |
+| **Jumlah file** | Repeater/multi-upload | Satu atau lebih file sesuai mode input | Tidak ada batas jumlah tetap |
+| Preview | Thumbnail/tautan privat | Pratinjau gambar dan akses PDF | Login diperlukan |
+| Hapus | Tombol | Menghapus berkas yang dipilih | Aksi terautorisasi |
 
 **Ketentuan penyimpanan:**
-- Folder terstruktur: `storage/app/public/uang_masuk/`, `storage/app/public/uang_keluar/`.
-- Nama file unik (timestamp/UUID).
-- File hanya dapat diakses user yang sudah login.
-- Disimpan sebagai **JSON array** di kolom `bukti` — jumlah file bebas.
-
-> ⚠️ **Menunggu keputusan:** apakah dokumen SPK (BAST, kuitansi, scan) disimpan di sistem (§13).
+- Bukti transaksi, dokumen SPK, avatar, dan tanda tangan berada pada disk privat.
+- File dilayani melalui route yang memerlukan autentikasi; jangan gunakan URL disk publik.
+- Kolom `bukti` dan `dokumen` menyimpan path sebagai JSON array.
+- Format nama/folder mengikuti `PenyimpanBerkas`; jangan mengasumsikan `storage/app/public`.
 
 ## 10. State yang Wajib Dirancang
 

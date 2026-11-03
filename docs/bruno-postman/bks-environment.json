@@ -1,0 +1,20 @@
+{
+  "name": "BKS Local Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8232",
+      "enabled": true
+    },
+    {
+      "key": "spkId",
+      "value": "5",
+      "enabled": true
+    },
+    {
+      "key": "uangMasukId",
+      "value": "89",
+      "enabled": true
+    }
+  ]
+}

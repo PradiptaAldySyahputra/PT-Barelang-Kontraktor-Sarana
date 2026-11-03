@@ -1,11 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-    <!-- Favicon: inisial BKS, monokrom (selaras tema Clean Minimalist Enterprise) -->
-    <rect width="64" height="64" rx="12" fill="#18181b"/>
-    <text x="32" y="42"
-          font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
-          font-size="24"
-          font-weight="700"
-          letter-spacing="-0.5"
-          text-anchor="middle"
-          fill="#fafafa">BKS</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><title>BKS - PT Barelang Kontraktor Sarana</title><g transform="translate(5.12 5.12) scale(0.96)">
+  
+  <rect x="0" y="0" width="256" height="256" fill="#000000"/>
+  <g transform="translate(128 128) scale(1.02) translate(-130 -128)">
+    <path fill="#ffffff" fill-rule="evenodd" d="M66 40 H156 L194 68 V110 L174 128 L194 146 V188 L156 216 H66 Z M109 66 L141 66 L156 84 L141 102 L109 102 L94 84 Z M110 150 L144 150 L160 168 L144 186 L110 186 L94 168 Z"/>
+  </g>
+</g></svg>

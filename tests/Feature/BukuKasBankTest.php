@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * BUKU KAS/BANK (B2-11) — format persis template atasan.
+ * BUKU KAS/BANK (B2-11) - format persis template atasan.
  *
  * ⚠️ KENAPA DIUJI:
  * Laporan akhir perusahaan memakai kolom TANGGAL/REF/KETERANGAN/DEBET/KREDIT/
@@ -83,10 +83,10 @@ class BukuKasBankTest extends TestCase
         $buku = BukuKasBank::susun(AkunKas::Kas, Carbon::parse('2026-08-01'), Carbon::parse('2026-08-31'));
         [$header, $baris] = BukuKasBank::untukEkspor($buku);
 
-        $this->assertSame(['Tanggal', 'Ref', 'Keterangan', 'Debet (Masuk)', 'Kredit (Keluar)', 'Saldo'], $header);
+        $this->assertSame(['TANGGAL', 'REF', 'KETERANGAN', 'PEMASUKAN', 'PENGELUARAN', 'SALDO'], $header);
 
-        // Baris pertama = SALDO AWAL, baris terakhir = TOTAL.
-        $this->assertSame('SALDO AWAL', $baris[0][2]);
+        // Baris pertama = Sisa Saldo Awal, baris terakhir = TOTAL.
+        $this->assertSame('Sisa Saldo Awal Periode', $baris[0][2]);
         $this->assertSame('TOTAL', $baris[count($baris) - 1][2]);
     }
 

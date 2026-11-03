@@ -17,7 +17,7 @@ use Tests\TestCase;
  *
  * ⚠️ KENAPA PENTING:
  * Sebelumnya `status_tagihan` diisi MANUAL. Risikonya: tertulis "Dibayar"
- * padahal uangnya belum masuk — laporan jadi bohong.
+ * padahal uangnya belum masuk - laporan jadi bohong.
  *
  * Sekarang status disinkronkan dari pembayaran nyata lewat observer.
  */
@@ -78,7 +78,7 @@ class SinkronStatusTagihanTest extends TestCase
 
     public function test_tanpa_pembayaran_status_tidak_ditimpa(): void
     {
-        // Admin sudah menandai "Sudah Ditagihkan" — sistem TIDAK boleh menimpa
+        // Admin sudah menandai "Sudah Ditagihkan" - sistem TIDAK boleh menimpa
         // selama belum ada pembayaran.
         $spk = $this->buatSpk(['status_tagihan' => StatusTagihan::SudahDitagihkan]);
 
@@ -156,15 +156,13 @@ class SinkronStatusTagihanTest extends TestCase
         $this->assertSame(StatusTagihan::Dibayar, $spk->fresh()->status_tagihan);
     }
 
-    // =========================================================
     // BUG: SPK NILAI 0 TIDAK BOLEH OTOMATIS "DIBAYAR"
-    // =========================================================
 
     /**
      * ⚠️ BUG YANG PERNAH TERJADI:
      * SPK dengan nilai_spk = 0 punya piutang 0 − 0 = 0, sehingga dianggap
      * LUNAS dan langsung berstatus "Dibayar" begitu ada transaksi apa pun.
-     * Itu salah — nilai 0 berarti data belum diisi, bukan sudah dibayar.
+     * Itu salah - nilai 0 berarti data belum diisi, bukan sudah dibayar.
      */
     public function test_spk_nilai_nol_tidak_otomatis_dibayar(): void
     {

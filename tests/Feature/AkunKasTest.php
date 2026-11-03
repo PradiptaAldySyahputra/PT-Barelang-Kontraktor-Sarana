@@ -10,7 +10,7 @@ use Tests\TestCase;
 /**
  * Enum akun kas/bank.
  *
- * Dipakai untuk memisahkan buku KAS dan BANK — permintaan pengguna agar
+ * Dipakai untuk memisahkan buku KAS dan BANK - permintaan pengguna agar
  * laporan keuangan bisa disajikan terpisah seperti Excel perusahaan.
  */
 class AkunKasTest extends TestCase

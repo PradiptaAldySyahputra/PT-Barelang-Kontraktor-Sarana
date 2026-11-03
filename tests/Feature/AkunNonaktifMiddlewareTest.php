@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * AKUN NONAKTIF LANGSUNG KEHILANGAN AKSES — VERIFIKASI (9 Okt 2026).
+ * AKUN NONAKTIF LANGSUNG KEHILANGAN AKSES - VERIFIKASI (9 Okt 2026).
  *
  * ⚠️ KOREKSI TEMUAN AUDIT:
  * Awalnya dikira akun nonaktif masih bisa memakai sesi yang sedang aktif
@@ -17,7 +17,7 @@ use Tests\TestCase;
  * `Filament\Http\Middleware\Authenticate::authenticate()` memanggil
  * `$user->canAccessPanel($panel)` pada SETIAP request (bukan hanya saat login),
  * dan `canAccessPanel()` menolak `is_aktif = false`. Jadi akses langsung
- * ditolak 403 begitu akun dinonaktifkan — perilaku sudah BENAR.
+ * ditolak 403 begitu akun dinonaktifkan - perilaku sudah BENAR.
  *
  * Tes ini mengunci perilaku tersebut supaya tidak berubah diam-diam bila
  * Filament naik versi mayor.
@@ -34,14 +34,14 @@ class AkunNonaktifMiddlewareTest extends TestCase
         ]);
 
         // Login dulu selagi aktif.
-        $this->actingAs($admin)->get('/admin')->assertSuccessful();
+        $this->actingAs($admin)->get('/panel')->assertSuccessful();
 
         // Direktur menonaktifkan akun (di DB).
         $admin->update(['is_aktif' => false]);
 
         // Request berikutnya HARUS ditolak (403), bukan tetap 200.
         $this->actingAs($admin->fresh())
-            ->get('/admin')
+            ->get('/panel')
             ->assertForbidden();
     }
 
@@ -52,6 +52,6 @@ class AkunNonaktifMiddlewareTest extends TestCase
             'is_aktif' => true,
         ]);
 
-        $this->actingAs($admin)->get('/admin')->assertSuccessful();
+        $this->actingAs($admin)->get('/panel')->assertSuccessful();
     }
 }

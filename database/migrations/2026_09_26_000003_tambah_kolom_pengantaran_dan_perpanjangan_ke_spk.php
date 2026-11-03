@@ -11,19 +11,19 @@ use Illuminate\Support\Facades\Schema;
  *
  * ⚠️ KENAPA INI PERLU (permintaan pengguna 26 Sep 2026):
  *
- * 1. `keterangan` — Excel "LIST SPK 2026.xlsx" punya kolom Keterangan
+ * 1. `keterangan` - Excel "LIST SPK 2026.xlsx" punya kolom Keterangan
  *    (mis. "diantar ke imperium", "sudah masuk rek BKS"). Kolom ini pernah
  *    dihapus 19 Sep, sekarang dikembalikan karena dibutuhkan admin.
  *
- * 2. `status_antar` + `tanggal_antar` — agar admin tahu mana dokumen SPK
+ * 2. `status_antar` + `tanggal_antar` - agar admin tahu mana dokumen SPK
  *    yang BELUM diantar. Nilainya dari enum App\Enums\StatusAntar
  *    (belum | sudah_diantar | diterima).
  *
- * 3. `perpanjangan` (JSON) — SPK sering diperpanjang lewat adendum tanpa
+ * 3. `perpanjangan` (JSON) - SPK sering diperpanjang lewat adendum tanpa
  *    menghapus tenggat awal. Disimpan sebagai riwayat agar jejaknya ada:
  *    [{"dari":"2026-08-01","ke":"2026-11-01","alasan":"...","dicatat":"..."}]
  *
- * ⚠️ TETAP 5 TABEL — ini penambahan KOLOM pada tabel `spk` yang sudah ada.
+ * ⚠️ TETAP 5 TABEL - ini penambahan KOLOM pada tabel `spk` yang sudah ada.
  */
 return new class extends Migration
 {

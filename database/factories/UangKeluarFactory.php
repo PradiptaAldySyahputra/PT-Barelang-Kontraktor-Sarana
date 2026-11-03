@@ -26,7 +26,20 @@ class UangKeluarFactory extends Factory
             'tanggal' => fake()->dateTimeBetween('-6 months', 'now'),
             'akun' => 'kas',
             'jumlah' => fake()->randomFloat(2, 500_000, 50_000_000),
-            'kategori' => fake()->randomElement(KategoriPengeluaran::cases()),
+            /*
+             * ⚠️ "Lainnya" SENGAJA TIDAK diacak di sini (11 Okt 2026).
+             * Kategori "Lainnya" mewajibkan `detail_kategori` (kebijakan A.5).
+             * Kalau ikut diacak tanpa detail, data jadi invalid dan tes bisa
+             * gagal acak (flaky). Pakai state `lainnya()` bila memang butuh.
+             */
+            'kategori' => fake()->randomElement([
+                KategoriPengeluaran::Material,
+                KategoriPengeluaran::Upah,
+                KategoriPengeluaran::Operasional,
+                KategoriPengeluaran::Gaji,
+                KategoriPengeluaran::Nota,
+                KategoriPengeluaran::Transportasi,
+            ]),
             'penerima' => fake()->randomElement([
                 'Toko Material Contoh', 'Mandor Contoh', 'CV Contoh Subkon',
                 'Kantor', 'Bengkel Las Batam', 'Supplier Besi',
@@ -45,6 +58,17 @@ class UangKeluarFactory extends Factory
     }
 
     /**
+     * Kategori "Lainnya" - WAJIB disertai `detail_kategori` (kebijakan A.5).
+     */
+    public function lainnya(string $detail = 'Pengeluaran lain-lain'): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'kategori' => KategoriPengeluaran::Lainnya,
+            'detail_kategori' => $detail,
+        ]);
+    }
+
+    /**
      * Pengeluaran terkait SPK tertentu.
      */
     public function terkaitSpk(): static
@@ -60,7 +84,7 @@ class UangKeluarFactory extends Factory
     }
 
     /**
-     * Pengeluaran umum (tanpa SPK) — operasional kantor.
+     * Pengeluaran umum (tanpa SPK) - operasional kantor.
      */
     public function umum(): static
     {

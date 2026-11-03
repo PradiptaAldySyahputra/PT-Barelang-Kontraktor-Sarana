@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tabel `mitra` — pihak terkait (PLN, pelanggan, vendor, subkon).
+ * Tabel `mitra` - pihak terkait (PLN, pelanggan, vendor, subkon).
  *
  * Asal: skema awal (`mitra`) + SRS.
  * Kolom `kategori` divalidasi memakai App\Enums\KategoriMitra.

@@ -8,7 +8,7 @@ namespace App\Support;
  * Perbandingan angka dengan periode sebelumnya (mis. "bulan ini vs bulan lalu").
  *
  * ⚠️ SARAN USER (9 Okt 2026):
- * "Hindari angka mentah tanpa konteks — selalu pasangkan dengan perbandingan
+ * "Hindari angka mentah tanpa konteks - selalu pasangkan dengan perbandingan
  *  (bulan lalu, target)."
  *
  * Angka "Rp 1.500.000 bulan ini" tidak berarti apa-apa tanpa pembanding:

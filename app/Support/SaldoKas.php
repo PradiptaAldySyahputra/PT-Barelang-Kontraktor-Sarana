@@ -23,7 +23,7 @@ use Illuminate\Support\Collection;
  * ada (aturan skema Rules.md §1). Data ter-soft-delete otomatis dikecualikan
  * karena model memakai SoftDeletes.
  *
- * ⚠️ SALDO BISA NEGATIF: itu SAH dan justru penting terlihat — artinya
+ * ⚠️ SALDO BISA NEGATIF: itu SAH dan justru penting terlihat - artinya
  * pengeluaran melebihi penerimaan pada akun tersebut (mis. kas diambil dari
  * bank tanpa tercatat sebagai uang masuk). Jangan dibulatkan ke 0.
  */
@@ -70,7 +70,7 @@ final class SaldoKas
     }
 
     /**
-     * Saldo berjalan per bulan untuk satu akun — untuk grafik/daftar tren.
+     * Saldo berjalan per bulan untuk satu akun - untuk grafik/daftar tren.
      *
      * Mengembalikan koleksi urut menaik: [['bulan' => '2026-01', 'masuk' => …,
      * 'keluar' => …, 'saldo' => …], …]. `saldo` adalah saldo AKHIR bulan tsb.
@@ -102,7 +102,7 @@ final class SaldoKas
         $saldoAwal = self::saldo($nilai, $awal->copy()->subDay());
 
         return collect(range($bulan - 1, 0))
-            ->map(function (int $i) use ($masuk, $keluar, $saldoAwal): array {
+            ->map(function (int $i) use ($masuk, $keluar): array {
                 $b = now()->subMonths($i)->startOfMonth();
                 $kunci = $b->format('Y-m');
 
@@ -111,11 +111,11 @@ final class SaldoKas
                     'label' => $b->translatedFormat('M Y'),
                     'masuk' => (float) ($masuk[$kunci] ?? 0),
                     'keluar' => (float) ($keluar[$kunci] ?? 0),
-                    'saldo_awal' => $saldoAwal,
                 ];
             })
-            ->reduce(function (Collection $acc, array $baris): Collection {
-                $saldo = $baris['saldo_awal'] + $baris['masuk'] - $baris['keluar'];
+            ->reduce(function (Collection $acc, array $baris) use ($saldoAwal): Collection {
+                // Saldo akhir bulan = saldo akhir bulan sebelumnya + mutasi bulan ini.
+                $saldo = ($acc->last()['saldo'] ?? $saldoAwal) + $baris['masuk'] - $baris['keluar'];
                 $acc->push([
                     'bulan' => $baris['bulan'],
                     'label' => $baris['label'],

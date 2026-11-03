@@ -50,7 +50,7 @@ class SpkFactory extends Factory
              * ⚠️ STATUS DEFAULT DIBUAT DETERMINISTIK (bukan acak).
              *
              * Sebelumnya: `fake()->randomElement(StatusSpk::cases())`.
-             * Akibatnya setiap tes bisa mendapat SPK `Dibatalkan` secara acak —
+             * Akibatnya setiap tes bisa mendapat SPK `Dibatalkan` secara acak -
              * dan sejak `Rules.md` §5 butir 3 ditegakkan (SPK Dibatalkan tidak
              * menerima transaksi), tes menjadi FLAKY: lulus/gagal tanpa ada
              * perubahan kode sama sekali.

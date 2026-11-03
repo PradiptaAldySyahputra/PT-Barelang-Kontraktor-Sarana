@@ -8,13 +8,13 @@ use App\Support\PembacaIsiNota;
 use PHPUnit\Framework\TestCase;
 
 /**
- * PEMBACA ISI NOTA (PHP) — mengurai teks OCR jadi draf field.
+ * PEMBACA ISI NOTA (PHP) - mengurai teks OCR jadi draf field.
  *
  * ⚠️ KENAPA PARSER DIPISAH & DIUJI DI SINI
  * Nota proyek ini banyak TULISAN TANGAN, jadi OCR sering salah baca
  * (contoh nyata dari berkas asli: "580m", "y59r000", "42 8a0"). Parser karena
  * itu dirancang TOLERAN: ia mengambil angka terbesar di baris "Total", bukan
- * menuntut format sempurna. Hasilnya selalu DRAF — admin WAJIB konfirmasi.
+ * menuntut format sempurna. Hasilnya selalu DRAF - admin WAJIB konfirmasi.
  *
  * Tes ini mengunci perilaku parser memakai teks OCR NYATA (dari berkas
  * 57-nota) supaya perbaikan tidak menurunkan kualitas baca.

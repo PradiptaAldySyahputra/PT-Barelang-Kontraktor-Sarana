@@ -28,7 +28,7 @@ use Tests\TestCase;
  * Perbaikan: hasil OCR disimpan di cache dengan kunci dari path berkas. Nama
  * berkas sudah deterministik (dari isi berkas), jadi kunci ini aman.
  *
- * Tes ini TIDAK menjalankan Python (tidak perlu venv) — cukup memastikan
+ * Tes ini TIDAK menjalankan Python (tidak perlu venv) - cukup memastikan
  * mekanisme cache-nya bekerja.
  */
 class CacheOcrTest extends TestCase
@@ -54,7 +54,7 @@ class CacheOcrTest extends TestCase
 
         $this->assertTrue(
             Cache::has($kunci),
-            'Hasil OCR harus disimpan di cache — kalau tidak, OCR jalan ulang setiap form dibuka (berat).',
+            'Hasil OCR harus disimpan di cache - kalau tidak, OCR jalan ulang setiap form dibuka (berat).',
         );
     }
 
@@ -70,7 +70,7 @@ class CacheOcrTest extends TestCase
 
         $pertama = $pembaca->baca('uang_keluar/uji.pdf');
 
-        // Sisipkan hasil "palsu" ke cache — kalau pemanggilan kedua memakai
+        // Sisipkan hasil "palsu" ke cache - kalau pemanggilan kedua memakai
         // cache (bukan menjalankan Python lagi), hasil palsu ini yang muncul.
         $kunci = 'ocr:nota:'.md5('uang_keluar/uji.pdf');
         Cache::put($kunci, [
@@ -123,7 +123,7 @@ class CacheOcrTest extends TestCase
 
         $this->assertFalse(
             Cache::has('ocr:nota:'.md5('uang_keluar/uji.pdf')),
-            'OCR yang dimatikan tidak boleh mengisi cache — nanti dianggap sudah dibaca padahal belum.',
+            'OCR yang dimatikan tidak boleh mengisi cache - nanti dianggap sudah dibaca padahal belum.',
         );
     }
 }

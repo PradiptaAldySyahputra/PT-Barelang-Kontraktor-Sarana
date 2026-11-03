@@ -8,16 +8,12 @@ use OpenSpout\Reader\CSV\Reader as CsvReader;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 
 /**
- * Pembaca berkas impor (B3-13) — XLSX/CSV → array baris asosiatif.
+ * Pembaca berkas impor (B3-13) - XLSX/CSV → array baris asosiatif.
  *
  * ⚠️ KENAPA PERLU:
- * Admin memigrasi data awal dari Excel. Pembaca ini mengubah baris pertama
- * (header) menjadi KUNCI, sehingga sisa berkas bisa dipetakan ke kolom model
- * tanpa peduli urutan kolom.
- *
- * Header yang dikenali (huruf kecil, tanpa spasi):
- *   tanggal | jumlah | akun | kategori | penerima | keterangan | spk_id |
- *   nomor_spk | nama_pekerjaan
+ * Admin memigrasi data awal dari Excel. Pembaca ini mencari baris header
+ * yang sah (toleran terhadap baris KOP/judul di baris 1-3) dan mengubahnya
+ * menjadi kunci asosiatif.
  */
 final class PembacaImpor
 {
@@ -43,14 +39,24 @@ final class PembacaImpor
                 $sel = [];
 
                 foreach ($row->getCells() as $cell) {
-                    $sel[] = $cell->getValue();
+                    $val = $cell->getValue();
+                    if ($val instanceof \DateTimeInterface) {
+                        $val = $val->format('Y-m-d');
+                    }
+                    $sel[] = $val;
                 }
 
                 if ($header === null) {
-                    $header = array_map(
+                    $kandidatHeader = array_map(
                         fn ($h): string => self::normalkanHeader((string) $h),
                         $sel,
                     );
+
+                    // Pastikan baris ini adalah header tabel sungguhan (memuat minimal 2 kolom kunci)
+                    $kunciPenting = ['tanggal', 'keterangan', 'jumlah', 'masuk', 'keluar', 'akun', 'nomor_spk', 'kategori'];
+                    if (count(array_intersect($kandidatHeader, $kunciPenting)) >= 2) {
+                        $header = $kandidatHeader;
+                    }
 
                     continue;
                 }
@@ -68,6 +74,15 @@ final class PembacaImpor
                     }
 
                     $baris[$kunci] = $sel[$i] ?? null;
+                }
+
+                // Jika kolom 'jumlah' belum ada tapi ada 'masuk' atau 'keluar', petakan ke 'jumlah'
+                if (!isset($baris['jumlah'])) {
+                    if (isset($baris['masuk']) && $baris['masuk'] !== null && $baris['masuk'] !== '') {
+                        $baris['jumlah'] = $baris['masuk'];
+                    } elseif (isset($baris['keluar']) && $baris['keluar'] !== null && $baris['keluar'] !== '') {
+                        $baris['jumlah'] = $baris['keluar'];
+                    }
                 }
 
                 $hasil[] = $baris;
@@ -90,6 +105,9 @@ final class PembacaImpor
         return match ($h) {
             'tanggal_transaksi', 'tgl', 'date' => 'tanggal',
             'nominal', 'total', 'nilai', 'amount' => 'jumlah',
+            'pemasukan', 'debet' => 'masuk',
+            'pengeluaran', 'kredit' => 'keluar',
+            'ref', 'no_spk', 'spk' => 'nomor_spk',
             'kas_bank', 'akun_kas', 'sumber' => 'akun',
             'kategori_pengeluaran' => 'kategori',
             'keterangan_transaksi', 'deskripsi', 'uraian' => 'keterangan',

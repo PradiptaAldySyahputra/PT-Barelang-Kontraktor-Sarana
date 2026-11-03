@@ -8,14 +8,14 @@ use App\Enums\StatusAntar;
 use Tests\TestCase;
 
 /**
- * Enum StatusAntar — status PENGANTARAN DOKUMEN SPK.
+ * Enum StatusAntar - status PENGANTARAN DOKUMEN SPK.
  *
  * ⚠️ PERMINTAAN PENGGUNA (26 Sep 2026):
- * "SPK ini perlu keterangan (lihat LIST SPK 2026.xlsx) — kalau di dalam SPK
+ * "SPK ini perlu keterangan (lihat LIST SPK 2026.xlsx) - kalau di dalam SPK
  *  tersebut ada keterangan, jadi admin perlu itu... karena itu penting juga
  *  untuk admin mengetahui apakah SPK tersebut sudah diantar atau belum."
  *
- * Keputusan pengguna: **CUKUP 3 NILAI** —
+ * Keputusan pengguna: **CUKUP 3 NILAI** -
  *   Belum / Sudah Diantar / Diterima
  * (nilai tambahan bisa menyusul bila diperlukan)
  */

@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * ARSIP NOTA (B2-7) — pencarian & pengunduhan nota per periode.
+ * ARSIP NOTA (B2-7) - pencarian & pengunduhan nota per periode.
  *
  * ⚠️ KENAPA PERLU:
  * Nota tersimpan sebagai berkas lepas di disk. Untuk mencari "nota tanggal
@@ -46,8 +46,9 @@ final class ArsipNota
         $kategori = $filter['kategori'] ?? null;
         $q = $filter['q'] ?? null;
 
-        // --- Uang keluar ---
+        // Uang keluar
         UangKeluar::query()
+            ->with('spk:id,nomor_spk')
             ->when($awal, fn ($query) => $query->where('tanggal', '>=', $awal->toDateString()))
             ->when($akhir, fn ($query) => $query->where('tanggal', '<=', $akhir->toDateString()))
             ->when($akun, fn ($query) => $query->where('akun', $akun))
@@ -59,7 +60,7 @@ final class ArsipNota
                 });
             })
             ->whereNotNull('bukti')
-            ->orderBy('tanggal')
+            ->orderByDesc('tanggal')
             ->get()
             ->each(function (UangKeluar $r) use ($hasil): void {
                 foreach ($r->bukti ?? [] as $path) {
@@ -71,12 +72,16 @@ final class ArsipNota
                         $r->penerima,
                         $r->keterangan,
                         (string) $path,
+                        $r->id,
+                        route('panel.cash-out.edit', ['uangKeluar' => $r, 'asal' => 'receipts']),
+                        $r->spk?->nomor_spk,
                     ));
                 }
             });
 
-        // --- Uang masuk ---
+        // Uang masuk
         UangMasuk::query()
+            ->with('spk:id,nomor_spk')
             ->when($awal, fn ($query) => $query->where('tanggal', '>=', $awal->toDateString()))
             ->when($akhir, fn ($query) => $query->where('tanggal', '<=', $akhir->toDateString()))
             ->when($akun, fn ($query) => $query->where('akun', $akun))
@@ -86,7 +91,7 @@ final class ArsipNota
                 });
             })
             ->whereNotNull('bukti')
-            ->orderBy('tanggal')
+            ->orderByDesc('tanggal')
             ->get()
             ->each(function (UangMasuk $r) use ($hasil): void {
                 foreach ($r->bukti ?? [] as $path) {
@@ -98,12 +103,15 @@ final class ArsipNota
                         null,
                         $r->keterangan,
                         (string) $path,
+                        $r->id,
+                        route('panel.cash-in.edit', ['uangMasuk' => $r, 'asal' => 'receipts']),
+                        $r->spk?->nomor_spk,
                     ));
                 }
             });
 
         return $hasil
-            ->sortBy(fn (array $b): int => $b['tanggal']->getTimestamp())
+            ->sortByDesc(fn (array $b): int => $b['tanggal']->getTimestamp())
             ->values()
             // Beri nomor urut per tanggal untuk nama unduhan otomatis.
             ->groupBy(fn (array $b): string => $b['tanggal']->format('Y-m-d'))
@@ -132,6 +140,9 @@ final class ArsipNota
         ?string $penerima,
         ?string $keterangan,
         string $path,
+        ?int $modelId = null,
+        ?string $editUrl = null,
+        ?string $spkNomor = null,
     ): array {
         return [
             'jenis' => $jenis,
@@ -144,6 +155,9 @@ final class ArsipNota
             'nama' => '', // diisi setelah pengelompokan
             'ada' => Nota::ada($path),
             'url' => Nota::url($path),
+            'model_id' => $modelId,
+            'edit_url' => $editUrl,
+            'spk_nomor' => $spkNomor,
             // Thumbnail (B2-7): hanya gambar yang bisa dipratinjau langsung;
             // PDF ditandai supaya view menampilkan ikon, bukan <img> rusak.
             'gambar' => self::gambar($path),
@@ -163,6 +177,12 @@ final class ArsipNota
     /**
      * Buat berkas ZIP dari daftar arsip (untuk "Unduh semua").
      *
+     * ⚠️ KENAPA `addFile` (BUKAN `addFromString`) - perbaikan BUG-3:
+     * Dulu seluruh isi berkas dimuat ke memori (`$disk->get()` +
+     * `addFromString()`). ZIP puluhan nota PDF besar bisa menghabiskan memori
+     * (OOM) dan membuat permintaan gagal. `addFile()` men-STERAM dari disk,
+     * jadi memori tetap kecil walau berkasnya besar.
+     *
      * @param  Collection<int, array<string, mixed>>  $arsip
      * @return string|null Path absolut berkas ZIP, atau null bila tidak ada berkas.
      */
@@ -179,21 +199,44 @@ final class ArsipNota
         $zip = new \ZipArchive;
 
         if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            // Bersihkan berkas kosong sisa tempnam() supaya tidak jadi sampah.
+            @unlink($zipPath);
+
             return null;
         }
 
         $disk = Storage::disk('nota');
+        $terisi = false;
 
         foreach ($ada as $b) {
-            $isi = $disk->get($b['path']);
+            // Simpan dalam sub-folder per tanggal agar rapi.
+            $namaDalamZip = $b['tanggal']->format('Y-m-d').'/'.$b['nama'];
 
-            if ($isi !== null) {
-                // Simpan dalam sub-folder per tanggal agar rapi.
-                $zip->addFromString($b['tanggal']->format('Y-m-d').'/'.$b['nama'], $isi);
+            try {
+                $absolut = $disk->path($b['path']);
+
+                if (! is_file($absolut)) {
+                    continue;
+                }
+
+                // addFile() men-stream dari disk - tidak memuat isi ke memori.
+                $zip->addFile($absolut, $namaDalamZip);
+                $terisi = true;
+            } catch (\Throwable $e) {
+                // Berkas bisa terhapus di tengah jalan - lewati, jangan gagalkan
+                // seluruh ZIP hanya karena satu berkas hilang.
+                report($e);
             }
         }
 
         $zip->close();
+
+        // Tidak ada berkas yang benar-benar masuk → jangan kirim ZIP kosong.
+        if (! $terisi) {
+            @unlink($zipPath);
+
+            return null;
+        }
 
         return $zipPath;
     }

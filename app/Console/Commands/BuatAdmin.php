@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 
 /**
- * Buat akun Admin (atau Direktur) pertama — TANPA password default di kode.
+ * Buat akun Admin (atau Direktur) pertama - TANPA password default di kode.
  *
  * ⚠️ KENAPA PERINTAH INI ADA (checklist hardening B1-5):
  *
@@ -90,7 +90,7 @@ class BuatAdmin extends Command
 
         $ulangi = (string) $this->secret('Ulangi password');
 
-        // --- Konfirmasi password -------------------------------------------------
+        // Konfirmasi password
         if ($password !== $ulangi) {
             $this->error('Konfirmasi password tidak cocok.');
 

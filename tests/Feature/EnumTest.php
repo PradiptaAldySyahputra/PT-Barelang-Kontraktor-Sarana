@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 use Tests\TestCase;
 
 /**
- * Uji PHP Enum — pengganti tabel master.
+ * Uji PHP Enum - pengganti tabel master.
  *
  * Enum ini WAJIB dipakai untuk memvalidasi status/kategori, karena schema
  * hanya 5 tabel (kolom berupa teks). Lihat Schema.md §7 & Rules.md §2 butir 10.
@@ -24,9 +24,7 @@ use Tests\TestCase;
  */
 class EnumTest extends TestCase
 {
-    // ---------------------------------------------------------
     // Peran
-    // ---------------------------------------------------------
 
     public function test_peran_punya_dua_nilai(): void
     {
@@ -35,15 +33,14 @@ class EnumTest extends TestCase
         $this->assertSame('direktur', Peran::Direktur->value);
     }
 
-    public function test_hanya_admin_yang_boleh_input(): void
+    public function test_peran_yang_boleh_input(): void
     {
         $this->assertTrue(Peran::Admin->bolehInput());
-        $this->assertFalse(Peran::Direktur->bolehInput());
+        // Pembaruan: Direktur sebagai Super Admin juga memiliki izin input & modifikasi data
+        $this->assertTrue(Peran::Direktur->bolehInput());
     }
 
-    // ---------------------------------------------------------
     // StatusSpk
-    // ---------------------------------------------------------
 
     public function test_status_spk_punya_enam_nilai(): void
     {
@@ -83,9 +80,7 @@ class EnumTest extends TestCase
         $this->assertSame('Berjalan', $opsi['berjalan']);
     }
 
-    // ---------------------------------------------------------
     // StatusTagihan
-    // ---------------------------------------------------------
 
     public function test_status_tagihan_punya_lima_nilai(): void
     {
@@ -99,9 +94,7 @@ class EnumTest extends TestCase
         $this->assertTrue(StatusTagihan::MenungguPembayaran->isPiutang());
     }
 
-    // ---------------------------------------------------------
     // KategoriPengeluaran
-    // ---------------------------------------------------------
 
     public function test_kategori_pengeluaran_punya_tujuh_nilai(): void
     {
@@ -115,9 +108,7 @@ class EnumTest extends TestCase
         $this->assertSame('Lain-lain', KategoriPengeluaran::Lainnya->kelompok());
     }
 
-    // ---------------------------------------------------------
     // KategoriMitra
-    // ---------------------------------------------------------
 
     public function test_kategori_mitra_punya_empat_nilai(): void
     {
@@ -131,9 +122,7 @@ class EnumTest extends TestCase
         $this->assertFalse(KategoriMitra::Subkon->pemberiKerja());
     }
 
-    // ---------------------------------------------------------
-    // Validasi Rule::enum — INTI mitigasi risiko
-    // ---------------------------------------------------------
+    // Validasi Rule::enum - INTI mitigasi risiko
 
     public function test_rule_enum_menolak_status_ngawur(): void
     {

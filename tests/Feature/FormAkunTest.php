@@ -32,7 +32,7 @@ class FormAkunTest extends TestCase
         $admin = Pengguna::factory()->admin()->create();
         $this->actingAs($admin);
 
-        $html = $this->get('/admin/uang-masuks/create')->assertSuccessful()->getContent();
+        $html = $this->get('/panel/cash-in/create')->assertSuccessful()->getContent();
 
         $this->assertStringContainsString('Kas', $html);
         $this->assertStringContainsString('Bank', $html);
@@ -43,7 +43,7 @@ class FormAkunTest extends TestCase
         $admin = Pengguna::factory()->admin()->create();
         $this->actingAs($admin);
 
-        $html = $this->get('/admin/uang-keluars/create')->assertSuccessful()->getContent();
+        $html = $this->get('/panel/cash-out/create')->assertSuccessful()->getContent();
 
         $this->assertStringContainsString('Kas', $html);
         $this->assertStringContainsString('Bank', $html);

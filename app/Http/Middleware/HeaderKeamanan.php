@@ -22,12 +22,12 @@ use Symfony\Component\HttpFoundation\Response;
  *   - Referrer-Policy kosong → URL halaman (kadang memuat id data) bocor
  *     ke situs luar lewat header Referer.
  *
- * Dipasang GLOBAL (web) — murah, tidak mengubah perilaku aplikasi.
+ * Dipasang GLOBAL (web) - murah, tidak mengubah perilaku aplikasi.
  *
  * CATATAN: Content-Security-Policy TIDAK dipasang. Filament + Livewire +
  * Alpine memakai inline script/style yang banyak; CSP yang salah akan
  * membuat panel admin rusak total. Butuh pengujian menyeluruh, jadi
- * sengaja ditunda — jangan dipasang tanpa uji browser.
+ * sengaja ditunda - jangan dipasang tanpa uji browser.
  */
 class HeaderKeamanan
 {

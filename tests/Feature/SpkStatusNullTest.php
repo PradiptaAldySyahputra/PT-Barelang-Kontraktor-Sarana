@@ -17,7 +17,7 @@ use Tests\TestCase;
  * Di SQL, `NULL != 'dibayar'` bernilai UNKNOWN (bukan true), sehingga
  * `where('status_tagihan', '!=', ...)` MENYARING HABIS baris berstatus NULL.
  * Akibatnya SPK seperti itu hilang dari tab "Belum Lunas" dan dari daftar
- * lewat/mendekati tenggat — padahal justru itu yang perlu ditindaklanjuti.
+ * lewat/mendekati tenggat - padahal justru itu yang perlu ditindaklanjuti.
  *
  * Kolom status juga di-cast ke Enum, sehingga `$spk->status_spk->method()`
  * melempar "Call to a member function on null" bila nilainya NULL.

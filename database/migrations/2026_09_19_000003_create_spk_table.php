@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tabel `spk` — ENTITAS INTI sistem.
+ * Tabel `spk` - ENTITAS INTI sistem.
  *
  * Asal: skema awal (`spk`) + revisi user + keputusan user.
  *
@@ -34,7 +34,7 @@ return new class extends Migration
             $table->string('lokasi', 255)->nullable();
             $table->decimal('nilai_spk', 18, 2);
 
-            // Retensi (untuk SPK subkon/vendor) — Rules.md §2 butir 2
+            // Retensi (untuk SPK subkon/vendor) - Rules.md §2 butir 2
             $table->decimal('persen_retensi', 5, 2)->nullable();
             $table->decimal('nilai_retensi', 18, 2)->nullable();
 

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * ARSIP NOTA (B2-7) — pencarian & ZIP.
+ * ARSIP NOTA (B2-7) - pencarian & ZIP.
  *
  * ⚠️ KENAPA DIUJI:
  * Fitur ini menggantikan penelusuran folder manual untuk mencari nota per
@@ -125,6 +125,37 @@ class ArsipNotaTest extends TestCase
         $zip = new \ZipArchive;
         $zip->open($zipPath);
         $this->assertSame(2, $zip->numFiles);
+
+        // BUG-3: dengan addFile() (streaming), isi berkas harus TETAP utuh.
+        $this->assertSame('ISI-A', $zip->getFromName('2026-08-01/2026-08-01 (1).pdf'));
+        $this->assertSame('ISI-B', $zip->getFromName('2026-08-02/2026-08-02 (1).pdf'));
+        $zip->close();
+
+        @unlink($zipPath);
+    }
+
+    /**
+     * BUG-3: satu berkas hilang di tengah jalan tidak boleh menggagalkan
+     * seluruh ZIP - berkas lain tetap terunduh.
+     */
+    public function test_buat_zip_tetap_jalan_walau_sebagian_berkas_hilang(): void
+    {
+        Storage::fake('nota');
+        $this->siapkanNota('uang_keluar/ada.pdf', 'ADA');
+
+        UangKeluar::factory()->create(['tanggal' => '2026-08-01', 'bukti' => ['uang_keluar/ada.pdf']]);
+        // Berkas ini TIDAK dibuat di disk → "hilang".
+        UangKeluar::factory()->create(['tanggal' => '2026-08-02', 'bukti' => ['uang_keluar/hilang.pdf']]);
+
+        $arsip = ArsipNota::cari();
+        $zipPath = ArsipNota::buatZip($arsip);
+
+        $this->assertNotNull($zipPath, 'ZIP tetap dibuat selama ada minimal satu berkas.');
+
+        $zip = new \ZipArchive;
+        $zip->open($zipPath);
+        $this->assertSame(1, $zip->numFiles, 'Hanya berkas yang ada yang masuk ZIP.');
+        $this->assertSame('ADA', $zip->getFromName('2026-08-01/2026-08-01 (1).pdf'));
         $zip->close();
 
         @unlink($zipPath);
@@ -154,9 +185,7 @@ class ArsipNotaTest extends TestCase
         $this->assertFalse($arsip[0]['ada']);
     }
 
-    // ---------------------------------------------------------
     // Thumbnail (B2-7)
-    // ---------------------------------------------------------
 
     public function test_menandai_berkas_gambar_untuk_thumbnail(): void
     {

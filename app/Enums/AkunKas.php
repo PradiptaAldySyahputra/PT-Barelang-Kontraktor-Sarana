@@ -30,7 +30,7 @@ enum AkunKas: string
     }
 
     /**
-     * Warna badge Filament — konsisten di seluruh halaman.
+     * Warna badge Filament - konsisten di seluruh halaman.
      */
     public function warnaBadge(): string
     {

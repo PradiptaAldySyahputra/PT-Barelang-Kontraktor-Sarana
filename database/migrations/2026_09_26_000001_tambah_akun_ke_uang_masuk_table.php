@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * ⚠️ KENAPA: pengguna meminta laporan kas/bank terpisah seperti Excel
  * perusahaan. Data lama otomatis menjadi 'kas' (keputusan pengguna).
- * Skema tetap 5 tabel — ini hanya KOLOM baru.
+ * Skema tetap 5 tabel - ini hanya KOLOM baru.
  */
 return new class extends Migration
 {

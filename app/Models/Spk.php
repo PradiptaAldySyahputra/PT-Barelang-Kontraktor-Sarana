@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * Model `spk` — ENTITAS INTI sistem.
+ * Model `spk` - ENTITAS INTI sistem.
  *
  * Menyimpan semua SPK, baik dari PLN/pelanggan maupun SPK subkon/vendor.
  * Tidak ada entitas PROYEK (keputusan user).
@@ -87,16 +87,14 @@ class Spk extends Model
             'status_tagihan' => StatusTagihan::class,
             'status_antar' => StatusAntar::class,
             'dikerjakan_oleh' => DikerjakanOleh::class,
-            // Riwayat perpanjangan tenggat (adendum) — lihat §perpanjangan.
+            // Riwayat perpanjangan tenggat (adendum) - lihat §perpanjangan.
             'perpanjangan' => 'array',
-            // Berkas SPK (BAST, scan SPK) — banyak berkas per SPK.
+            // Berkas SPK (BAST, scan SPK) - banyak berkas per SPK.
             'dokumen' => 'array',
         ];
     }
 
-    // ---------------------------------------------------------
     // Relasi
-    // ---------------------------------------------------------
 
     /**
      * @return BelongsTo<Pengguna, $this>
@@ -115,7 +113,7 @@ class Spk extends Model
     }
 
     /**
-     * Mitra subkon — hanya terisi jika `dikerjakan_oleh = subkon`.
+     * Mitra subkon - hanya terisi jika `dikerjakan_oleh = subkon`.
      *
      * @return BelongsTo<Mitra, $this>
      */
@@ -128,7 +126,7 @@ class Spk extends Model
      * Apakah SPK ini disubkonkan ke pihak lain?
      *
      * ⚠️ Dinamai `isDisubkonkan()` (bukan `disubkonkan()`) karena nama itu
-     * BENTROK dengan `scopeDisubkonkan()` — PHP akan menolak panggilan
+     * BENTROK dengan `scopeDisubkonkan()` - PHP akan menolak panggilan
      * statis `Spk::disubkonkan()`. Pola yang sama pernah terjadi pada
      * `dariSpk()` vs `scopeDariSpk()`.
      */
@@ -153,26 +151,26 @@ class Spk extends Model
         return $this->hasMany(UangKeluar::class, 'spk_id');
     }
 
-    // ---------------------------------------------------------
     // Kolom turunan (dihitung, tidak disimpan)
     // Lihat Schema.md §6
-    // ---------------------------------------------------------
 
     /**
      * Total penerimaan untuk SPK ini.
      */
     public function totalPenerimaan(): float
     {
+        if (array_key_exists('total_masuk', $this->attributes)) {
+            return (float) ($this->attributes['total_masuk'] ?? 0);
+        }
+
         return (float) $this->uangMasuk()->sum('jumlah');
     }
 
-    // ---------------------------------------------------------
     // SISA & PIUTANG (SEDERHANA)
-    // ---------------------------------------------------------
     //
     // ⚠️ KEPUTUSAN USER (19 Sep 2026):
     // Retensi, laba/rugi, dan aging piutang DIHAPUS. Sistem murni mencatat
-    // data yang diinput — tanpa perhitungan pajak/biaya/laba yang tidak
+    // data yang diinput - tanpa perhitungan pajak/biaya/laba yang tidak
     // dipakai perusahaan.
     //
     // Karena itu `totalBiaya()` dan `labaRugi()` IKUT DIHAPUS: keduanya
@@ -185,7 +183,7 @@ class Spk extends Model
     /**
      * Piutang: sisa nilai SPK yang belum diterima.
      *
-     * Bisa negatif kalau penerimaan melebihi nilai SPK — itu tanda ada
+     * Bisa negatif kalau penerimaan melebihi nilai SPK - itu tanda ada
      * kelebihan input yang perlu diperiksa.
      */
     public function piutang(): float
@@ -219,12 +217,10 @@ class Spk extends Model
         return $this->piutang() <= 0;
     }
 
-    // ---------------------------------------------------------
     // TENGGAT (tanggal_akhir) & PERPANJANGAN
-    // ---------------------------------------------------------
 
     /**
-     * Tenggat EFEKTIF — tanggal_akhir terbaru setelah semua perpanjangan.
+     * Tenggat EFEKTIF - tanggal_akhir terbaru setelah semua perpanjangan.
      *
      * ⚠️ KENAPA INI ADA (permintaan pengguna 26 Sep 2026):
      * "perpanjangan tenggat SPK tidak bergantung tenggat waktu awal, bisa
@@ -286,7 +282,7 @@ class Spk extends Model
      * Berapa berkas dokumen yang tersimpan untuk SPK ini.
      *
      * Dipakai tabel supaya admin langsung tahu mana SPK yang dokumennya
-     * belum diunggah (0 berkas) — kebutuhan dari PRD FR-SPK-007.
+     * belum diunggah (0 berkas) - kebutuhan dari PRD FR-SPK-007.
      */
     public function jumlahDokumen(): int
     {
@@ -350,9 +346,7 @@ class Spk extends Model
         return $sisa.' hari lagi';
     }
 
-    // ---------------------------------------------------------
     // Scope
-    // ---------------------------------------------------------
 
     /**
      * @param  Builder<Spk>  $query
@@ -372,7 +366,7 @@ class Spk extends Model
     {
         // ⚠️ `status_tagihan` boleh NULL. Di SQL, `NULL != 'dibayar'` bernilai
         // UNKNOWN (bukan true), sehingga tanpa `orWhereNull` SPK yang statusnya
-        // belum diisi HILANG dari daftar "Belum Lunas" — padahal justru itu yang
+        // belum diisi HILANG dari daftar "Belum Lunas" - padahal justru itu yang
         // perlu ditindaklanjuti. Perlakukan NULL sebagai "belum lunas".
         $query->where(function (Builder $q): void {
             $q->where('status_tagihan', '!=', StatusTagihan::Dibayar->value)

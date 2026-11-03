@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * BUKU KAS / BUKU BANK (B2-11) — format persis template atasan.
+ * BUKU KAS / BUKU BANK (B2-11) - format persis template atasan.
  *
  * ⚠️ KENAPA PERLU:
  * Laporan akhir perusahaan = sheet "KAS" & "BANK" dengan kolom:
@@ -22,7 +22,7 @@ use Illuminate\Support\Collection;
  * ⚠️ DEBET = uang MASUK, KREDIT = uang KELUAR (sudut pandang buku kas).
  * SALDO berjalan = saldo awal + debet − kredit, per baris.
  *
- * ⚠️ TIDAK ADA TABEL BARU — dihitung on-the-fly (Rules §1).
+ * ⚠️ TIDAK ADA TABEL BARU - dihitung on-the-fly (Rules §1).
  */
 final class BukuKasBank
 {
@@ -50,44 +50,54 @@ final class BukuKasBank
             ? SaldoKas::saldo($enum, $awal->copy()->subDay())
             : 0.0;
 
-        // Kumpulkan transaksi masuk (debet) & keluar (kredit).
-        $masuk = UangMasuk::query()
+        $baris = [];
+
+        foreach (UangMasuk::query()
+            ->select(['id', 'tanggal', 'nomor_spk', 'keterangan', 'nama_pekerjaan', 'jumlah'])
             ->where('akun', $nilai)
             ->when($awal, fn ($q) => $q->where('tanggal', '>=', $awal->toDateString()))
             ->when($akhir, fn ($q) => $q->where('tanggal', '<=', $akhir->toDateString()))
-            ->get()
-            ->map(fn (UangMasuk $r): array => [
+            ->cursor() as $r) {
+            $baris[] = [
                 'tanggal' => $r->tanggal,
                 'ref' => $r->nomor_spk ?: ('UM-'.$r->id),
                 'keterangan' => $r->keterangan ?: ($r->nama_pekerjaan ?: 'Penerimaan'),
                 'debet' => (float) $r->jumlah,
                 'kredit' => 0.0,
-            ]);
+                '_id' => $r->id,
+                '_jenis' => 0,
+            ];
+        }
 
-        $keluar = UangKeluar::query()
+        foreach (UangKeluar::query()
+            ->select(['id', 'tanggal', 'keterangan', 'penerima', 'jumlah'])
             ->where('akun', $nilai)
             ->when($awal, fn ($q) => $q->where('tanggal', '>=', $awal->toDateString()))
             ->when($akhir, fn ($q) => $q->where('tanggal', '<=', $akhir->toDateString()))
-            ->get()
-            ->map(fn (UangKeluar $r): array => [
+            ->cursor() as $r) {
+            $baris[] = [
                 'tanggal' => $r->tanggal,
                 'ref' => 'UK-'.$r->id,
                 'keterangan' => $r->keterangan ?: ($r->penerima ?: 'Pengeluaran'),
                 'debet' => 0.0,
                 'kredit' => (float) $r->jumlah,
-            ]);
+                '_id' => $r->id,
+                '_jenis' => 1,
+            ];
+        }
 
-        // Urutkan per tanggal, lalu hitung saldo berjalan.
-        $baris = $masuk->concat($keluar)
-            ->sortBy(fn (array $b): int => $b['tanggal']->getTimestamp())
-            ->values()
-            ->reduce(function (Collection $acc, array $b) use ($saldoAwal): Collection {
-                $saldoSebelum = $acc->last()['saldo'] ?? $saldoAwal;
-                $b['saldo'] = $saldoSebelum + $b['debet'] - $b['kredit'];
-                $acc->push($b);
+        usort($baris, fn (array $a, array $b): int => [$a['tanggal']->getTimestamp(), $a['_id'], $a['_jenis']] <=> [$b['tanggal']->getTimestamp(), $b['_id'], $b['_jenis']]);
 
-                return $acc;
-            }, collect());
+        $saldo = $saldoAwal;
+        $baris = collect($baris)->map(function (array $b) use (&$saldo): array {
+            $saldo += $b['debet'] - $b['kredit'];
+            unset($b['_id'], $b['_jenis']);
+            $b['saldo'] = $saldo;
+
+            return $b;
+        });
+
+        $baris = $baris->values();
 
         return [
             'akun' => $nilai,
@@ -109,16 +119,16 @@ final class BukuKasBank
      */
     public static function untukEkspor(array $buku): array
     {
-        $header = ['Tanggal', 'Ref', 'Keterangan', 'Debet (Masuk)', 'Kredit (Keluar)', 'Saldo'];
+        $header = ['TANGGAL', 'REF', 'KETERANGAN', 'PEMASUKAN', 'PENGELUARAN', 'SALDO'];
 
         $baris = [];
 
-        // Baris saldo awal.
+        // Baris saldo awal / sisa kas bulan lalu
         $baris[] = [
             $buku['periode'],
             '',
-            'SALDO AWAL',
-            null,
+            'Sisa Saldo Awal Periode',
+            $buku['saldo_awal'] > 0 ? $buku['saldo_awal'] : null,
             null,
             $buku['saldo_awal'],
         ];

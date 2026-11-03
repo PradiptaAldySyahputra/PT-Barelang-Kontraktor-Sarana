@@ -198,6 +198,18 @@ Sistem hanya memiliki **2 role**:
 - **Format mata uang selalu Rupiah (Rp)**, pemisah ribuan titik: `Rp 15.000.000`.
 - **Format tanggal:** `DD-MM-YYYY` di UI, `YYYY-MM-DD` di database.
 - Nama tabel database mengikuti konvensi Laravel (`snake_case`, plural).
+- **Warna badge = SATU SUMBER KEBENARAN di enum.** Semua warna badge
+  (status, kategori, peran, akun, dll) WAJIB didefinisikan sebagai method
+  `warnaBadge(): string` pada enum terkait — **jangan** tulis peta warna
+  `match(...)` di dalam tabel/form. Alasan: satu status bisa tampil di beberapa
+  halaman; kalau warnanya ditulis terpisah, bisa berbeda tanpa disadari.
+  Warna mengikuti standar tema Tailwind/TailAdmin (`gray|brand|success|warning|error`). Dikunci oleh `tests/Feature/PetaWarnaBadgeTest.php`.
+- **Mode gelap (dark mode) adalah keadaan yang WAJIB didukung.** Setiap halaman
+  baru harus diverifikasi di mode gelap (latar `#09090b`, teks terang, badge
+  kontras). ⚠️ Saat memverifikasi halaman Admin-only, pakai akun **Admin** —
+  sebagai Direktur halaman itu 403 (latar putih = halaman error, bukan bug tema).
+- **Aksen warna = satu saja** (biru enterprise `#2563eb`). Jangan warna-warni
+  per modul.
 
 ## 7. Framework & Best Practices
 

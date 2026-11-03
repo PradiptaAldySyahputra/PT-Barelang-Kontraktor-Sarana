@@ -30,7 +30,7 @@ class MitraFactory extends Factory
     }
 
     /**
-     * Pemberi kerja — termasuk PT PLN Batam.
+     * Pemberi kerja - termasuk PT PLN Batam.
      *
      * Nama method `pln()` dipertahankan agar test lama tetap jalan,
      * tetapi kategorinya sekarang `mitra` (revisi user).
@@ -54,7 +54,7 @@ class MitraFactory extends Factory
     }
 
     /**
-     * Subkon — penerima pekerjaan dari kita.
+     * Subkon - penerima pekerjaan dari kita.
      */
     public function subkon(): static
     {

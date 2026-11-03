@@ -22,7 +22,7 @@ use Tests\TestCase;
  * Yang dikunci tes ini:
  *   1. berkas BARU disimpan di sub-folder bertanggal;
  *   2. berkas LAMA (tanpa sub-folder tanggal) TETAP bisa dikembalikan apa adanya
- *      (idempoten) — jadi tidak ada migrasi berkas yang perlu.
+ *      (idempoten) - jadi tidak ada migrasi berkas yang perlu.
  */
 class PenyimpanNotaStrukturTest extends TestCase
 {
@@ -79,7 +79,7 @@ class PenyimpanNotaStrukturTest extends TestCase
         $this->assertSame(
             'uang_keluar/nota-lama.jpg',
             $path,
-            'Berkas lama harus dipakai apa adanya — jangan dipindah/diduplikasi.',
+            'Berkas lama harus dipakai apa adanya - jangan dipindah/diduplikasi.',
         );
     }
 

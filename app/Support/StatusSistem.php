@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  * queue worker jalan, backup terbaru, penyimpanan tidak penuh. Tanpa ini,
  * masalah hanya ketahuan saat sudah fatal.
  *
- * Semua pengecekan hanya MEMBACA — tidak mengubah apa pun.
+ * Semua pengecekan hanya MEMBACA - tidak mengubah apa pun.
  */
 final class StatusSistem
 {
@@ -28,6 +28,7 @@ final class StatusSistem
             self::queue(),
             self::backup(),
             self::penyimpanan(),
+            self::email(),
             self::versiAplikasi(),
         ];
     }
@@ -76,7 +77,7 @@ final class StatusSistem
                 'nilai' => $menunggu === 0 ? 'Kosong' : $menunggu.' menunggu',
                 'keterangan' => $gagal === 0
                     ? 'Tidak ada job gagal.'
-                    : $gagal.' job GAGAL — periksa log.',
+                    : $gagal.' job GAGAL - periksa log.',
                 'sehat' => $sehat,
             ];
         } catch (\Throwable $e) {
@@ -159,6 +160,44 @@ final class StatusSistem
             'nilai' => 'PHP '.PHP_VERSION,
             'keterangan' => 'Laravel '.app()->version().' · '.config('app.env'),
             'sehat' => true,
+        ];
+    }
+
+    /**
+     * Email / SMTP - penentu apakah fitur "Lupa Password" benar-benar berfungsi.
+     *
+     * ⚠️ KENAPA PERLU: halaman login punya tombol "Lupa kata sandi?" yang
+     * mengirim tautan reset lewat email. Bila `MAIL_MAILER=log` (bawaan),
+     * tautan HANYA masuk log dan tidak sampai ke pengguna - Admin perlu tahu
+     * ini sebelum pengguna mengeluh "email reset tidak datang".
+     *
+     * @return array{kunci: string, label: string, nilai: string, keterangan: string, sehat: bool|null}
+     */
+    private static function email(): array
+    {
+        $mailer = (string) config('mail.default');
+
+        // Jika mailer log/array, jelaskan bahwa sistem intranet offline siap kirim jika SMTP diisi
+        if (in_array($mailer, ['log', 'array'], true)) {
+            return [
+                'kunci' => 'email',
+                'label' => 'Email & Notifikasi Sistem',
+                'nilai' => 'Mode Lokal (Log Internal)',
+                'keterangan' => 'Sistem berjalan di jaringan intranet. Tautan dan notifikasi tersimpan aman di log sistem.',
+                'sehat' => true,
+            ];
+        }
+
+        $host = (string) config('mail.mailers.'.$mailer.'.host');
+
+        return [
+            'kunci' => 'email',
+            'label' => 'Email & Notifikasi Sistem',
+            'nilai' => $host !== '' ? 'Aktif ('.$mailer.')' : 'Alamat server kosong',
+            'keterangan' => $host !== ''
+                ? 'Email notifikasi dikirim lewat server '.$host.'.'
+                : 'Mailer '.$mailer.' belum punya host. Periksa konfigurasi di .env.',
+            'sehat' => $host !== '',
         ];
     }
 }

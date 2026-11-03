@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * ⚠️ KENAPA DISK PRIVAT: avatar & tanda tangan adalah data pribadi pegawai.
  * Menyimpannya di disk `public` membuatnya bisa diunduh siapa pun tanpa login
- * (kesalahan yang pernah terjadi pada nota — lihat catatan audit 26 Sep 2026).
+ * (kesalahan yang pernah terjadi pada nota - lihat catatan audit 26 Sep 2026).
  */
 return new class extends Migration
 {

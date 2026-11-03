@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tabel `uang_masuk` — penerimaan dana.
+ * Tabel `uang_masuk` - penerimaan dana.
  *
  * Asal: skema awal (`uang_masuk`) + revisi user.
  *
@@ -41,7 +41,7 @@ return new class extends Migration
             $table->foreignId('mitra_id')->nullable()->constrained('mitra')->nullOnDelete();
             $table->text('keterangan')->nullable();
 
-            // Jumlah file BEBAS (keputusan user) — array path file
+            // Jumlah file BEBAS (keputusan user) - array path file
             $table->json('bukti')->nullable();
 
             $table->timestamps();

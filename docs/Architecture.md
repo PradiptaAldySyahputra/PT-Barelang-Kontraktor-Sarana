@@ -1,8 +1,8 @@
 # Architecture — Sistem Informasi SPK & Kontrol Keuangan
 ## PT Barelang Kontraktor Sarana
 
-> **Stack:** Laravel 13 · Filament 5 (panel `/admin`) · MySQL/MariaDB · PHP 8.5
-> **Perubahan utama dari draf awal:** deployment lokal 2 PC · **Filament** (bukan Blade) ·
+> **Stack:** Laravel 13 · Blade + Livewire 4 (`/panel`, TailAdmin) · MySQL/MariaDB · PHP 8.5
+> **Perubahan arsitektur:** deployment lokal intranet 2 PC · **Blade + TailAdmin** (Filament 100% dicabut) ·
 > tanpa approval · SPK entitas inti · **5 tabel + PHP Enum**.
 
 ---
@@ -32,31 +32,25 @@
 | Database | **MySQL / MariaDB** | Relasional, stabil, gratis |
 | ORM | Eloquent ORM | Relasi eksplisit, query aggregate |
 | Validasi Enum | **PHP Enum + `Rule::enum()`** | ⭐ Pengganti tabel master (lihat `Schema.md` §7) |
-| **Frontend / Admin Panel** | **Filament 5** (`/admin`) | ⚠️ **MENYIMPANG dari SRS** — lihat catatan di bawah |
-| Tema Tampilan | **Clean Minimalist Enterprise** (Vercel/Linear) — CSS tema Filament | Monokrom, border tipis, font sistem |
-| Authentication | Filament Login + Laravel Auth | Login, logout, session, password hashing |
-| Authorization | `canAccessPanel()` + `canCreate/canEdit/canDelete` + trait `BolehUbahData` | Batasi akses Admin/Direktur |
+| **Frontend / Admin Panel** | **Blade + Livewire 4** (`/panel`) | Template TailAdmin, Tailwind CSS v4 |
+| Tema Tampilan | **TailAdmin Corporate** | Biru Baja BKS `#0F4C81`, dark mode terintegrasi, font sistem |
+| Authentication | Laravel Session Auth | Login, logout, session, password hashing |
+| Authorization | Middleware `PastikanPeran` (`peran:admin,direktur`) | Admin & Direktur (Super Admin) |
 | File Storage | Laravel Storage | Simpan bukti transaksi (uang masuk & keluar) |
-| Grafik | Chart.js (bawaan Filament ChartWidget) | Grafik arus kas, status SPK, kategori |
-| Export Laporan | **CSV** (bawaan, tanpa paket) | Bisa dibuka di Excel — aplikasi yang dipakai perusahaan |
+| Grafik | ApexCharts (bawaan template) | Grafik arus kas, status SPK, kategori |
+| Export Laporan | **XLSX & CSV** (OpenSpout) | Format persis file kas & bank kantor BKS, CSV UTF-8 |
 | **Deployment** | **Lokal di PC Direktur (jaringan kantor)** | Biaya rendah, data tetap di perusahaan |
 | Web Server Lokal | Apache/Nginx (via Laragon/XAMPP) | Menjalankan aplikasi di port lokal |
 | Backup | `php artisan bks:backup` + Laravel Scheduler | Dump harian `.sql.gz`, retensi 30 hari |
 
-> ⚠️ **PERUBAHAN PENTING dari v1.0 — Frontend BUKAN Blade lagi:**
+> ✅ **STATUS FRONTEND SAAT INI — Blade + Livewire 4 (TailAdmin):**
 >
-> SRS mengunci frontend ke **Blade Template**, tetapi implementasi memakai
-> **Filament 5** (panel admin di `/admin`). Alasannya:
-> - 5 modul CRUD (SPK, Mitra, Uang Masuk, Uang Keluar, Pengguna) + laporan
->   dikerjakan jauh lebih cepat, dengan tabel/filter/pencarian/upload bawaan.
-> - Menghemat waktu pengerjaan magang secara signifikan.
-> - Model, migration, Enum, dan seluruh logika bisnis **tetap sama** —
->   Filament bekerja di atas Eloquent yang sudah ada.
->
-> **Konsekuensi:** dokumen SRS menyebut Blade → **tidak sinkron** dengan implementasi.
->
-> **Catatan:** halaman Blade lama (dashboard & login) sudah **dihapus** dan
-> digantikan Filament sepenuhnya.
+> Sistem berjalan 100% di atas **Blade + Livewire 4** (panel `/panel`) dengan template **TailAdmin**.
+> Seluruh dependensi Filament telah dicabut tuntas per 31 Oktober 2026.
+> - Modul CRUD dan interaktivitas ditangani oleh Livewire & Alpine.js.
+> - Grafik dashboard ditangani oleh ApexCharts.
+> - Ekspor dokumen ditangani oleh OpenSpout (Excel) dan dompdf (PDF).
+> - Seluruh logika bisnis, database 5 tabel, dan PHP Enum tetap terjaga utuh.
 
 > ✅ **Perubahan dari draf awal:** *Hosting VPS* **dihapus** → **deployment lokal**.
 
@@ -67,17 +61,12 @@ app/
 ├── Enums/                 # PHP Enum: Peran, StatusSpk, StatusTagihan,
 │                          #   KategoriPengeluaran, KategoriMitra, AkunKas, StatusAntar, DikerjakanOleh
 ├── Models/                # 5 model Eloquent (Pengguna, Mitra, Spk, UangMasuk, UangKeluar)
-├── Filament/              # Panel admin /admin
-│   ├── Resources/         #   Spks · Mitras · Penggunas · UangMasuks · UangKeluars · MonitoringSpk
-│   ├── Pages/             #   Dashboard, Laporan
-│   ├── Widgets/           #   kartu ringkasan & grafik
-│   ├── Exports/           #   ekspor per menu
-│   ├── Actions/           #   CatatPembayaran
-│   └── Concerns/          #   BolehUbahData, FilterPeriodeUang, PratinjauNotaPrivat
-├── Services/              # PembacaNota (OCR), PenyimpanBerkas
+├── Http/Controllers/      # Controller Panel TailAdmin (SPK, Keuangan, Mitra, Laporan, Sistem)
+├── Livewire/              # Komponen Reaktif Livewire 4 (Tabel, Form, ReceiptUploadForm)
+├── Services/              # PembacaNota (OCR), PenyimpanBerkas, LaporanEkspor
 ├── Observers/             # SinkronStatusTagihanObserver
 ├── Http/Middleware/       # PastikanPeran, HeaderKeamanan
-└── Support/               # Format (rupiah), Nota
+└── Support/               # BukuKasBank, SaldoKas, Format, StatusBackup, ArsipNota
 ```
 
 > 📌 **Karena schema hanya 5 tabel**, status & kategori **tidak** punya tabel master.
@@ -419,6 +408,50 @@ php artisan config:clear && php artisan config:cache
 php artisan route:cache && php artisan view:cache
 php artisan storage:link
 ```
+
+#### 12.2.1 Email / SMTP (fitur "Lupa Password")
+
+Tombol **"Lupa kata sandi?"** di halaman login sudah berfungsi, tetapi **butuh
+SMTP** agar tautan reset benar-benar sampai ke email pengguna. Tanpa SMTP
+(`MAIL_MAILER=log`), tautan hanya **ditulis ke `storage/logs/laravel.log`** —
+berguna untuk uji coba, tidak untuk pemakaian nyata.
+
+Isi di `.env` lalu `php artisan config:clear`:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com          # atau mail.namadomain.com
+MAIL_PORT=587                      # 587 (tls) / 465 (ssl)
+MAIL_USERNAME=nama@gmail.com
+MAIL_PASSWORD=app-password         # Gmail: pakai "App Password", bukan password akun
+MAIL_SCHEME=tls                    # tls (587) atau ssl (465)
+MAIL_FROM_ADDRESS="no-reply@bks.local"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+Cara memverifikasi tanpa menunggu email:
+1. Isi SMTP di atas, `php artisan config:clear`.
+2. Buka `/admin/password-reset/request`, masukkan email terdaftar.
+3. Cek kotak masuk.
+
+> ⚠️ **Kalau `MAIL_MAILER=log` (belum ada SMTP), tautan tidak sampai ke email —
+> hanya ditulis ke `storage/logs/laravel.log`.** Namun tautan itu **hanya muncul
+> bila `LOG_LEVEL` = `debug` atau `info`**. Bawaan server memakai
+> `LOG_LEVEL=error`, sehingga tautan **tidak akan terlihat sama sekali**.
+> Untuk melihatnya saat uji coba, set sementara `LOG_LEVEL=debug`, jalankan
+> `php artisan config:clear`, ulangi permintaan reset, lalu cari di log:
+>
+> ```bash
+> grep "password-reset/reset" storage/logs/laravel.log | tail -1
+> ```
+>
+> Halaman **Status Sistem** (`/admin/status-sistem-page`) menampilkan status
+> email ini agar Admin tahu fitur lupa password sudah aktif atau belum.
+
+> ⚠️ **Keamanan.** Halaman ini sudah anti-enumerasi (pesan selalu sama, tidak
+> membocorkan email terdaftar) + rate limit 5×/menit. Jangan ubah pesannya agar
+> membedakan email terdaftar/tidak. Tautan berlaku **60 menit**
+> (`config/auth.php` → `passwords.users.expire`).
 
 ### 12.3 Cara menjalankan
 

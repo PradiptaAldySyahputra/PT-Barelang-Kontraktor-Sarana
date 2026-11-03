@@ -25,10 +25,24 @@ enum Peran: string
 
     /**
      * Apakah peran ini boleh menginput/mengubah data?
+     *
+     * Pembaruan keputusan: Direktur berperan sebagai super admin
+     * dan dapat mengakses seluruh fitur input, ubah, dan hapus.
      */
     public function bolehInput(): bool
     {
-        return $this === self::Admin;
+        return $this === self::Admin || $this === self::Direktur;
+    }
+
+    /**
+     * Warna badge Filament - konsisten di seluruh halaman.
+     */
+    public function warnaBadge(): string
+    {
+        return match ($this) {
+            self::Admin => 'primary',
+            self::Direktur => 'warning',
+        };
     }
 
     /**

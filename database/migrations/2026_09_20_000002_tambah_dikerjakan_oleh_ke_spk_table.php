@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * Permintaan user: SPK perlu menandai apakah dikerjakan sendiri atau
  * disubkonkan ke pihak lain (kita bayar mereka).
  *
- * Tetap 5 tabel — tidak ada tabel baru. Pekerjaan yang sebagian
+ * Tetap 5 tabel - tidak ada tabel baru. Pekerjaan yang sebagian
  * disubkonkan dibuat sebagai SPK terpisah.
  */
 return new class extends Migration
@@ -26,7 +26,7 @@ return new class extends Migration
                 ->after('status_tagihan')
                 ->index();
 
-            // Mitra subkon — hanya diisi jika dikerjakan_oleh = 'subkon'
+            // Mitra subkon - hanya diisi jika dikerjakan_oleh = 'subkon'
             $table->foreignId('subkon_id')
                 ->nullable()
                 ->after('dikerjakan_oleh')

@@ -4,7 +4,9 @@
 
 > **Untuk:** Admin (operator harian) & Direktur (pemantau)
 > **Versi dokumen:** 1.0 — 29 September 2026
-> **Aplikasi:** Laravel 13 + Filament 5, berjalan **lokal di jaringan kantor**
+> **Aplikasi:** Laravel 13 + Blade + Livewire 4 (TailAdmin), berjalan **lokal di jaringan kantor**
+> **Alamat:** `http://127.0.0.1:8232/panel` (atau IP PC server kantor)
+> **Hak Akses:** **Admin** (input & operasional) dan **Direktur** (Super Admin & monitoring)
 >
 > ⚠️ Manual ini ditulis berdasarkan **kode yang benar-benar berjalan**, bukan
 > dari rencana. Setiap menu & tombol yang disebut sudah diverifikasi ada.

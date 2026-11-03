@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
  *
  * ⚠️ KENAPA TIDAK PAKAI Storage::url() LAGI (temuan audit 26 Sep 2026):
  * Dulu nota disimpan di disk `public` dan ditautkan lewat `/storage/...`.
- * Ternyata berkas itu bisa diunduh SIAPA PUN TANPA LOGIN — nota memuat
+ * Ternyata berkas itu bisa diunduh SIAPA PUN TANPA LOGIN - nota memuat
  * harga material, pembayaran subkon, dan gaji karyawan.
  *
  * Sekarang nota ada di disk privat `nota`, dan URL-nya menunjuk ke rute
@@ -37,7 +37,7 @@ final class Nota
 
         $bersih = ltrim(str_replace('\\', '/', $path), '/');
 
-        // Tolak path traversal sejak awal — jangan pernah bikin URL '..'.
+        // Tolak path traversal sejak awal - jangan pernah bikin URL '..'.
         if (str_contains($bersih, '..')) {
             return null;
         }

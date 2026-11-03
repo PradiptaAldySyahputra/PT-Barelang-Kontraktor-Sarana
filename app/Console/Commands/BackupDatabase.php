@@ -12,11 +12,18 @@ use Illuminate\Support\Facades\Process;
  * Backup database harian.
  *
  * ⚠️ KENAPA INI PENTING:
- * Deployment lokal — PC Direktur adalah SERVER. Kalau hardisknya rusak,
+ * Deployment lokal - PC Direktur adalah SERVER. Kalau hardisknya rusak,
  * seluruh data SPK & keuangan perusahaan HILANG. Backup bukan "nice to have".
  *
- * Hasil: storage/app/backup/bks-YYYY-MM-DD-HHMMSS.sql.gz
+ * Hasil: storage/app/backup/bks-YYYY-MM-DD-HHMMSS.zip (berisi .sql di dalamnya)
  * Retensi: backup lebih tua dari `--hari` (default 30) dihapus otomatis.
+ *
+ * ⚠️ KENAPA ZIP, BUKAN .sql.gz (perbaikan 11 Okt 2026):
+ * Dulu berkas dibuat `.sql.gz` (gzip mentah). Di Windows, berkas itu
+ * MEMBINGUNGKAN pengguna: dibuka dengan WinRAR/7-Zip lalu dilaporkan "error".
+ * Sebabnya, `.sql.gz` cuma berisi SATU berkas (.sql), dan asosiasi berkas
+ * ganda (gzip lalu sql) mudah salah. ZIP adalah format arsip standar Windows
+ * - bisa dibuka TANPA WinRAR (langsung dari Explorer) dan isinya jelas.
  */
 class BackupDatabase extends Command
 {
@@ -24,7 +31,7 @@ class BackupDatabase extends Command
                             {--hari=30 : Hapus backup lebih tua dari N hari}
                             {--simpan : Tetap simpan meski gagal (untuk uji)}';
 
-    protected $description = 'Backup database MySQL/MariaDB ke file .sql.gz';
+    protected $description = 'Backup database MySQL/MariaDB ke file .zip';
 
     public function handle(): int
     {
@@ -35,7 +42,7 @@ class BackupDatabase extends Command
         }
 
         $nama = sprintf(
-            '%s-%s.sql.gz',
+            '%s-%s.zip',
             config('database.connections.mysql.database'),
             now()->format('Y-m-d-His')
         );
@@ -62,7 +69,7 @@ class BackupDatabase extends Command
         }
 
         /*
-         * ⚠️ MEMAKAI FACADE `Process` (bukan `new Symfony\Process`) — agar bisa
+         * ⚠️ MEMAKAI FACADE `Process` (bukan `new Symfony\Process`) - agar bisa
          * diuji dengan `Process::fake()`. Sebelumnya perintah ini memakai
          * objek Symfony langsung sehingga `bks:backup` TIDAK BISA diuji tanpa
          * mysqldump nyata; akibatnya fitur kritikal ini nol tes (temuan survei
@@ -89,8 +96,24 @@ class BackupDatabase extends Command
             return self::FAILURE;
         }
 
-        // Kompres dengan gzencode (tanpa butuh binary gzip)
-        File::put($tujuan, gzencode($sql, 9));
+        // ⚠️ Simpan sebagai ZIP (berisi .sql) - lihat catatan di atas kelas.
+        // .sql ditulis ke berkas sementara lebih dulu agar bisa di-`addFile`
+        // (streaming), lalu sementara dihapus setelah ZIP jadi.
+        $sementara = tempnam(sys_get_temp_dir(), 'bks-backup').'.sql';
+        File::put($sementara, $sql);
+
+        $zip = new \ZipArchive;
+
+        if ($zip->open($tujuan, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            File::delete($sementara);
+            $this->error('Backup GAGAL: tidak bisa membuat berkas ZIP.');
+
+            return self::FAILURE;
+        }
+
+        $zip->addFile($sementara, pathinfo($nama, PATHINFO_FILENAME).'.sql');
+        $zip->close();
+        File::delete($sementara);
 
         $ukuran = File::size($tujuan);
 
@@ -120,7 +143,9 @@ class BackupDatabase extends Command
         $terhapus = 0;
 
         foreach (File::files($dir) as $file) {
-            if ($file->getExtension() === 'gz' && $file->getMTime() < $batas) {
+            // Dukung format LAMA (.sql.gz) DAN BARU (.zip) - backup lama harus
+            // tetap ikut dibersihkan oleh retensi.
+            if (in_array($file->getExtension(), ['gz', 'zip'], true) && $file->getMTime() < $batas) {
                 File::delete($file->getPathname());
                 $terhapus++;
             }

@@ -10,17 +10,17 @@ use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
 
 /**
- * BACKUP DATABASE — fitur KRITIKAL (data keuangan perusahaan).
+ * BACKUP DATABASE - fitur KRITIKAL (data keuangan perusahaan).
  *
  * ⚠️ KENAPA DIUJI:
  * `bks:backup` dijadwalkan harian (routes/console.php) dan menyimpan data
- * keuangan perusahaan. Sebelumnya TIDAK ADA tes sama sekali — kalau rusak
+ * keuangan perusahaan. Sebelumnya TIDAK ADA tes sama sekali - kalau rusak
  * diam-diam, data tak ter-backup dan baru ketahuan saat butuh restore.
  *
  * ⚠️ CARA UJI (tanpa mysqldump nyata):
  * Perintah ini memanggil binary `mysqldump`. Di lingkungan tes, binary itu
  * mungkin tak ada. Jadi kita MEMALSUKAN `Process` (facade) supaya mengembalikan
- * dump palsu — tujuannya menguji LOGIKA kita sendiri:
+ * dump palsu - tujuannya menguji LOGIKA kita sendiri:
  *   1. berkas .sql.gz terbentuk & isinya benar (hasil gunzip = dump),
  *   2. retensi `--hari` menghapus berkas lama,
  *   3. `--simpan` tetap menyimpan meski dump gagal.
@@ -52,7 +52,7 @@ class BackupDatabaseTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_backup_membuat_berkas_sql_gz_yang_benar(): void
+    public function test_backup_membuat_berkas_zip_yang_benar(): void
     {
         $dump = "-- dump palsu\nCREATE TABLE spk (id INT);\n";
 
@@ -65,8 +65,15 @@ class BackupDatabaseTest extends TestCase
         $berkas = File::files($this->dir);
         $this->assertCount(1, $berkas, 'Harus ada tepat satu berkas backup.');
 
-        $isi = gzdecode(File::get($berkas[0]->getPathname()));
-        $this->assertSame($dump, $isi, 'Isi backup harus sama dengan hasil dump.');
+        // ⚠️ Berkas harus .zip (bukan .sql.gz) agar bisa dibuka di Windows
+        // tanpa WinRAR. Isi .sql di dalamnya harus sama dengan hasil dump.
+        $this->assertSame('zip', strtolower($berkas[0]->getExtension()), 'Backup harus berformat .zip.');
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($berkas[0]->getPathname()) === true, 'Berkas backup harus ZIP yang valid.');
+        $this->assertSame(1, $zip->numFiles, 'ZIP backup harus berisi tepat satu berkas.');
+        $this->assertSame($dump, $zip->getFromIndex(0), 'Isi .sql harus sama dengan hasil dump.');
+        $zip->close();
     }
 
     public function test_retensi_menghapus_backup_lama(): void
@@ -76,16 +83,22 @@ class BackupDatabaseTest extends TestCase
         ]);
 
         // Buat berkas "lama" (mtime 40 hari lalu) + berkas "baru".
-        $lama = $this->dir.'/bks-lama.sql.gz';
-        File::put($lama, gzencode('lama', 9));
+        // Dua-duanya .zip (format baru); retensi juga harus mendukung .gz lama.
+        $lama = $this->dir.'/bks-lama.zip';
+        File::put($lama, 'lama');
         touch($lama, now()->subDays(40)->getTimestamp());
 
-        $baru = $this->dir.'/bks-baru.sql.gz';
-        File::put($baru, gzencode('baru', 9));
+        $lamaGz = $this->dir.'/bks-lama-lagi.sql.gz';
+        File::put($lamaGz, gzencode('lama', 9));
+        touch($lamaGz, now()->subDays(40)->getTimestamp());
+
+        $baru = $this->dir.'/bks-baru.zip';
+        File::put($baru, 'baru');
 
         $this->artisan('bks:backup', ['--hari' => 30])->assertSuccessful();
 
         $this->assertFileDoesNotExist($lama, 'Backup > 30 hari harus dihapus.');
+        $this->assertFileDoesNotExist($lamaGz, 'Backup .sql.gz lama juga harus ikut dihapus.');
         $this->assertFileExists($baru, 'Backup baru tidak boleh ikut terhapus.');
     }
 

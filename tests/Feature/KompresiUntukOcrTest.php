@@ -78,7 +78,7 @@ class KompresiUntukOcrTest extends TestCase
             $this->markTestSkipped('Ekstensi GD tidak tersedia.');
         }
 
-        // Foto HP besar (4000 px) — kasus paling umum.
+        // Foto HP besar (4000 px) - kasus paling umum.
         $tmp = $this->gambarUji(3000, 4000);
 
         $hasil = app(PenyimpanBerkas::class)->kompres($tmp, 'png');
@@ -96,14 +96,14 @@ class KompresiUntukOcrTest extends TestCase
         $this->assertGreaterThanOrEqual(
             1600,
             $sisiMaks,
-            "Sisi terpanjang hasil kompresi ({$sisiMaks}px) terlalu kecil — "
+            "Sisi terpanjang hasil kompresi ({$sisiMaks}px) terlalu kecil - "
             .'tulisan nota bisa tidak terbaca OCR. Minimal 1600px.',
         );
 
         $this->assertLessThanOrEqual(
             2400,
             $sisiMaks,
-            'Sisi terpanjang terlalu besar — aplikasi jadi berat tanpa manfaat OCR.',
+            'Sisi terpanjang terlalu besar - aplikasi jadi berat tanpa manfaat OCR.',
         );
 
         $this->assertSame('jpg', $ekstensi);
@@ -137,7 +137,7 @@ class KompresiUntukOcrTest extends TestCase
 
         $hasil = app(PenyimpanBerkas::class)->kompres($tmp, 'png');
 
-        // Dua keluaran sah: TIDAK dikompres (null) — tetap tidak diperbesar —
+        // Dua keluaran sah: TIDAK dikompres (null) - tetap tidak diperbesar -
         // atau dikompres dengan dimensi ≤ aslinya. Keduanya harus dinyatakan
         // eksplisit, kalau tidak PHPUnit menandai tes ini "risky" (tanpa asersi).
         if ($hasil === null) {
@@ -163,7 +163,7 @@ class KompresiUntukOcrTest extends TestCase
 
         $this->assertNull(
             app(PenyimpanBerkas::class)->kompres($tmp, 'pdf'),
-            'PDF tidak boleh dikompres — resolusinya penting untuk OCR tulisan tangan.',
+            'PDF tidak boleh dikompres - resolusinya penting untuk OCR tulisan tangan.',
         );
 
         @unlink($tmp);

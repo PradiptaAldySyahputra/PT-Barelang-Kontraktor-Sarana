@@ -14,7 +14,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 /**
- * Seeder utama — data awal sistem.
+ * Seeder utama - data awal sistem.
  *
  * Membuat:
  *   1. Akun Admin & Direktur
@@ -27,19 +27,17 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // ---------------------------------------------------------
         // 1. Akun pengguna
         //
         // ⚠️ KEAMANAN (checklist hardening B1-5):
         // Seeder ini untuk DATA DEMO/PENGEMBANGAN saja. Sebelumnya ia menanam
-        // password harfiah `password` — siapa pun yang membaca repo tahu
+        // password harfiah `password` - siapa pun yang membaca repo tahu
         // password default server. Sekarang:
         //
         //   - DI PRODUKSI: seeder MENOLAK jalan. Buat admin lewat
         //     `php artisan app:buat-admin` (password diminta, tidak di kode).
         //   - Di pengembangan: password diambil dari env SEEDER_PASSWORD, atau
-        //     dibuat ACAK lalu DICETAK — bukan `password` polos.
-        // ---------------------------------------------------------
+        //     dibuat ACAK lalu DICETAK - bukan `password` polos.
         if (app()->environment('production')) {
             $this->command->error(
                 'Seeder ini untuk pengembangan saja. Di produksi, buat akun '
@@ -66,9 +64,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✓ Akun demo: admin@bks.test & direktur@bks.test');
         $this->command->warn('  Password demo: '.$passwordDemo.' (hanya untuk pengembangan)');
 
-        // ---------------------------------------------------------
         // 2. Mitra
-        // ---------------------------------------------------------
         $pln = Mitra::factory()->pln()->create([
             'nama' => 'PT Contoh Pemberi Kerja',
             'kontak' => '0778-000000',
@@ -88,11 +84,9 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('✓ Mitra: pemberi kerja, pelanggan, subkon');
 
-        // ---------------------------------------------------------
         // 3. SPK
-        // ---------------------------------------------------------
 
-        // SPK dari PLN — pekerjaan utama
+        // SPK dari PLN - pekerjaan utama
         $spkPln = Spk::factory()->pln()->berjalan()->create([
             'nomor_spk' => 'SPK-CONTOH-001',
             'tanggal_spk' => '2026-06-29',
@@ -104,7 +98,7 @@ class DatabaseSeeder extends Seeder
             'dibuat_oleh' => $admin->id,
         ]);
 
-        // SPK subkon/vendor — dengan retensi 5%
+        // SPK subkon/vendor - dengan retensi 5%
         $spkSubkon = Spk::factory()->subkon()->berjalan()->create([
             'nomor_spk' => 'SUBKON-001',
             'tanggal_spk' => '2026-07-01',
@@ -138,11 +132,9 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('✓ SPK: 4 contoh (reguler, subkon, tanpa SPK, lunas)');
 
-        // ---------------------------------------------------------
         // 4. Uang masuk
-        // ---------------------------------------------------------
 
-        // Dari SPK PLN — termin
+        // Dari SPK PLN - termin
         UangMasuk::factory()->dariSpk()->denganBukti(2)->create([
             'spk_id' => $spkPln->id,
             'nomor_spk' => $spkPln->nomor_spk,
@@ -172,9 +164,7 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('✓ Uang masuk: 3 contoh (2 dari SPK, 1 luar SPK)');
 
-        // ---------------------------------------------------------
         // 5. Uang keluar
-        // ---------------------------------------------------------
 
         // Terkait SPK PLN
         UangKeluar::factory()->terkaitSpk()->denganBukti(2)->create([
@@ -195,7 +185,7 @@ class DatabaseSeeder extends Seeder
             'keterangan' => 'Upah tukang minggu ke-3',
         ]);
 
-        // Umum (tanpa SPK) — operasional kantor
+        // Umum (tanpa SPK) - operasional kantor
         UangKeluar::factory()->umum()->denganBukti(1)->create([
             'tanggal' => '2026-08-01',
             'jumlah' => 3_000_000,
@@ -206,9 +196,7 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('✓ Uang keluar: 3 contoh (2 terkait SPK, 1 umum)');
 
-        // ---------------------------------------------------------
         // Ringkasan
-        // ---------------------------------------------------------
         $this->command->newLine();
         $this->command->info('=== RINGKASAN DATA AWAL ===');
         $this->command->table(
@@ -222,7 +210,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Tabel ringkasan per SPK — hanya angka yang BENAR-BENAR dipakai.
+        // Tabel ringkasan per SPK - hanya angka yang BENAR-BENAR dipakai.
         // ⚠️ Kolom Laba/Rugi & Biaya DIHAPUS: fitur itu sudah dibuang dari
         // sistem (keputusan user, v4.3). Menampilkannya di sini hanya
         // menyesatkan orang yang membaca output seeder.

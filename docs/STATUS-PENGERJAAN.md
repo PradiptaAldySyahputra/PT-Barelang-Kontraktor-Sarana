@@ -8,6 +8,454 @@
 
 ---
 
+## 0u. Sesi 12 Okt 2026 (lanjutan 2) — Perbaikan "AI-Slop" TAMPILAN + BUG komentar bocor
+
+**Mandat user:** "aislop itu ditampilan atau desain... tampilan nya masih
+aislop". Fokus: benahi tampilan, bukan kode. Arah disepakati user:
+**pertahankan bahasa desain "Clean Minimalist Enterprise"** yang ada,
+benahi yang generik/berantakan — bukan ganti tema.
+
+**Dikerjakan lewat tugas Kanban** `t_947f2222` (agent "desain", tampil di
+kantor pixel 8791) + dituntaskan asisten. 3 commit agent:
+- `19bdc4b` fix(font): font sistem benar-benar dipakai (bukan Inter bawaan
+  Filament). Akar: Filament memuat Inter via font provider sendiri.
+- `0abe6e5` refactor(dashboard): hilangkan "card soup" 15 kartu seragam ->
+  blok logis (UANG / PERLU PERHATIAN / PEKERJAAN & TAGIHAN) + kartu
+  "Lewat Tenggat" diberi penanda merah (terang `rgb(255,245,246)`,
+  gelap `rgb(28,10,14)` + border rose).
+- `72326ec` fix(tabel): kolom rupiah rata kanan + tebal di semua tabel
+  keuangan; kotak cari ganda dibedakan (global "Cari di semua data" vs
+  tabel "Cari di tabel ini").
+
+**BUG KRITIS (diperkenalkan asisten, ditemukan user):** saat transformasi
+anti-slop menghapus banner dekoratif `{{-- ==== ... ==== --}}` di
+`resources/views/filament/pages/laporan.blade.php`, baris PEMBUKA `{{--`
+ikut terhapus sementara penutup `==== --}}` tertinggal. Akibatnya 9 blok
+isi komentar (mis. "PEMILIH PERIODE") BOCOR jadi teks di halaman Laporan -
+terlihat berantakan. Diperbaiki: 9 pembuka komentar dipulihkan
+(12 `{{--` = 12 `--}}`). Scan menyeluruh: hanya 1 berkas terdampak.
+
+**Pelajaran:** `artisan serve` menyimpan opcache - setelah mengubah berkas
+view, server HARUS di-restart, kalau tidak perubahan tidak terlihat
+(membingungkan: berkas & compiled view bersih tapi browser masih lama).
+
+**Tes regresi baru:** `tests/Feature/KomentarBladeTest.php` (2 tes) -
+setiap Blade wajib punya `{{--` dan `--}}` seimbang + tidak ada baris
+banner `====` di luar komentar.
+
+**Verifikasi:** `pint` bersih; **882/882 tes lulus** (2.463 assertions);
+browser nyata terang & gelap (sesi uji server-side, DIHAPUS setelahnya).
+
+**Belum di-commit (menunggu user):** perbaikan form Uang Keluar
+(`UangKeluarForm.php` - stepper dipendekkan, tombol hapus berlabel),
+`docs/Design.md` (agent), `tests/Feature/PerbaikanSlopPanelTest.php`,
+`tests/Feature/KomentarBladeTest.php`, dan perbaikan `laporan.blade.php`.
+Aturan AGENTS.md §1: user yang commit/push.
+
+---
+
+## 0y. Sesi 12 Okt 2026 (lanjutan 6) — Chart modern (bar & donut)
+
+**Mandat user:** "chartnya bisa diperbarui lebih modern seperti contoh gambar
+desain tadi".
+
+**Yang diperbarui:**
+- **Bar chart Arus Kas:** batang lebih ramping (`maxBarThickness` 26,
+  `barPercentage` 0.62), sudut atas membulat (`borderRadius` 8 +
+  `borderSkipped: bottom`), hover lebih pekat, grid halus
+  (`rgba(148,163,184,.16)`), legend titik bulat, tooltip radius 10, dan
+  **sumbu-Y angka ringkas** (500.000.000 -> "500M").
+- **Donut (Status Tagihan & SPK per Status):** celah antar segmen
+  (`spacing` 3), sudut membulat (`borderRadius` 6), `hoverOffset` 8, cutout
+  lebih besar (68%), legend & tooltip modern.
+
+**BUG KRITIS yang ditemukan & diperbaiki (dan ditangkap tes baru):**
+- Awalnya sumbu-Y ringkas dibuat dengan `RawJs` (`ticks.callback`). Ternyata
+  **`RawJs` TIDAK terserialisasi** oleh `@js()` di Filament 5.8 -> nilainya
+  jadi objek kosong `{}` di JSON -> Chart.js **GAGAL merender SELURUH bar
+  chart** (kanvas kosong, terukur `painted: false`).
+- Perbaikan: pakai `ticks.format` (opsi Intl bawaan Chart.js, array biasa,
+  aman diserialisasi) -> `notation: compact`. Kanvas kembali ter-render
+  (`painted: true`).
+- Ditambah uji regresi `test_opsi_chart_arus_kas_bisa_diserialisasi_ke_json`.
+
+**Verifikasi:** 3 canvas chart `painted: true`; sumbu-Y "500M"; donut bercelah.
+**891/891 tes lulus · 2.480 assertions**; pint bersih.
+
+## 0x. Sesi 12 Okt 2026 (lanjutan 5) — Penyesuaian lanjutan ke referensi Prodex (soft UI)
+
+**Mandat user:** "masih belum mirip dan sudah sesuai, bisa lakukan penyesuaian
+kembali?" Setelah mengukur referensi vs BKS, jarak yang diperkecil (warna tetap
+satu aksen biru):
+
+| Elemen | Referensi | BKS sebelum | BKS sesudah |
+|:--|:--|:--|:--|
+| Kanvas halaman | abu `#EEF0F4` | `#fafafa` | `#eef0f4` |
+| Radius kartu | 16px | 10px | 16px |
+| Padding kartu | 20-24px | 14-16px | 18-22px |
+| Ikon KPI | squircle 40px | tanpa ikon | squircle 40px pastel |
+| Bayangan | ambient halus | none | `0 1px 2px + 0 6px 16px` |
+
+**Perubahan (theme.css bagian 24 + RingkasanKeuangan.php):**
+1. Kanvas abu `#eef0f4` (gelap `#08080a`) supaya app "melayang".
+2. Semua kartu/section radius 16px + border `#e6e8ee` + bayangan ambient.
+3. Ikon chip squircle 40px pastel biru di SEMUA 12 kartu dashboard.
+4. Label kartu Title Case (bukan HURUF BESAR semua), padding section 20-24px.
+5. Ikon bermakna per kartu (dokumen, panah, jam, kunci pas, dll).
+
+**Verifikasi (ukur DOM):** `bodyBg` `rgb(238,240,244)`; kartu radius `16px`,
+padding `18px 20px`; ikon chip `40x40px` radius `12px` bg `rgb(239,246,255)`;
+12/12 kartu dashboard ber-ikon; 7/7 kartu KPI Laporan ber-ikon.
+**890/890 tes lulus · 2.478 assertions**; pint bersih.
+
+**Catatan:** lagi-lagi perubahan PHP sempat tidak termuat karena opcache -
+restart server + `optimize:clear` (kejadian berulang, sudah dicatat di skill).
+
+## 0w. Sesi 12 Okt 2026 (lanjutan 4) — Adopsi struktur desain referensi (Prodex), warna tetap satu aksen
+
+**Mandat user:** kirim gambar `original-65051695e5b57ea9deae9fac54b6f1e3.webp`
+(dashboard "Prodex") dan tanya "seperti desain ini bisa?". User memilih:
+**adopsi struktur & komponennya, warna tetap SATU aksen biru** (aturan BKS).
+
+**Yang diadopsi dari referensi (komponen yang belum ada di BKS):**
+1. **Donut chart** untuk "Pengeluaran per Kategori" (Laporan) - sebelumnya
+   hanya daftar progress bar. Cincin dibuat `conic-gradient` (tanpa library),
+   palet SATU aksen biru #2563eb dengan alpha bertingkat (bukan warna-warni),
+   total di lubang tengah, daftar + porsi % di samping.
+2. **Feed "Aktivitas Terbaru"** (widget dashboard baru) - 6 transaksi terakhir
+   (masuk & keluar), terbaru di atas, titik hijau/merah + nominal bertanda.
+   Menjawab "apa yang baru terjadi?" yang sebelumnya tidak ada.
+
+**Yang TIDAK diadopsi (sengaja):** gradient warna-warni per metrik - melanggar
+aturan "satu warna aksen saja" yang dikunci `DesainBaruTest`.
+
+**Verifikasi (browser + ukur DOM):**
+- Donut: `.bks-donut` ada, `conic-gradient(rgb(37,99,235) 0% ...)`; total tengah
+  Rp 1.699.557.067; daftar Material 55.1% / Upah 36.1% / dst.
+- Feed: 8 heading dashboard termasuk "Aktivitas Terbaru", 6 item; widget
+  terdaftar di `Dashboard::getWidgets()` (daftar eksplisit, bukan discover).
+- **890/890 tes lulus · 2.478 assertions** (naik dari 885); pint bersih.
+
+**Catatan:** perubahan `Dashboard.php` (daftar widget) sempat tidak termuat
+karena **opcache** `artisan serve` - perlu restart + `optimize:clear`.
+
+## 0v. Sesi 12 Okt 2026 (lanjutan 3) — Desain Dashboard & Laporan: animatif, menarik, informatif
+
+**Mandat user:** "lanjut perbaiki desain kembali masih lengket dengan aislop,
+gunakan desain yang profesional terutama untuk dashboard dan laporan untuk
+card dan bagian lain buat lebih animatif menarik dan informatif untuk menu
+bagian lain juga".
+
+**Arah desain (antislop during):** pertahankan bahasa "Clean Minimalist
+Enterprise" (satu aksen biru #2563eb), TAMBAH kejelasan & makna.
+Prinsip: animasi hanya sebagai pengarah perhatian (bukan loop tanpa henti);
+warna tetap satu aksen + semantik (hijau masuk / merah keluar); semua
+tambahan MEMBAWA INFORMASI, bukan dekorasi. Hormati `prefers-reduced-motion`.
+
+**Yang dikerjakan (theme.css bagian 23 + widget + blade):**
+1. Kartu stat: animasi masuk bertahap (stagger 40-510ms) + hover terangkat.
+2. Dashboard: **sparkline tren 6 bulan** di kartu "Sudah Diterima" &
+   "Uang Keluar" (satu query agregat, tanpa N+1). Ini informasi arah uang.
+3. Laporan: kartu ringkasan jadi kartu KPI ber-ikon bermakna + **progress
+   bar % penerimaan** (uang masuk dari SPK vs nilai SPK).
+4. Saldo negatif ditandai merah (`bks-kpi-angka--bahaya`) - informasi, bukan hiasan.
+5. Transisi halaman halus (`.fi-main`).
+
+**Bug yang ditemukan & diperbaiki saat verifikasi:**
+- Sparkline bawaan Filament `position:absolute` di dasar kartu MENIMPA
+  deskripsi panjang (terukur tumpang-tindih 20px). Diperbaiki: chart jadi
+  baris statis di bawah deskripsi (`position:static` + flex kolom).
+- Persentase "Sudah Diterima" meledak jadi "4.000.000.000%" saat nilai SPK = 0
+  (bagi dengan max(0,1)). Diperbaiki: tampilkan persen hanya bila SPK > 0.
+- Ikon "Belum Diterima" memakai amber `#d97706` - MELANGGAR aturan satu aksen
+  (ditangkap `DesainBaruTest`). Diganti netral abu.
+
+**Verifikasi (browser sungguhan + ukur DOM, bukan tebakan):**
+- Sparkline: 2 canvas hadir; overlap deskripsi = false; kartu seragam 163px.
+- Laporan: 7 kartu KPI, 7 ikon, 1 progress bar, 2 angka negatif merah
+  (`rgb(225,29,72)`); ikon "tenggat" netral `rgb(244,244,245)`.
+- Mode gelap: angka `rgb(250,250,250)` di latar `rgb(12,12,14)` (kontras ~19:1).
+- **885/885 tes lulus · 2.466 assertions**; pint bersih; route sesi uji terhapus.
+
+**Catatan penilaian:** model penglihat 3x salah menilai ("kolom uang tidak
+rata kanan", "angka kartu tidak sejajar", "teks gelap di mode gelap") - semua
+terbukti keliru lewat pengukuran DOM. Selalu ukur, jangan percaya mata saja.
+
+## 0t. Sesi 12 Okt 2026 (lanjutan) — Refactor Anti-Slop (kode) + Ponytail
+
+User: *"pecahkan saja bagian lain juga yang kalau terlalu panjang codenya
+jadi susah untuk di manage... perbaiki dan penulisan code dengan ponytile"*.
+
+Skill aktif: `antislop` (mode DURING) + `antislop-code` + `ponytail`.
+
+**Prinsip yang dipakai (ponytail):** ekstraksi method (bukan menambah layer
+abstraksi), DRY pada duplikasi nyata, hapus kode mati. **Tanpa** mengubah
+perilaku. Setiap langkah diverifikasi `php -l` + tes terkait.
+
+**File dipecah** (satu method raksasa -> method per bagian):
+- `UangMasukForm` (1x293 -> 5 bagian + configure)
+- `SpkForm` (1x250 -> 9 bagian)
+- `SpksTable` (1x273 -> configure/kolom/filter)
+- `UangMasuksTable`, `UangKeluarsTable` (-> kolom/filter/aksi)
+- `UangKeluarForm::configureSekaligus` (164 -> langkah1/2/3 + repeaterPengeluaran)
+- `Laporan::getViewData` (145 -> 6 method) & `ekspor` (207 -> siapkanDataEkspor + unduhPdf/Xlsx/Csv)
+- `RingkasanKeuangan::getStats` (136 -> 5 barisUang/Pekerjaan/Tagihan/Saldo/Master)
+- `CatatPembayaran::make` (-> skema + simpan)
+- `StatusSpkResource`, `TagihanSpkResource`, `TagihanSelesaiSpkResource::table` (-> kolom/filter)
+- `NotaPengeluaran::susunBaris` (148 -> 4 method), `PembacaIsiNota::cariNominal` (82 -> 2)
+
+**DRY (duplikasi nyata dihapus):** 12 method `canCreate/canEdit/canDelete`
+identik di 4 Resource -> dipindah ke trait `BolehUbahData` (Resource yang punya
+aturan khusus seperti `PenggunasResource`/`MonitoringSpkResource` tetap
+menang lewat override).
+
+**Kode mati dihapus:** `UangKeluar::labelKategori()`, `UangKeluar::scopeUmum()`,
+`RakitEkspor::susunDari()` (terbukti 0 pemakai).
+
+**Verifikasi:** `pint` bersih; **867/867 tes lulus** (2.426 assertions);
+browser nyata (sesi uji server-side, DIHAPUS setelahnya): 13 halaman admin
+render 200; otorisasi terbukti (Direktur tanpa tombol Tambah, Admin ada);
+ekspor CSV/XLSX/PDF ketiganya HTTP 200 dengan berkas valid (XLSX terbaca
+Excel, PDF 3 halaman).
+
+---
+
+## 0s. Sesi 12 Okt 2026 (lanjutan) — Audit Anti-Slop (skill baru user)
+
+User menambah skill **anti-slop** (core + code/ui/copy/human/layoutmobile),
+**ponytail** + **ponytail-audit**, dan **Matt Pocock** (code-review,
+simplify-code, requesting-code-review, improve-codebase-architecture), lalu
+minta kode diperbaiki sesuai skill tersebut.
+
+- **Mode: AFTER** (dipilih user) → audit dulu, temuan bernomor, user pilih.
+  Laporan: `anti-slop/audit-001-2026-10-12.md`.
+- **Keputusan user:** F-01 + F-02 sekaligus; placeholder `'—'` ikut diganti.
+- **Hasil:** 977 em-dash + 464 banner dekoratif + 39 em-dash CSS dibersihkan
+  (250 file). **0 perubahan logika** (dibuktikan: kode tanpa komentar &
+  baris kosong identik dengan backup `/tmp/bks-backup-antislop-*`).
+- **Verifikasi:** `pint` bersih; **867/867 tes lulus** (2.426 assertions);
+  halaman login render HTTP 200 di server uji.
+- **Temuan bersih (bukti negatif):** emoji komentar 0, TODO/FIXME 0,
+  empty catch 0, interface-1-impl 0, a11y (`alt`/`type`/`aria-label`) lengkap.
+- **Tidak dikerjakan:** F-03 (pecah `UangKeluarForm.php` 849 baris) — berisiko
+  ke banyak tes; menunggu permintaan user.
+
+---
+
+## 0r. Sesi 12 Okt 2026 (lanjutan) — BUG-06 & BUG-07: Foto Profil
+
+Keluhan user: *"avatar tidak berubah ketika kembali atau pada halaman lain"* +
+*"tidak dapat menyesuaikan posisi gambar... cuma kepala rambut tidak terlihat."*
+
+### BUG-06 — Foto tidak muncul di topbar (lanjutan BUG-05 yang belum tuntas)
+
+**Akar masalah:** Filament hanya memanggil `getFilamentAvatarUrl()` bila model
+`instanceof Filament\Models\Contracts\HasAvatar`:
+```php
+if ($user instanceof HasAvatar) { $avatar = $user->getFilamentAvatarUrl(); }
+```
+Model `Pengguna` punya method-nya (BUG-05) tapi **TIDAK implements `HasAvatar`**
+→ Filament mengabaikannya & jatuh ke avatar inisial. Tes lama lulus **PALSU**
+(hanya menguji method, bukan interface yang benar-benar dibaca Filament).
+
+**Perbaikan:** `class Pengguna implements FilamentUser, HasName, HasAvatar`.
+
+### BUG-07 — Tidak bisa atur posisi foto (kepala terpotong)
+
+**Akar masalah:** `->avatar()` memakai `automaticallyCropImagesToAspectRatio()`
+→ memotong otomatis dari **TENGAH** foto. Foto setengah badan/berdiri punya
+kepala di ATAS → terpotong.
+
+**Perbaikan:** tambah `->imageEditor()->circleCropper()` pada field avatar.
+Pengguna kini bisa **geser, zoom, putar, balik** foto sebelum disimpan
+(terverifikasi: editor punya Mode geser/potong, Perbesar/Perkecil, Geser 4 arah,
+Putar, Balik). Panduan crop **bulat** sesuai tampilan avatar Filament.
+
+**Terverifikasi browser:** unggah foto potret → crop → simpan → avatar muncul
+di topbar Dashboard/SPK/Laporan/Mitra (URL `nota/profil/...`, bukan lagi
+`ui-avatars.com`); hapus foto → kembali ke inisial. **Tes:** `ProfilDiperluasTest`
+(+4 tes: interface HasAvatar, jalur Filament, image editor, circle cropper).
+
+**⚠️ Pelajaran:** setelah mengubah model/config, **restart `artisan serve`** —
+server lama menyimpan opcache sehingga perubahan `implements` tidak terlihat.
+
+**Suite:** 867 lulus · 2.426 assertions · pint bersih.
+
+---
+
+## 0q. Sesi 12 Okt 2026 — Bagian C: Keputusan User + Status Email
+
+Prompt Bagian C minta **keputusan pengguna** dulu. Hasil tanya-jawab:
+
+| Item | Keputusan user | Tindakan |
+|:-----|:---------------|:---------|
+| **Lupa Password / SMTP** | Siapkan kode + dokumentasi .env SMTP | Dokumentasi + indikator Status Sistem |
+| **Aging piutang** | **Tetap dihapus** (hormati keputusan lama) | Tidak diubah |
+| **Kolom avatar** | **Biarkan di form** (sesuai tanda ⏸️) | Tidak disentuh |
+
+**Yang dikerjakan (hanya Lupa Password/SMTP):**
+
+1. **Dokumentasi SMTP** di `.env.example` (contoh Gmail & cPanel) dan
+   `docs/Architecture.md` §12.2.1.
+2. **Indikator Email di Status Sistem** — pengecekan ke-6: `StatusSistem::email()`
+   melaporkan mailer aktif/belum. Bila `MAIL_MAILER=log` → kartu MERAH
+   "Belum aktif (log)" + saran isi SMTP. Tes: `StatusSistemTest` (2 tes baru).
+
+**Temuan penting (dicatat di docs):**
+- ⚠️ Notifikasi `ResetPassword` Filament implements `ShouldQueue`. Dengan
+  `QUEUE_CONNECTION=sync` jalan langsung; bila `database`, butuh queue worker.
+- ⚠️ `MAIL_MAILER=log` **tidak** menampilkan tautan bila `LOG_LEVEL=error`
+  (bawaan server) — mail log ditulis di level `info`. Untuk uji, set
+  `LOG_LEVEL=debug`. **Inilah alasan admin butuh indikator Status Sistem**:
+  tanpa SMTP + LOG_LEVEL=error, tautan reset praktis tak terlihat.
+
+**Alur lupa password sudah lengkap & teruji** (sebelumnya): anti-enumerasi,
+rate limit 5×/menit, token 60 menit. Verifikasi browser: halaman
+`/admin/password-reset/request` kirim → token terbuat di
+`password_reset_tokens`; halaman reset (URL bertanda tangan) terbuka dengan
+2 field kata sandi. **Suite:** 863 lulus · 2.418 assertions · pint bersih.
+
+---
+
+## 0p. Sesi 11 Okt 2026 (lanjutan 9) — A.2 Peta Warna Badge + A.3 Mode Gelap Menyeluruh
+
+**A.2 — Peta warna badge KONSISTEN.** Sebelumnya warna badge ditulis TERPISAH
+di tiap tabel (`match` hardcode). Sekarang **semua warna dipusatkan** di method
+`warnaBadge()` pada tiap enum (satu sumber kebenaran) — sama seperti StatusSpk.
+Enum yang ditambahi: `KategoriPengeluaran`, `DikerjakanOleh`, `KategoriMitra`,
+`Peran` (4 enum; 4 enum lain sudah punya). Pemakaian di
+`UangKeluarsTable`/`MitrasTable`/`PenggunasTable`/`SpksTable`/`StatusSpkResource`/
+`PreviewSpk` diganti ke `->warnaBadge()`. Tes baru `PetaWarnaBadgeTest` (11 tes)
+mengunci: tiap enum badge punya `warnaBadge()` + warnanya warna resmi Filament +
+tabel tidak lagi menulis peta warna hardcode.
+
+**A.3 — Mode gelap diverifikasi MENYELURUH (16 halaman).** Semua halaman admin
+(dashboard, 6 resource, laporan, arsip nota, backup, status sistem, impor, ekspor,
+profil, 3 form tambah) berhasil mode gelap: latar `rgb(9,9,11)`, teks terang,
+badge kontras. **Temuan penting:** 3 halaman tampak "putih" saat diuji sebagai
+Direktur — ternyata itu halaman **403 Forbidden** (Backup/Status Sistem/Impor =
+Admin-only), bukan bug tema. Verifikasi harus pakai **Admin**.
+
+**Suite:** 861 lulus · 2.409 assertions · pint bersih · terverifikasi browser.
+
+**Bonus — perbaikan tes FLAKY.** `UangKeluarFactory` mengacak kategori dari
+`KategoriPengeluaran::cases()`, termasuk "Lainnya". Sejak kebijakan A.5,
+"Lainnya" mewajibkan `detail_kategori`, jadi bila acak mendapat "Lainnya"
+tanpa detail, save ditolak → tes gagal **acak** (flaky, kadang hijau kadang
+merah). Perbaikan: kategori acak default TIDAK menyertakan "Lainnya"; ditambah
+state `lainnya()` untuk tes yang memang butuh. Diverifikasi stabil 3× run.
+
+---
+
+## 0o. Sesi 11 Okt 2026 (lanjutan 8) — Sistem Desain v1.1 (Bagian A)
+
+Implementasi prompt "Desain + Perbaikan Bug" Bagian A. **File acuan desain
+(`sistem-desain-spk.md`, `prototipe-desain-spk.html`, `spesifikasi-ui-ux-spk.md`)
+TIDAK ADA di filesystem** — dikerjakan dari detail yang tertulis di prompt saja.
+BUG-1..5 sudah selesai di §0m.
+
+| # | Item | Perubahan | Bukti |
+|:--|:-----|:----------|:------|
+| A.1 | Aksen biru `#2563eb` | Panel `primary` Zinc → **Blue**; theme.css `--brand-accent` amber → **biru**; **warna-warni per modul DIHAPUS** (dulu SPK biru/Keuangan hijau/Master violet/Laporan amber = pelangi) → satu aksen biru | `DesainBaruTest`, browser: tombol `rgb(37,99,235)` |
+| A.3 | Mode gelap | Sudah aktif (bawaan Filament 5) + dikunci tes. Browser: bg `#09090b`, teks `#fafafa` | `DesainBaruTest::test_mode_gelap_aktif` |
+| A.4 | Wizard 3 langkah | Form Tambah Uang Keluar → `Wizard` 3 Step. **Urutan disesuaikan alur nyata**: ① Unggah & OCR → ② Isi Rincian → ③ Review & Simpan (kalau "Data dulu", langkah Data KOSONG karena baris dibuat OCR). Sticky bar tetap | `DesainBaruTest`, browser: 3 step tampil |
+| A.5 | Field reaktif | (a) Kategori="Lainnya" → **Detail kategori** muncul & WAJIB (kolom baru `detail_kategori`); (b) pilih SPK → sisa piutang (sudah ada); (c) pilih Kas/Bank → **hint saldo terakhir** (baru) | `FieldReaktifTest` |
+| A.7 | Rapikan Profil | 3 **kartu berdampingan** (Foto·Data·Keamanan) + `getMaxWidth(7xl)` → satu layar, tidak memanjang; **field "Tanda Tangan" DIHAPUS** dari form (kolom DB & kode TTD dibiarkan) | `ProfilDiperluasTest`, browser: 3 kartu top=169 (sejajar) |
+
+**Keputusan user:** kolom `detail_kategori` ditambah sebagai **kolom baru** (bukan menumpang `keterangan`); aksen diganti ke biru `#2563eb`.
+
+**Tes lama yang diperbarui (mengunci perilaku lama):** `TemaTest` (monokrom→biru),
+`ProfilDiperluasTest` (TTD ada→tidak ada), `TataLetakUangKeluarTest` (Section→Wizard),
+`FilamentResourceTest` (kategori Lainnya + detail_kategori).
+
+**Suite:** 850 lulus · 2.362 assertions · pint bersih.
+
+**⚠️ Belum dikerjakan (menunggu keputusan / file acuan):** Bagian A.2 (peta warna
+badge konsisten — butuh sistem-desain §2), Bagian C (SMTP lupa password, aging
+piutang, kolom avatar). BUG-1..5 selesai (§0m).
+
+---
+
+## 0n. Sesi 11 Okt 2026 (lanjutan 7) — Penataan Menu (keluhan user)
+
+Menindaklanjuti keluhan verbatim user: *"fiturnya banyak berantakan … bagian spk
+di list spk masih menampilkan banyak data sampai harus scroll kesamping …
+status dan tagihan sudah ada menunya … deskripsi pada setiap menu terlalu
+panjang … uang masuk keluar masih ada total"*.
+
+Dikerjakan **tanpa** file acuan desain (belum tersedia) — bagian yang tidak
+butuh bahasa visual.
+
+| # | Keluhan | Perbaikan | Bukti |
+|:--|:--------|:----------|:------|
+| 1 | List SPK lebar → scroll ke samping | Kolom **Status SPK, Status Tagihan, Pengantaran, Sudah Diterima, Belum Diterima** disembunyikan default (`toggleable(isToggledHiddenByDefault: true)`) — bagiannya punya menu sendiri (Status SPK / Tagihan SPK). Kolom tetap ADA, bisa diaktifkan dari tombol **Columns**. | browser: header hanya 8 kolom (`PenataanMenuTest`) |
+| 2 | Deskripsi menu kepanjangan | Subjudul `getSubheading()` dipendekkan di List SPK/UangMasuk/UangKeluar/Mitra/Pengguna (≤ 80 karakter) | `PenataanMenuTest::test_subjudul_menu_pendek` |
+| 3 | "Uang masuk keluar masih ada total" (ganda) | Total bawaan bawah tabel **dimatikan** (`summaries(pageCondition: false, allTableCondition: false)`); **satu** total tetap di bar atas (`->header()`, filter-aware + rincian kategori) | `RingkasanTotalUangTest`, `TotalTerfilterTest` |
+
+**Catatan teknis:** `summaries(pageCondition: false)` saja TIDAK cukup — harus
+`allTableCondition: false` juga, karena keduanya adalah flag terpisah.
+
+**Pelaporan tes `PreviewSpkTest`:** tes lama `assertSee('20.000.000')` dulu lulus
+**kebetulan** karena angka itu muncul di kolom tabel yang kini disembunyikan —
+bukan dari isi slide-over (Filament 5 merender isi modal secara lazy). Diperbaiki
+memakai `assertSchemaComponentStateSet()` sehingga benar-benar menguji isi
+preview (`diterima`, `sisa_tagih`, dst.).
+
+**Verifikasi browser (sungguhan):** List SPK 8 kolom tanpa scroll samping; Uang
+Keluar menampilkan **satu** bar "TOTAL UANG KELUAR (TERFILTER) Rp 1.699.557.067
+dari 31 transaksi"; ringkasan bawah tabel hilang.
+
+**Suite:** 839 lulus · 2.340 assertions · pint bersih.
+
+---
+
+## 0m. Sesi 11 Okt 2026 (lanjutan 6) — Perbaikan 5 BUG (prompt desain+bug)
+
+Perbaikan bug dari prompt "Desain + Perbaikan Bug". TDD: tes gagal-sebelum → hijau.
+
+| # | Bug | Perbaikan | Bukti |
+|:--|:----|:----------|:------|
+| BUG-1 | Impor O(n²): `sudahAda()` memuat SELURUH tabel per baris | Sidik jari dihitung **sekali** per impor (`sidikTersimpan()`), cek ke himpunan | `test_impor_banyak_baris_cepat_dan_tanpa_duplikat` (500 baris) |
+| BUG-2 | Impor melewati aturan bisnis | Tegakkan **(a)** uang masuk ≤ sisa piutang (akumulasi per batch), **(b)** SPK Dibatalkan tolak, **(c)** tanggal ≤ hari ini → masuk daftar `gagal` | 6 tes baru di `ImporTransaksiTest` |
+| BUG-3 | ZIP Arsip Nota OOM (`get()` + `addFromString`) | Pakai `$zip->addFile()` (streaming) + try/catch + bersihkan ZIP kosong | `test_buat_zip_tetap_jalan_walau_sebagian_berkas_hilang` |
+| BUG-4 | Menu "Backup & Restore" tanpa Restore | **Ganti nama → "Backup"** (keputusan user) | `BackupRestore.php` |
+| BUG-5 | Foto profil tak tampil di topbar | Tambah `Pengguna::getFilamentAvatarUrl()` (jembatan ke `urlAvatar()`) | `ProfilDiperluasTest` (2 tes) |
+
+**Bonus — perbaikan backup "error saat diekstrak" (WinRAR):**
+Berkas backup dulu `.sql.gz` (gzip mentah). Di Windows, WinRAR/7-Zip sering
+melaporkan error karena asosiasi gzip→sql membingungkan. Diubah jadi **`.zip`**
+berisi `.sql` — bisa dibuka langsung tanpa aplikasi tambahan. Retensi tetap
+mendukung `.sql.gz` lama.
+
+Diverifikasi: `bks:backup` → `.zip` valid (`7z t` = "Everything is Ok"), unduh
+HTTP identik; browser: menu "Backup" tampil, "Restore" hilang, halaman render.
+
+**Suite:** 835 lulus · 2.294 assertions · pint bersih.
+
+---
+
+## 0l. Sesi 11 Okt 2026 (lanjutan 5) — Refactor "god class" UangKeluarForm
+
+`UangKeluarForm` dulu **1.620 baris** (god class — keluhan reviewer eksternal
+& permintaan user "perbaikan struktur dan penulisan code"). Logika MURNI
+(OCR + penyusun baris + salin isian, ± 750 baris) dipindah ke kelas baru
+`App\Support\NotaPengeluaran`. Sekarang:
+
+| Berkas | Sebelum | Sesudah | Peran |
+|:-------|--------:|--------:|:------|
+| `UangKeluarForm.php` | 1.620 | **774** | lapisan skema (tampilan form) |
+| `NotaPengeluaran.php` | — | **753** | logika murni (bisa diuji tanpa Livewire) |
+
+⚠️ API publik & konstanta DIPERTAHANKAN sebagai alias (`UangKeluarForm::MAKS_BARIS`
+= `NotaPengeluaran::MAKS_BARIS`, dst) supaya 12 file tes + view `progres-pengisian`
+tetap jalan tanpa diubah. Method publik (`susunBaris`, `prosesOcr`,
+`jalankanOcrPenuh`, `salinIsianKeBarisKosong`, `gabungBaris`) kini mendelegasikan.
+
+**Verifikasi:** 823 tes lulus (termasuk 99 tes Uang Keluar), browser: halaman
+Tambah & Ubah render tanpa error `unresolvable`.
+
+---
+
 ## 0k. Sesi 11 Okt 2026 (lanjutan 4) — Struktur folder nota bertanggal (B2-7)
 
 Melengkapi B2-7: berkas nota **BARU** kini disimpan di
@@ -433,16 +881,15 @@ Keluhan user: *"halaman uang masuk dan keluar kenapa ada total begitu? membuang 
 
 ---
 
-## 5. Belum Selesai / Menunggu Keputusan User
+## 5. Status Item Fitur & Keputusan Sesi Ini
 
 | Kode | Item | Status |
 |:-----|:-----|:-------|
-| **B1** | Saldo berjalan Kas & Bank | ⏳ **Butuh keputusan user** (opsi a/b/c). Rancangan sudah dilebur ke `docs/Architecture.md` §16 |
-| **B4** | Ekspor Excel format perusahaan | ⏳ Terikat B1 |
-| **C1** | Navigasi/UI lebih tegas | 🔄 Sebagian (preview & laporan sudah; tinjau menu lain bila perlu) |
-| **C3** | Menu baru | ⏳ **Butuh daftar menu** dari user |
-| — | Data keuangan final dari Admin | ⏳ Belum diterima (Rules §14) |
-| — | Pajak PPN/PPh, data lama 2024–2026 | ⏳ Belum diputuskan (Rules §14) |
+| **B1** | Saldo berjalan Kas & Bank | ✅ **Selesai** (`BukuKasBank::susun` + mutasi saldo berjalan di Laporan) |
+| **B4** | Ekspor Excel format perusahaan | ✅ **Selesai** (Kop PT BKS, freeze pane, total, dan tanda tangan Direktur & Admin) |
+| **C1** | Navigasi/UI lebih tegas | ✅ **Selesai** (Tombol kembali tunggal di atas komponen breadcrumb, tanpa duplikasi di bawah) |
+| **C3** | Menu baru: Kalender Tenggat | ✅ **Selesai** (Tampilan kalender bulanan tenggat SPK di `/panel/spk/calendar`) |
+| **B3** | Impor data perusahaan | ✅ **Selesai** (`PembacaImpor` toleran kop dan membaca 94 baris kas riil) |
 
 ---
 

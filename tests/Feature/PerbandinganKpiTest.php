@@ -11,7 +11,7 @@ use Tests\TestCase;
  * PERBANDINGAN DENGAN BULAN LALU pada KPI dashboard.
  *
  * ⚠️ SARAN USER (9 Okt 2026):
- * "Hindari angka mentah tanpa konteks — selalu pasangkan dengan perbandingan
+ * "Hindari angka mentah tanpa konteks - selalu pasangkan dengan perbandingan
  *  (bulan lalu, target)."
  */
 class PerbandinganKpiTest extends TestCase

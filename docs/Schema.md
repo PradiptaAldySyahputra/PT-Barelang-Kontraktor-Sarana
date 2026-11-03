@@ -12,7 +12,7 @@
 |---|---|---|
 | 1 | **SPK adalah entitas inti. Tidak ada entitas PROYEK.** | Tidak ada tabel `proyek` |
 | 2 | **Tidak ada Pengajuan Dana & Approval.** | Tidak ada tabel pengajuan |
-| 3 | **`spk_id` dipertahankan di `uang_keluar`** (boleh NULL) | Laba-rugi per SPK dapat dihitung |
+| 3 | **`spk_id` dipertahankan di `uang_keluar`** (boleh NULL) | Penelusuran pengeluaran terkait pekerjaan; tidak digunakan menghitung laba-rugi |
 | 4 | **Tidak ada approval Direktur.** | Tidak ada field `disetujui_oleh` / `tanggal_persetujuan` |
 | 5 | **SPK subkon/vendor masuk tabel `spk`** | Tidak ada tabel `subcon_spk` |
 | 6 | **Tidak ada tabel `bukti`.** Bukti jadi kolom `bukti` di `uang_masuk` & `uang_keluar` | Jumlah file **bebas** (JSON array) |
@@ -97,9 +97,7 @@ CREATE TABLE spk (
     lokasi         VARCHAR(255) NULL,
     nilai_spk      DECIMAL(18,2) NOT NULL,
 
-    -- Retensi (untuk SPK subkon/vendor)
-    -- ❌ KOLOM RETENSI DIHAPUS (19 Sep 2026) — perusahaan tidak menahan 5%.
-    -- Migrasi: 2026_09_20_000003_hapus_retensi_dari_spk_table.php
+    -- Kolom retensi tidak digunakan; lihat migration penghapusannya di riwayat schema.
 
     jenis_sumber   VARCHAR(50) NULL,          -- pln | luar | internal | lainnya
     sheet_lama     VARCHAR(100) NULL,         -- referensi sheet Excel lama
@@ -153,8 +151,10 @@ CREATE TABLE uang_keluar (
     id         BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     spk_id     BIGINT UNSIGNED NULL,          -- ✅ dipertahankan (keputusan #3)
     tanggal    DATE NOT NULL,
+    akun       VARCHAR(20) NULL DEFAULT 'kas', -- kas | bank (migrasi 26 Sep 2026)
     jumlah     DECIMAL(18,2) NOT NULL,
     kategori   VARCHAR(100) NULL,             -- material|upah|operasional|gaji|nota|transportasi|lainnya
+    detail_kategori VARCHAR(150) NULL,        -- 🆕 wajib bila kategori = 'lainnya' (11 Okt 2026)
     penerima   VARCHAR(200) NULL,             -- nama vendor/subkon/staf
     keterangan TEXT NULL,
     bukti      JSON NULL,                     -- 🆕 jumlah file BEBAS (TF, gambar, PDF)
@@ -216,7 +216,7 @@ CREATE INDEX idx_keluar_kategori ON uang_keluar(kategori);
 | `dicatat_oleh` | ❌ dihapus | Revisi user |
 | `disetujui_oleh` | ❌ **dihapus** | Keputusan #4 — tidak ada approval |
 | `tanggal_persetujuan` | ❌ **dihapus** | Keputusan #4 — tidak ada approval |
-| `spk_id` | ✅ **dipertahankan** | Keputusan #3 — wajib untuk laba-rugi per SPK |
+| `spk_id` | ✅ **dipertahankan** | Menghubungkan transaksi dengan SPK untuk pelacakan penerimaan/pengeluaran |
 | — | ✅ **ditambah** `bukti` | Revisi user |
 
 ### Tabel `bukti` — DIHAPUS
@@ -224,39 +224,25 @@ CREATE INDEX idx_keluar_kategori ON uang_keluar(kategori);
 Bukti jadi kolom `bukti` bertipe **JSON** di `uang_masuk` & `uang_keluar`.
 **Jumlah file bebas** — bisa 1, bisa 10, sesuai kebutuhan.
 
-## 6. Kolom Turunan (Dihitung, Tidak Disimpan)
+## 6. Nilai Turunan yang Dipakai Aplikasi
 
-| Nilai | Rumus |
+Nilai berikut dihitung dari transaksi dan tidak disimpan sebagai kolom ringkasan.
+
+| Nilai | Rumus/keterangan |
 |---|---|
-| **Total Uang Masuk** | `SUM(uang_masuk.jumlah)` |
-| **Uang Masuk dari SPK** | `SUM(jumlah) WHERE spk_id IS NOT NULL` |
-| **Uang Masuk dari Luar** | `SUM(jumlah) WHERE spk_id IS NULL` |
-| **Total Uang Keluar** | `SUM(uang_keluar.jumlah)` |
-| **Pengeluaran per Kategori** | `SUM(jumlah) GROUP BY kategori` |
-| **Saldo Bersih** | Total Uang Masuk − Total Uang Keluar |
-| **Total Nilai SPK** | `SUM(spk.nilai_spk)` |
-| **Jumlah SPK per Status** | `COUNT(*) GROUP BY status_spk` |
-| ~~Retensi SPK~~ | ❌ Tidak dipakai — kolom dihapus |
-| **⭐ Nilai Tagih** | `nilai_spk − retensi_ditahan` |
-| **⭐ Piutang Lancar** | `nilai_tagih − penerimaan` (**retensi TIDAK dihitung**) |
-| **Sisa Hak Penuh** | `nilai_spk − penerimaan` (termasuk retensi) |
-| **Penerimaan per SPK** | `SUM(uang_masuk.jumlah) WHERE spk_id = X` |
-| **Biaya per SPK** | `SUM(uang_keluar.jumlah) WHERE spk_id = X` |
-| **Estimasi Laba/Rugi per SPK** | Penerimaan per SPK − Biaya per SPK |
-| **⭐ Umur Piutang** | `DATEDIFF(hari ini, tanggal_spk)` → kelompok `0-30`/`31-60`/`61-90`/`>90` |
-| **⭐ Tenggat** | `DATEDIFF(tanggal_akhir, hari ini)` → lewat / ≤14 hari |
+| Total penerimaan | `SUM(uang_masuk.jumlah)` |
+| Penerimaan dari SPK | `SUM(jumlah) WHERE spk_id IS NOT NULL` |
+| Penerimaan luar SPK | `SUM(jumlah) WHERE spk_id IS NULL` |
+| Total pengeluaran | `SUM(uang_keluar.jumlah)` |
+| Pengeluaran per kategori | `SUM(jumlah) GROUP BY kategori` |
+| Saldo kas/bank | Penerimaan dikurangi pengeluaran per nilai `akun`; dapat bernilai negatif |
+| Nilai SPK | `SUM(spk.nilai_spk)` |
+| Piutang per SPK | `max(0, nilai_spk − SUM(uang_masuk.jumlah untuk SPK tersebut))` |
+| Tenggat | Selisih `tanggal_akhir` dengan tanggal hari ini; lewat atau mendekati dalam 14 hari |
+| Jumlah SPK per status | `COUNT(*) GROUP BY status_spk` |
 
-> ✅ **RETENSI TIDAK DIPAKAI** (diselaraskan 26 Sep 2026).
-> Seluruh SPK yang berstatus `Dibayar` di data perusahaan diterima **100%** —
-> tidak ada penahanan 5%. Karena itu:
->
-> ```
-> piutang = nilai_spk − sudah_diterima
-> ```
->
-> Kolom `persen_retensi` & `nilai_retensi` sudah **DIHAPUS** dari tabel `spk`.
-> Rincian di `Rules.md` §2.
-
+Tidak ada perhitungan retensi, laba-rugi, margin, atau umur piutang. `spk_id` pada
+pengeluaran hanya menghubungkan catatan biaya dengan pekerjaan untuk penelusuran.
 ## 7. ⚠️ Risiko Desain 5 Tabel & Mitigasinya
 
 Risiko ini **sudah dibuktikan** dengan uji di MariaDB 11.8 (dua skema, data identik).
@@ -378,153 +364,63 @@ Keputusan user: **audit log tidak perlu.** Konsekuensinya:
 1. **Package `spatie/laravel-activitylog`** — otomatis membuat tabelnya sendiri
 2. Tambah tabel `log_aktivitas` — jadi 6 tabel
 
-## 9. ⚠️ Satu Hal yang Masih Perlu Keputusan: Dokumen SPK
+## 9. Dokumen SPK dan Bukti Transaksi
 
-Karena tabel `bukti` dihapus dan bukti hanya di `uang_masuk` & `uang_keluar`,
-**dokumen SPK tidak punya tempat penyimpanan** di sistem.
-
-Padahal SRS mencantumkan upload pada form SPK: **scan SPK, kuitansi, BAST, BAAP, invoice, foto**.
-
-**Kenapa ini penting:**
-
-| Dokumen | Fungsi |
-|---|---|
-| Scan SPK | Bukti legal — SPK asli yang ditandatangani PLN |
-| BAST | Bukti pekerjaan sudah diserahkan & diterima |
-| BAAP | Bukti pekerjaan selesai |
-| Kuitansi/Invoice | Bukti penagihan |
-| Foto | Dokumentasi kondisi lapangan |
-
-Sistem sudah mencatat *angka* (nilai SPK, status). Tapi angka **tidak membuktikan apa-apa** saat:
-- PLN bilang "pekerjaan belum selesai" → butuh **BAST**
-- Ada pemeriksaan pajak → butuh **scan SPK asli**
-- Direktur mau verifikasi "SPK ini beneran ada?" → butuh **dokumen**
-
-**Opsi:**
-
-| Opsi | Dampak |
-|---|---|
-| **(a) Tambah kolom `dokumen` (JSON) di `spk`** | Tetap 5 tabel, +1 kolom. Konsisten dengan pola `bukti` |
-| **(b) Tidak ada** | Dokumen SPK disimpan di luar sistem (lemari arsip / folder manual) |
-
-**Rekomendasi saya: opsi (a)** — biayanya hanya 1 kolom.
+Dokumen SPK disimpan pada `spk.dokumen`; bukti transaksi pada `uang_masuk.bukti`
+dan `uang_keluar.bukti`. Seluruh berkas disimpan di disk privat dan diakses
+melalui route terautentikasi. Jenis dan batas file mengikuti validasi form.
 
 ## 10. Rencana Migrasi Data dari Excel
 
-| Sumber Data Lama | Target | Aturan |
+| Sumber | Target | Aturan |
 |---|---|---|
-| Daftar SPK dari banyak sheet | `spk` | Semua SPK disatukan; sheet lama → `sheet_lama` |
-| Uang masuk dari SPK | `uang_masuk` | `spk_id` **wajib** diisi |
-| Uang masuk dari luar SPK | `uang_masuk` | `spk_id` kosong |
-| Uang keluar terkait SPK | `uang_keluar` | `spk_id` diisi |
-| Uang keluar umum | `uang_keluar` | `spk_id` kosong |
-| Daftar user | `pengguna` | Hanya `admin` atau `direktur` |
+| Daftar SPK | `spk` | Bersihkan dan deduplikasi sebelum import |
+| Penerimaan SPK | `uang_masuk` | `spk_id` diisi |
+| Penerimaan luar SPK | `uang_masuk` | `spk_id` NULL |
+| Pengeluaran terkait SPK | `uang_keluar` | `spk_id` diisi |
+| Pengeluaran umum | `uang_keluar` | `spk_id` NULL |
 
-### ⚠️ Kualitas Data Referensi SPK
+## 11. Output Laporan dan Ekspor
 
-| Masalah | Jumlah |
-|---|---|
-| Record **tanpa nomor SPK** | 14 |
-| Record **tanpa tanggal** | 14 |
-| Record **tanpa dokumen** | 91 (seluruhnya) |
-| **Nomor SPK duplikat** | Ada |
-
-**Urutan wajib sebelum import production:**
-`cleansing` → `deduplikasi` → `rekonsiliasi nilai` → `validasi sampel` →
-tetapkan `nomor_spk` sebagai unique key.
-
-## 11. Output Laporan
-
-| Laporan | Sumber Data | Tujuan |
+| Bagian | Data | Kolom pokok ekspor |
 |---|---|---|
-| Laporan SPK | `spk` | Daftar SPK, nilai, status, tagihan |
-| Laporan Uang Masuk | `uang_masuk` | Seluruh penerimaan dari SPK & luar SPK |
-| Laporan Uang Keluar | `uang_keluar` | Seluruh pengeluaran per kategori & periode |
-| Laporan Cashflow | `uang_masuk` + `uang_keluar` | Perbandingan masuk vs keluar per periode |
-| Laporan SPK Belum Dibayar | `spk` + `uang_masuk` | Selisih nilai SPK vs pembayaran diterima |
-| **Laporan Laba-Rugi per SPK** | `spk` + `uang_masuk` + `uang_keluar` | Penerimaan − biaya ⭐ |
+| Arus kas bulanan | `uang_masuk` + `uang_keluar` | Bulan, jumlah transaksi masuk, total masuk, total keluar, selisih |
+| Pengeluaran per kategori | `uang_keluar` | Kategori, jumlah transaksi, total |
+| Daftar SPK | `spk` + `uang_masuk` | Nomor SPK, pekerjaan, nilai, diterima, belum diterima, status SPK, status tagihan |
+| Piutang | `spk` + `uang_masuk` | SPK, mitra, nilai, diterima, belum diterima, status tagihan, tenggat |
+| Tenggat | `spk` | SPK, pekerjaan, mitra, tanggal tenggat, sisa hari, nilai |
+| Buku kas/bank | `uang_masuk` + `uang_keluar` | Tanggal, referensi, keterangan, debet, kredit, saldo berjalan |
 
-## 12. Jalur Pivot ke 10 Tabel (Nanti)
+Format tersedia CSV, XLSX, dan PDF pada bagian yang relevan. Piutang memakai
+penerimaan terkait SPK; uang masuk luar SPK tidak menguranginya. Angka transaksi
+mengikuti periode yang dipilih; nilai SPK/piutang dan saldo merupakan posisi saat ini.
 
-Karena user menyebut *"nanti kedepannya baru pivot ke lain"*, berikut jalurnya —
-**tanpa membuang data**:
+## 12. Relasi (ERD Tekstual)
 
-| Langkah | Aksi |
-|---|---|
-| 1 | Buat tabel master: `status_spk`, `status_tagihan`, `kategori_pengeluaran` |
-| 2 | Isi dari nilai distinct: `INSERT INTO status_spk SELECT DISTINCT status_spk FROM spk` |
-| 3 | Tambah kolom FK: `ALTER TABLE spk ADD COLUMN status_spk_id BIGINT UNSIGNED NULL` |
-| 4 | Isi FK: `UPDATE spk s JOIN status_spk m ON m.nama = s.status_spk SET s.status_spk_id = m.id` |
-| 5 | Hapus kolom lama: `ALTER TABLE spk DROP COLUMN status_spk` |
-| 6 | Tambah foreign key constraint |
-| 7 | Ubah Enum → relasi Eloquent (`belongsTo`) |
-
-**Yang memudahkan pivot:** karena Enum dipakai sejak awal, nilai di database **sudah konsisten**
-(`draft`, `terbit`, `berjalan`, ...) — jadi langkah 2 & 4 bersih tanpa duplikasi/typo.
-
-> ⚠️ Kalau sejak awal pakai teks bebas tanpa Enum, pivot akan berantakan karena data
-> sudah terpecah dan harus dibersihkan manual.
-
-## 13. Relasi (ERD Tekstual)
-
-```
-pengguna
-  └── hasMany spk          (dibuat_oleh)
-
-mitra
-  ├── hasMany spk          (mitra_id — pemberi kerja)
-  └── hasMany uang_masuk   (mitra_id — pembayar)
-
-spk
-  ├── belongsTo pengguna   (dibuat_oleh)
-  ├── belongsTo mitra      (mitra_id)
-  ├── hasMany uang_masuk   (spk_id, nullable)
-  └── hasMany uang_keluar  (spk_id, nullable)
-
-uang_masuk
-  ├── belongsTo spk        (nullable)
-  └── belongsTo mitra      (nullable)
-
-uang_keluar
-  └── belongsTo spk        (nullable)
-```
+Struktur relasi mengikuti lima tabel domain dan foreign key pada migration.
 
 ```mermaid
 erDiagram
-    pengguna ||--o{ spk : "membuat"
-    mitra ||--o{ spk : "pemberi kerja"
-    mitra ||--o{ uang_masuk : "pembayar"
-    spk ||--o{ uang_masuk : "penerimaan"
-    spk ||--o{ uang_keluar : "biaya"
+    pengguna ||--o{ spk : membuat
+    mitra ||--o{ spk : pemberi_kerja
+    mitra ||--o{ uang_masuk : pembayar
+    spk ||--o{ uang_masuk : penerimaan
+    spk ||--o{ uang_keluar : penelusuran_biaya
 ```
 
-## 14. Aturan Integritas
+## 13. Aturan Integritas
 
-1. `jumlah` **harus > 0**; `nilai_spk` **harus ≥ 0**.
-2. Arah transaksi ditentukan oleh **tabel** (`uang_masuk`/`uang_keluar`), bukan tanda minus.
-3. **Sumber uang masuk disimpulkan dari `spk_id`:**
-   - `spk_id` **terisi** → uang masuk dari SPK
-   - `spk_id` **NULL** → uang masuk dari luar SPK
-4. Uang keluar terkait SPK → `spk_id` diisi; pengeluaran umum → `spk_id` boleh `NULL`.
-5. **`status_spk`, `status_tagihan`, `kategori`, `jenis_sumber`, `peran`, `mitra.kategori`
-   WAJIB divalidasi memakai PHP Enum** — tidak boleh teks bebas (mitigasi risiko §7).
-6. Histori keuangan **tidak boleh dihapus fisik** — gunakan soft delete.
-7. `nomor_spk` **unique** — tetapi data Excel punya **nomor SPK duplikat** & **14 record tanpa
-   nomor SPK**. Wajib *cleansing* sebelum import.
-8. Operasi yang mengubah beberapa tabel wajib memakai `DB::transaction`.
+1. `jumlah` harus lebih dari nol; `nilai_spk` tidak boleh negatif.
+2. Arah transaksi ditentukan tabelnya, bukan tanda minus.
+3. `uang_masuk.spk_id` terisi untuk penerimaan SPK dan NULL untuk penerimaan luar SPK.
+4. `uang_keluar.spk_id` boleh NULL untuk pengeluaran umum.
+5. Status, kategori, dan peran divalidasi dengan PHP Enum.
+6. Histori transaksi memakai soft delete, bukan penghapusan fisik.
+7. Perubahan multi-tabel dilakukan dalam transaksi database.
 
 ---
 
-## 15. Ringkasan Perubahan v3.1
+## 14. Ringkasan Perubahan v3.1
 
-| Aspek | v3.0 | v3.1 |
-|---|---|---|
-| Kolom `keterangan` di `spk` | Ada (dipertahankan sementara) | ❌ **Dihapus** |
-| Audit log | Opsi package `spatie` | ❌ **Dihapus** (menyimpang dari SRS) |
-| Jumlah file bukti | JSON array | ✅ **Bebas** (dikonfirmasi) |
-| Deployment | Lokal | ✅ Lokal, **PC boleh dipakai kerja lain** |
-| Kolom `dokumen` di `spk` | JSON | ✅ **Selesai** — `spk.dokumen` (JSON) |
-
----
-
-*Keputusan user 19 September 2026 sudah diterapkan.*
+Dokumen ini menjelaskan schema aplikasi saat ini. Migration adalah sumber kebenaran
+untuk struktur database yang sedang terpasang.

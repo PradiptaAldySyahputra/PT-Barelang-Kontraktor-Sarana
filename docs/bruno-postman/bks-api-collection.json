@@ -1,0 +1,106 @@
+{
+  "name": "BKS - Sistem Informasi SPK & Kontrol Keuangan",
+  "version": "1.0.0",
+  "items": [
+    {
+      "name": "01. Auth - Login Admin",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/panel/login",
+        "headers": [
+          { "name": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "formUrlEncoded",
+          "formUrlEncoded": [
+            { "name": "email", "value": "admin@bks.test" },
+            { "name": "password", "value": "password" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "02. Auth - Login Direktur",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/panel/login",
+        "headers": [
+          { "name": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "formUrlEncoded",
+          "formUrlEncoded": [
+            { "name": "email", "value": "direktur@bks.test" },
+            { "name": "password", "value": "password" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "03. SPK - Riwayat Termin Drawer (JSON)",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/panel/spk/{{spkId}}/termin-drawer",
+        "headers": [
+          { "name": "Accept", "value": "application/json" }
+        ]
+      }
+    },
+    {
+      "name": "04. Uang Masuk - Cetak Kuitansi PDF",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/panel/cash-in/{{uangMasukId}}/kuitansi"
+      }
+    },
+    {
+      "name": "04b. SPK - Cetak BAST Resmi PDF",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/panel/spk/{{spkId}}/bast-pdf"
+      }
+    },
+    {
+      "name": "05. Laporan - Bundel ZIP (5 Berkas)",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/laporan/bundel-zip?periode=12"
+      }
+    },
+    {
+      "name": "06. Laporan - Ekspor Buku Kas XLSX",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/laporan/ekspor/buku-kas?format=xlsx&periode=12"
+      }
+    },
+    {
+      "name": "07. Laporan - Ekspor Piutang PDF",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/laporan/ekspor/piutang?format=pdf&periode=12"
+      }
+    },
+    {
+      "name": "08. Arsip Nota - Unduh ZIP",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/arsip-nota/zip"
+      }
+    },
+    {
+      "name": "09. Sistem - Jalankan Backup Database",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/panel/backup/run"
+      }
+    },
+    {
+      "name": "10. Sistem - Template Impor CSV",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/panel/import/template"
+      }
+    }
+  ]
+}

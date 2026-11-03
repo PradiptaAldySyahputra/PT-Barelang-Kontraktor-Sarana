@@ -12,7 +12,7 @@ use App\Enums\StatusTagihan;
 use PHPUnit\Framework\TestCase;
 
 /**
- * UNIT TEST — ENUM: NILAI, LABEL, & LOGIKA TURUNAN.
+ * UNIT TEST - ENUM: NILAI, LABEL, & LOGIKA TURUNAN.
  *
  * ⚠️ KENAPA ENUM DIUJI TERPISAH (`docs/Rules.md` §2 butir 11):
  *   "WAJIB: status_spk, status_tagihan, kategori, jenis_sumber, peran, dan
@@ -26,13 +26,11 @@ use PHPUnit\Framework\TestCase;
  * data lama di database jadi tidak dikenali dan laporan langsung rusak.
  * Uji ini mengunci nilai-nilai itu.
  *
- * 📌 Unit test murni — Enum tidak menyentuh database sama sekali.
+ * 📌 Unit test murni - Enum tidak menyentuh database sama sekali.
  */
 class EnumTest extends TestCase
 {
-    // ---------------------------------------------------------------
-    // NILAI TERKUNCI (jangan berubah — data lama bergantung padanya)
-    // ---------------------------------------------------------------
+    // NILAI TERKUNCI (jangan berubah - data lama bergantung padanya)
 
     public function test_nilai_status_spk_terkunci(): void
     {
@@ -72,22 +70,20 @@ class EnumTest extends TestCase
 
     public function test_nilai_akun_kas_terkunci(): void
     {
-        // Hanya 2 — sesuai Excel perusahaan (sheet KAS + BANK).
+        // Hanya 2 - sesuai Excel perusahaan (sheet KAS + BANK).
         $this->assertSame(['kas', 'bank'], array_column(AkunKas::cases(), 'value'));
     }
 
     public function test_nilai_status_antar_terkunci(): void
     {
-        // 3 nilai — keputusan pengguna 26 Sep 2026.
+        // 3 nilai - keputusan pengguna 26 Sep 2026.
         $this->assertSame(
             ['belum', 'sudah_diantar', 'diterima'],
             array_column(StatusAntar::cases(), 'value'),
         );
     }
 
-    // ---------------------------------------------------------------
     // LABEL & OPSI (dipakai dropdown)
-    // ---------------------------------------------------------------
 
     public function test_semua_enum_punya_label_tidak_kosong(): void
     {
@@ -112,7 +108,7 @@ class EnumTest extends TestCase
     {
         /*
          * `opsi()` dipakai untuk mengisi dropdown. Kalau jumlahnya tidak sama
-         * dengan jumlah nilai enum, ada status yang tidak bisa dipilih admin —
+         * dengan jumlah nilai enum, ada status yang tidak bisa dipilih admin -
          * dan itu menyebabkan data tidak konsisten.
          */
         $this->assertCount(count(StatusSpk::cases()), StatusSpk::opsi());
@@ -134,9 +130,7 @@ class EnumTest extends TestCase
         }
     }
 
-    // ---------------------------------------------------------------
     // WARNA BADGE (dipakai tampilan)
-    // ---------------------------------------------------------------
 
     public function test_semua_enum_punya_warna_badge(): void
     {
@@ -156,9 +150,7 @@ class EnumTest extends TestCase
         }
     }
 
-    // ---------------------------------------------------------------
     // LOGIKA TURUNAN
-    // ---------------------------------------------------------------
 
     public function test_spk_dibatalkan_tidak_boleh_transaksi_baru(): void
     {
@@ -188,7 +180,7 @@ class EnumTest extends TestCase
 
         $this->assertFalse(
             StatusSpk::Berjalan->isAkhir(),
-            'SPK Berjalan masih aktif — tidak boleh dianggap akhir.',
+            'SPK Berjalan masih aktif - tidak boleh dianggap akhir.',
         );
         $this->assertFalse(StatusSpk::Terbit->isAkhir());
     }
@@ -208,7 +200,7 @@ class EnumTest extends TestCase
         ] as $status) {
             $this->assertTrue(
                 $status->isPiutang(),
-                "Tagihan {$status->value} masih piutang — harus masuk laporan piutang.",
+                "Tagihan {$status->value} masih piutang - harus masuk laporan piutang.",
             );
         }
     }

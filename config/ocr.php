@@ -4,7 +4,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | OCR NOTA — BANTUAN, BUKAN PENENTU
+    | OCR NOTA - BANTUAN, BUKAN PENENTU
     |--------------------------------------------------------------------------
     |
     | OCR dipakai HANYA untuk dua hal:
@@ -13,7 +13,7 @@ return [
     |
     | OCR TIDAK membaca nominal rupiah. Angka tetap diisi admin, karena salah
     | baca nominal bisa langsung masuk laporan keuangan. Salah hitung jumlah
-    | nota jauh lebih ringan — admin tinggal ubah angkanya di form.
+    | nota jauh lebih ringan - admin tinggal ubah angkanya di form.
     |
     */
 

@@ -37,7 +37,7 @@ enum StatusSpk: string
      * Warna badge Filament.
      *
      * Ditaruh di Enum (bukan di tiap tabel) supaya warna status SPK
-     * KONSISTEN di seluruh halaman — sebelumnya logika yang sama disalin
+     * KONSISTEN di seluruh halaman - sebelumnya logika yang sama disalin
      * ke beberapa file dan bisa berbeda tanpa disadari.
      */
     public function warnaBadge(): string

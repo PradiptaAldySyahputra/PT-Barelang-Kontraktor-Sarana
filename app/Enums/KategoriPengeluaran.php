@@ -54,6 +54,26 @@ enum KategoriPengeluaran: string
     }
 
     /**
+     * Warna badge Filament - konsisten di seluruh halaman.
+     *
+     * Peta warna (sistem desain v1.1 §2, 11 Okt 2026): kategori pengeluaran
+     * dipetakan ke warna semantik. Material/Upah/Transportasi = biaya proyek,
+     * Operasional/Gaji/Nota = biaya kantor, Lainnya = netral.
+     */
+    public function warnaBadge(): string
+    {
+        return match ($this) {
+            self::Material => 'primary',
+            self::Upah => 'warning',
+            self::Transportasi => 'info',
+            self::Operasional => 'gray',
+            self::Gaji => 'success',
+            self::Nota => 'info',
+            self::Lainnya => 'gray',
+        };
+    }
+
+    /**
      * @return array<string, string>
      */
     public static function opsi(): array

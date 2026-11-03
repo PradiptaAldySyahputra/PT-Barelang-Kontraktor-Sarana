@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 /**
- * PERINTAH `app:buat-admin` — bagian checklist hardening (B1-5).
+ * PERINTAH `app:buat-admin` - bagian checklist hardening (B1-5).
  *
  * ⚠️ KENAPA PERLU:
  * Seeder lama menanam akun `admin@bks.test` / `password` LANGSUNG di repo.

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\File;
  * apakah data perusahaan benar-benar ter-backup. Kelas ini membaca folder
  * backup dan merangkumnya untuk halaman "Backup & Restore".
  *
- * Tidak menulis/mengubah apa pun — hanya membaca.
+ * Tidak menulis/mengubah apa pun - hanya membaca.
  */
 final class StatusBackup
 {
@@ -34,7 +34,8 @@ final class StatusBackup
         }
 
         $berkas = collect(File::files($dir))
-            ->filter(fn (\SplFileInfo $f): bool => in_array($f->getExtension(), ['gz', 'sql'], true))
+            // Dukung format LAMA (.sql.gz) dan BARU (.zip).
+            ->filter(fn (\SplFileInfo $f): bool => in_array($f->getExtension(), ['gz', 'zip', 'sql'], true))
             ->map(function (\SplFileInfo $f): array {
                 $ukuran = $f->getSize();
                 $waktu = Carbon::createFromTimestamp($f->getMTime());
@@ -105,7 +106,7 @@ final class StatusBackup
     }
 
     /**
-     * Ambil berkas backup berdasarkan nama (untuk unduh) — DENGAN penjagaan
+     * Ambil berkas backup berdasarkan nama (untuk unduh) - DENGAN penjagaan
      * path traversal: nama harus benar-benar salah satu berkas di folder backup.
      */
     public static function pathAman(string $nama): ?string

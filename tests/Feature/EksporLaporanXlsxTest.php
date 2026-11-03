@@ -138,12 +138,12 @@ class EksporLaporanXlsxTest extends TestCase
 
         /*
          * ⚠️ KENAPA PENTING: kalau nominal tersimpan sebagai TEKS, admin tidak
-         * bisa langsung menjumlahkan di Excel — dan itulah alasan utama
+         * bisa langsung menjumlahkan di Excel - dan itulah alasan utama
          * memilih XLSX daripada CSV.
          */
         $this->assertNotEmpty(
             $nilaiNumerik,
-            'Nominal harus tersimpan sebagai ANGKA di XLSX, bukan teks — agar bisa dijumlahkan di Excel.',
+            'Nominal harus tersimpan sebagai ANGKA di XLSX, bukan teks - agar bisa dijumlahkan di Excel.',
         );
     }
 
@@ -159,7 +159,7 @@ class EksporLaporanXlsxTest extends TestCase
 
     /**
      * ⚠️ SARAN USER (9 Okt 2026): "header rapi, tanpa merge cell, ada baris
-     * total, freeze pane — supaya bisa di-sort/filter di Excel".
+     * total, freeze pane - supaya bisa di-sort/filter di Excel".
      */
     public function test_xlsx_punya_baris_total(): void
     {

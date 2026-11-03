@@ -11,7 +11,7 @@
 | Proyek | **Sistem Informasi SPK & Kontrol Keuangan** |
 | Perusahaan | PT Barelang Kontraktor Sarana (Batam) — subkontraktor PT PLN Batam |
 | Sifat | Sistem internal — **tugas magang** Pradipta Aldy Syahputra |
-| Stack | Laravel 13 · Filament 5 (`/admin`) · MySQL/MariaDB · PHP 8.5 |
+| Stack | Laravel 13 · Blade + Livewire 4 (`/panel`, TailAdmin) · Tailwind CSS v4 · MySQL/MariaDB · PHP 8.5 |
 | Skema | **5 tabel domain**: `mitra`, `spk`, `uang_masuk`, `uang_keluar`, `pengguna` |
 | Role | **2**: Admin (input) · Direktur (monitor) |
 | Deploy | **Lokal intranet** — PC Direktur = server (Windows, Laragon/XAMPP) |
@@ -35,8 +35,8 @@
 - `docs/Architecture.md` — struktur teknis, deployment, backup, pengujian, OCR
 - `docs/Schema.md` — struktur database
 - `docs/Design.md` — UI/UX
-- `docs/PANDUAN-FILAMENT.md` — cara review & ubah kode Filament (untuk yang biasa Blade)
 - `docs/MANUAL-BOOK.md` — panduan Admin & Direktur
+- `docs/arsip-migrasi-lama/` — dokumen historis analisis & panduan Filament lama (arsip)
 
 ## 4. Keputusan Bisnis FINAL
 

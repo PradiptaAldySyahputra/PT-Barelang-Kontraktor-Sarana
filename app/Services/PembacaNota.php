@@ -12,10 +12,9 @@ use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
- * Pembaca nota — pembungkus skrip Python `python/ocr_nota.py`.
+ * Pembaca nota - pembungkus skrip Python `python/ocr_nota.py`.
  *
  * KENAPA DIPISAH KE SERVICE
- * -------------------------
  * Memanggil proses Python langsung dari komponen Filament akan membuat kode
  * form sulit diuji dan rawan crash. Service ini jadi satu-satunya tempat yang
  * tahu cara memanggil OCR, sehingga:
@@ -23,11 +22,10 @@ use Throwable;
  *   - kalau OCR mati/error, form tetap jalan (fallback jumlah nota manual).
  *
  * PRINSIP PENTING
- * ---------------
  * 1. OCR ini BANTUAN, bukan penentu. Kalau gagal, sistem TIDAK boleh ikut
- *    gagal — admin tetap bisa mengisi jumlah nota manual seperti sebelumnya.
+ *    gagal - admin tetap bisa mengisi jumlah nota manual seperti sebelumnya.
  * 2. OCR HANYA mendeteksi jumlah & posisi nota. Nominal rupiah TIDAK dibaca
- *    otomatis — itu tetap diisi admin (lihat catatan di skrip Python).
+ *    otomatis - itu tetap diisi admin (lihat catatan di skrip Python).
  */
 class PembacaNota
 {
@@ -67,7 +65,7 @@ class PembacaNota
         }
 
         /*
-         * ⚠️ CACHE HASIL OCR — permintaan pengguna: "jangan buat aplikasi berat".
+         * ⚠️ CACHE HASIL OCR - permintaan pengguna: "jangan buat aplikasi berat".
          *
          * Sebelumnya hasil OCR tidak disimpan, jadi setiap form dibuka/diperbarui
          * (Livewire memanggil ulang berkas yang sama) proses Python jalan lagi:
@@ -105,7 +103,7 @@ class PembacaNota
             $gagal += ['alasan' => 'OCR error: '.$e->getMessage()];
 
             // Jangan cache kegagalan SEMENTARA (mis. proses dimatikan timeout,
-            // Python belum terpasang) — berkas bisa berhasil di percobaan lain.
+            // Python belum terpasang) - berkas bisa berhasil di percobaan lain.
             return $gagal;
         }
 
@@ -124,7 +122,7 @@ class PembacaNota
         //
         // Sekaligus baca ISI tiap nota (nominal, tanggal, penerima, saran
         // kategori) dari teks yang sudah dikelompokkan skrip Python. Hasilnya
-        // DRAF — admin WAJIB konfirmasi sebelum dipakai (nota sering tulisan
+        // DRAF - admin WAJIB konfirmasi sebelum dipakai (nota sering tulisan
         // tangan, OCR bisa salah baca).
         $potongan = [];
         $daftarNota = [];
@@ -161,11 +159,11 @@ class PembacaNota
             'jumlah_nota' => max(1, (int) ($hasil['jumlah_nota'] ?? 1)),
             'metode' => (string) ($hasil['metode'] ?? 'ocr'),
             'potongan' => $potongan,
-            // Isi tiap nota (DRAF) — dipakai form untuk mengisi otomatis.
+            // Isi tiap nota (DRAF) - dipakai form untuk mengisi otomatis.
             'nota' => $daftarNota,
         ];
 
-        // Simpan hasil SUKSES ke cache (7 hari) — permintaan pengguna:
+        // Simpan hasil SUKSES ke cache (7 hari) - permintaan pengguna:
         // "jangan buat aplikasi berat". Tanpa ini, OCR jalan ulang setiap
         // form dibuka/diperbarui untuk berkas yang sama.
         Cache::put($kunci, $hasilAkhir, now()->addDays(7));
@@ -176,7 +174,7 @@ class PembacaNota
     /**
      * Apakah OCR diaktifkan? (bisa dimatikan lewat .env)
      *
-     * Penting untuk server yang belum dipasangi Python — sistem tetap jalan
+     * Penting untuk server yang belum dipasangi Python - sistem tetap jalan
      * dengan jumlah nota manual, tanpa error.
      */
     public function aktif(): bool
@@ -195,12 +193,12 @@ class PembacaNota
         $python = config('ocr.python');
 
         /*
-         * ⚠️ LEPAS BATAS WAKTU PHP — SENGAJA.
+         * ⚠️ LEPAS BATAS WAKTU PHP - SENGAJA.
          *
          * php.ini web punya `max_execution_time = 30`, sedangkan OCR berkas
          * besar (contoh nyata: 57 nota dalam 15 halaman) butuh ~38 detik.
          * Tanpa ini, proses bisa dimatikan di tengah jalan dan admin melihat
-         * error — padahal berkasnya sah.
+         * error - padahal berkasnya sah.
          *
          * Pembatasan waktu diserahkan ke `Process::timeout()` di bawah, yang
          * memang dirancang untuk itu. set_time_limit(0) = tanpa batas; aman
@@ -221,7 +219,7 @@ class PembacaNota
 
         $keluaran = trim($hasil->output());
 
-        // Ambil baris JSON terakhir — kalau skrip mencetak peringatan library
+        // Ambil baris JSON terakhir - kalau skrip mencetak peringatan library
         // ke stdout, kita tetap dapat JSON-nya.
         $baris = collect(preg_split('/\R/', $keluaran))
             ->map(fn (string $b): string => trim($b))

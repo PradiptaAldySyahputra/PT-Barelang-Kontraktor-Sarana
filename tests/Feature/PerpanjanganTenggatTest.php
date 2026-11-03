@@ -16,7 +16,7 @@ use Tests\TestCase;
  *  diperpanjang sesuai kesepakatan (berapa bulan / perjanjian)"
  *
  * MASALAH SEBELUMNYA: `tanggal_akhir` hanya satu tanggal. Kalau SPK
- * diperpanjang lewat adendum, admin mengubah tanggalnya LANGSUNG — sehingga
+ * diperpanjang lewat adendum, admin mengubah tanggalnya LANGSUNG - sehingga
  * **jejak tenggat awal HILANG** dan tidak ada catatan berapa kali diperpanjang.
  *
  * SOLUSI (tetap 5 tabel): riwayat perpanjangan disimpan di kolom JSON
@@ -51,7 +51,7 @@ class PerpanjanganTenggatTest extends TestCase
         // tanggal_akhir ikut diperbarui (dipakai perhitungan tenggat).
         $this->assertSame('2026-11-01', $spk->tanggal_akhir->toDateString());
 
-        // Riwayat menyimpan tanggal LAMA — supaya jejaknya tidak hilang.
+        // Riwayat menyimpan tanggal LAMA - supaya jejaknya tidak hilang.
         $riwayat = $spk->perpanjangan;
         $this->assertCount(1, $riwayat);
         $this->assertSame('2026-08-01', $riwayat[0]['dari']);

@@ -19,7 +19,7 @@ use Tests\TestCase;
  *
  * ⚠️ KENAPA PDF PERLU, padahal sudah ada Excel & CSV:
  * Excel dipakai untuk **mengolah** angka. PDF dipakai untuk **menyerahkan &
- * mengarsipkan** — mis. lampiran laporan ke bagian pajak, atau bukti saat
+ * mengarsipkan** - mis. lampiran laporan ke bagian pajak, atau bukti saat
  * pemeriksaan. PDF tidak bisa diubah angkanya tanpa jejak, jadi lebih aman
  * sebagai dokumen resmi.
  *
@@ -103,7 +103,7 @@ class EksporLaporanPdfTest extends TestCase
         $this->assertGreaterThan(
             2000,
             strlen($isi),
-            'PDF tidak boleh kosong — harus memuat kop & tabel laporan.',
+            'PDF tidak boleh kosong - harus memuat kop & tabel laporan.',
         );
     }
 

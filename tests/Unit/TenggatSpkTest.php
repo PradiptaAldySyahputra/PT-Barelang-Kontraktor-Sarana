@@ -10,13 +10,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * UNIT TEST — PERHITUNGAN TENGGAT SPK.
+ * UNIT TEST - PERHITUNGAN TENGGAT SPK.
  *
  * ⚠️ KENAPA INI PENTING (`docs/Rules.md` §2 butir 17):
  *   Lewat tenggat   → badge MERAH
  *   ≤ 14 hari lagi  → badge KUNING
  *
- * Kalau perhitungan hari salah, alarm tenggat memunculkan peringatan PALSU —
+ * Kalau perhitungan hari salah, alarm tenggat memunculkan peringatan PALSU -
  * dan itu pernah terjadi: 67 dari 90 SPK asli dianggap lewat tenggat, padahal
  * sebagian sudah selesai. Peringatan palsu membuat admin mengabaikan alarm
  * yang sebenarnya penting.
@@ -27,7 +27,7 @@ use Tests\TestCase;
  *
  * ⚠️ WAKTU DIKUNCI: tes ini memakai `Carbon::setTestNow()` supaya hasilnya
  * SAMA setiap hari dijalankan. Tanpa itu, tes bisa lulus hari ini dan gagal
- * besok — tes yang tidak bisa dipercaya.
+ * besok - tes yang tidak bisa dipercaya.
  */
 class TenggatSpkTest extends TestCase
 {
@@ -46,9 +46,7 @@ class TenggatSpkTest extends TestCase
         return $spk;
     }
 
-    // ---------------------------------------------------------------
     // sisaTenggatHari()
-    // ---------------------------------------------------------------
 
     /**
      * @return list<array{0: string|null, 1: int|null}>
@@ -94,9 +92,7 @@ class TenggatSpkTest extends TestCase
         );
     }
 
-    // ---------------------------------------------------------------
     // sudahLewatTenggat()
-    // ---------------------------------------------------------------
 
     public function test_belum_lewat_saat_tenggat_hari_ini(): void
     {
@@ -104,7 +100,7 @@ class TenggatSpkTest extends TestCase
 
         $this->assertFalse(
             $this->spkDenganTenggat('2026-06-10')->sudahLewatTenggat(),
-            'Tenggat hari ini BELUM lewat — badge merah baru muncul besok.',
+            'Tenggat hari ini BELUM lewat - badge merah baru muncul besok.',
         );
     }
 
@@ -125,9 +121,7 @@ class TenggatSpkTest extends TestCase
         );
     }
 
-    // ---------------------------------------------------------------
-    // isMendekatiTenggat() — ambang 14 hari (Rules §2 butir 17)
-    // ---------------------------------------------------------------
+    // isMendekatiTenggat() - ambang 14 hari (Rules §2 butir 17)
 
     /**
      * @return list<array{0: string, 1: bool}>
@@ -169,9 +163,7 @@ class TenggatSpkTest extends TestCase
         );
     }
 
-    // ---------------------------------------------------------------
-    // labelTenggat() — teks untuk badge
-    // ---------------------------------------------------------------
+    // labelTenggat() - teks untuk badge
 
     /**
      * @return list<array{0: string|null, 1: string|null}>

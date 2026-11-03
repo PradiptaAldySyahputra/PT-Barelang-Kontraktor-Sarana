@@ -32,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
          *   method.
          *
          * Akibatnya tombol "Ekspor Excel"/PDF di daftar SPK (dan menu lain)
-         * gagal — file tidak pernah terunduh.
+         * gagal - file tidak pernah terunduh.
          *
          * Perbaikan: beri tahu container model autentikasi yang BENAR. Ini
          * juga dipakai Filament untuk ImportAction.
@@ -46,12 +46,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         /*
-         * ATURAN PASSWORD TERPUSAT — permintaan user (9 Okt 2026):
+         * ATURAN PASSWORD TERPUSAT - permintaan user (9 Okt 2026):
          * "Aturan minimal: 8 karakter, kombinasi huruf & angka."
          *
          * Ditaruh di sini (bukan di satu form) supaya SEMUA jalur yang memakai
-         * `Password::default()` — halaman Profil, Lupa Password, dan form
-         * Pengguna — memakai aturan yang SAMA. Kalau aturan ditulis ulang per
+         * `Password::default()` - halaman Profil, Lupa Password, dan form
+         * Pengguna - memakai aturan yang SAMA. Kalau aturan ditulis ulang per
          * form, cepat atau lambat akan berbeda diam-diam.
          */
         PasswordRule::defaults(
@@ -70,7 +70,7 @@ class AppServiceProvider extends ServiceProvider
          * CATAT WAKTU LOGIN TERAKHIR (permintaan user 10 Okt 2026).
          *
          * Halaman Profil menampilkan "Login terakhir". Nilainya diisi di sini
-         * lewat event `Login` — jadi berlaku untuk SEMUA jalur login (panel
+         * lewat event `Login` - jadi berlaku untuk SEMUA jalur login (panel
          * Filament maupun seeder/tes), tanpa menambah kolom di form.
          *
          * ⚠️ `terakhir_masuk` di-update TANPA memicu event model lain supaya

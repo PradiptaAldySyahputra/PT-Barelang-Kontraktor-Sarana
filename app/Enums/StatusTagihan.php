@@ -32,9 +32,27 @@ enum StatusTagihan: string
     }
 
     /**
+     * Label pendek untuk tabel padat di panel Blade.
+     *
+     * Label penuh ("Menunggu Pembayaran") butuh ±150px; di tabel 7 kolom
+     * ruang itu tidak ada. Yang pendek dipakai HANYA di sel tabel, sedangkan
+     * badge detail/filter tetap memakai label().
+     */
+    public function labelPendek(): string
+    {
+        return match ($this) {
+            self::BelumDitagihkan => 'Belum ditagih',
+            self::SudahDitagihkan => 'Sudah ditagih',
+            self::RevisiDokumen => 'Revisi dok.',
+            self::MenungguPembayaran => 'Menunggu bayar',
+            self::Dibayar => 'Dibayar',
+        };
+    }
+
+    /**
      * Warna badge Filament.
      *
-     * Ditaruh di Enum supaya konsisten di seluruh halaman — lihat catatan
+     * Ditaruh di Enum supaya konsisten di seluruh halaman - lihat catatan
      * di StatusSpk::warnaBadge().
      */
     public function warnaBadge(): string

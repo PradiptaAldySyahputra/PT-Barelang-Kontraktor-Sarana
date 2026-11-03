@@ -20,7 +20,7 @@ use Tests\TestCase;
  *    kolom `perpanjangan` (JSON) menyimpan riwayat adendum.
  *
  * ⚠️ TETAP 5 TABEL: semua tambahan berupa KOLOM di tabel `spk` yang sudah
- * ada — tidak ada tabel baru.
+ * ada - tidak ada tabel baru.
  */
 class KolomSpkBaruTest extends TestCase
 {

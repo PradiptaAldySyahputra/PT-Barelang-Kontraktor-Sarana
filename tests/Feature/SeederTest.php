@@ -14,13 +14,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Uji SEEDER — memastikan data awal bisa dibuat dari database kosong.
+ * Uji SEEDER - memastikan data awal bisa dibuat dari database kosong.
  *
  * ⚠️ BUG YANG DICEGAH:
  * `DatabaseSeeder` pernah memanggil `MitraFactory::pelanggan()`, padahal
  * state itu sudah dihapus saat kategori mitra disederhanakan jadi 2
  * (mitra & subkon) pada v4.3. Akibatnya `php artisan migrate:fresh --seed`
- * GAGAL — dan tidak ada satu pun test yang menangkapnya, karena semua test
+ * GAGAL - dan tidak ada satu pun test yang menangkapnya, karena semua test
  * membuat data lewat factory langsung, bukan lewat seeder.
  *
  * Seeder yang rusak berbahaya: orang baru yang menjalankan proyek ini tidak
@@ -51,13 +51,14 @@ class SeederTest extends TestCase
         $this->assertNotNull($admin, 'akun admin harus ada');
         $this->assertNotNull($direktur, 'akun direktur harus ada');
         $this->assertTrue($admin->bolehInput(), 'admin harus bisa input');
-        $this->assertFalse($direktur->bolehInput(), 'direktur hanya monitoring');
+        // Pembaruan keputusan bisnis: Direktur kini Super Admin (boleh input dan kelola seluruh sistem)
+        $this->assertTrue($direktur->bolehInput(), 'direktur sebagai super admin dapat menginput data');
     }
 
     /**
      * Semua state factory yang dipanggil seeder harus benar-benar ada.
      *
-     * Ini menangkap kasus seperti `pelanggan()` — nama state yang sudah
+     * Ini menangkap kasus seperti `pelanggan()` - nama state yang sudah
      * dihapus tapi masih dipanggil.
      */
     public function test_semua_state_factory_yang_dipakai_seeder_ada(): void
@@ -67,7 +68,7 @@ class SeederTest extends TestCase
         foreach (['pln', 'mitra', 'subkon'] as $state) {
             $this->assertTrue(
                 $mitra->hasMethod($state),
-                "State MitraFactory::$state() tidak ada — seeder akan gagal"
+                "State MitraFactory::$state() tidak ada - seeder akan gagal"
             );
         }
     }
@@ -82,11 +83,11 @@ class SeederTest extends TestCase
 
         $this->assertFalse(
             $spk->hasMethod('labaRugi'),
-            'labaRugi() sudah dihapus — jangan dipakai lagi'
+            'labaRugi() sudah dihapus - jangan dipakai lagi'
         );
         $this->assertFalse(
             $spk->hasMethod('totalBiaya'),
-            'totalBiaya() sudah dihapus — jangan dipakai lagi'
+            'totalBiaya() sudah dihapus - jangan dipakai lagi'
         );
     }
 

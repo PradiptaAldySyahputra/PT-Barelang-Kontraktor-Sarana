@@ -25,7 +25,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Tidak bisa dikembalikan persis — informasi kategori lama
+        // Tidak bisa dikembalikan persis - informasi kategori lama
         // (pln/pelanggan/vendor) sudah hilang setelah digabung.
         // Baris yang tadinya 'pln' dikembalikan sebagai 'pln' bila namanya PLN,
         // sisanya tetap 'mitra'.

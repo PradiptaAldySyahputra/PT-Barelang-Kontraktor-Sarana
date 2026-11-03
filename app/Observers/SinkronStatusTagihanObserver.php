@@ -13,7 +13,7 @@ use App\Models\UangMasuk;
  *
  * ⚠️ KENAPA INI PERLU:
  * Sebelumnya `status_tagihan` diisi MANUAL oleh Admin. Risikonya:
- * status tertulis "Dibayar" padahal uangnya belum masuk — laporan jadi bohong.
+ * status tertulis "Dibayar" padahal uangnya belum masuk - laporan jadi bohong.
  *
  * ATURAN:
  *   - SPK lunas (piutang lancar = 0)  -> `Dibayar`
@@ -52,7 +52,7 @@ class SinkronStatusTagihanObserver
         // 0 − 0 = 0, sehingga dianggap LUNAS dan langsung berstatus "Dibayar"
         // begitu ada transaksi apa pun. Itu salah: nilai 0 berarti data belum
         // diisi, bukan sudah dibayar. Untuk SPK seperti itu, status tagihan
-        // TIDAK disentuh sama sekali — biar Admin yang menentukan.
+        // TIDAK disentuh sama sekali - biar Admin yang menentukan.
         if ($nilaiSpk <= 0) {
             return;
         }
@@ -71,7 +71,7 @@ class SinkronStatusTagihanObserver
             //  - kalau status sebelumnya di-set SISTEM (mis. pembayaran dihapus),
             //    kembalikan ke BelumDitagihkan
             //  - kalau status MANUAL (SudahDitagihkan / RevisiDokumen),
-            //    jangan sentuh — itu penanda kerja Admin
+            //    jangan sentuh - itu penanda kerja Admin
             in_array($spk->status_tagihan, $statusSistem, true) => StatusTagihan::BelumDitagihkan,
 
             default => null,
@@ -96,7 +96,7 @@ class SinkronStatusTagihanObserver
     /**
      * Dipanggil saat uang masuk DIUBAH.
      *
-     * Perlu menangani SPK lama juga — kalau `spk_id` dipindah dari SPK A ke B,
+     * Perlu menangani SPK lama juga - kalau `spk_id` dipindah dari SPK A ke B,
      * maka A juga harus dihitung ulang.
      */
     public function updated(UangMasuk $uangMasuk): void

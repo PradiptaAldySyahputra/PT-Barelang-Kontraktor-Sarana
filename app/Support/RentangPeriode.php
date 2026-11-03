@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  * dari komponen Filament, logika bisa diuji langsung tanpa browser.
  *
  * ⚠️ PRINSIP: "Bulan lalu" dihitung relatif terhadap TANGGAL HARI INI, bukan
- * awal bulan — supaya admin yang membuka awal bulan tetap dapat bulan penuh
+ * awal bulan - supaya admin yang membuka awal bulan tetap dapat bulan penuh
  * sebelumnya, bukan bulan berjalan yang baru mulai.
  */
 class RentangPeriode

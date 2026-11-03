@@ -15,9 +15,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * Model `uang_keluar` — pengeluaran dana.
+ * Model `uang_keluar` - pengeluaran dana.
  *
- * TIDAK ADA APPROVAL (keputusan user) — tidak ada field disetujui_oleh.
+ * TIDAK ADA APPROVAL (keputusan user) - tidak ada field disetujui_oleh.
  * spk_id boleh NULL untuk pengeluaran umum.
  *
  * @property int $id
@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $tanggal
  * @property string $jumlah
  * @property KategoriPengeluaran|null $kategori
+ * @property string|null $detail_kategori
  * @property string|null $penerima
  * @property string|null $keterangan
  * @property array<int, string>|null $bukti
@@ -47,6 +48,7 @@ class UangKeluar extends Model
         'akun',
         'jumlah',
         'kategori',
+        'detail_kategori',
         'penerima',
         'keterangan',
         'bukti',
@@ -66,9 +68,7 @@ class UangKeluar extends Model
         ];
     }
 
-    // ---------------------------------------------------------
     // Relasi
-    // ---------------------------------------------------------
 
     /**
      * @return BelongsTo<Spk, $this>
@@ -78,9 +78,7 @@ class UangKeluar extends Model
         return $this->belongsTo(Spk::class, 'spk_id');
     }
 
-    // ---------------------------------------------------------
     // Helper
-    // ---------------------------------------------------------
 
     /**
      * Apakah pengeluaran ini terkait SPK tertentu?
@@ -93,19 +91,12 @@ class UangKeluar extends Model
         return $this->spk_id !== null;
     }
 
-    public function labelKategori(): string
-    {
-        return $this->kategori?->label() ?? '—';
-    }
-
     public function jumlahFileBukti(): int
     {
         return count($this->bukti ?? []);
     }
 
-    // ---------------------------------------------------------
     // Scope
-    // ---------------------------------------------------------
 
     /**
      * @param  Builder<UangKeluar>  $query
@@ -113,13 +104,5 @@ class UangKeluar extends Model
     public function scopeTerkaitSpk(Builder $query): void
     {
         $query->whereNotNull('spk_id');
-    }
-
-    /**
-     * @param  Builder<UangKeluar>  $query
-     */
-    public function scopeUmum(Builder $query): void
-    {
-        $query->whereNull('spk_id');
     }
 }

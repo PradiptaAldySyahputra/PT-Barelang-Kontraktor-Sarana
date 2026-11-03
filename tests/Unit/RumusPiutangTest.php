@@ -9,12 +9,12 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * UNIT TEST — RUMUS PIUTANG & SISA TAGIH.
+ * UNIT TEST - RUMUS PIUTANG & SISA TAGIH.
  *
  * ⚠️ KENAPA INI DIPISAH SEBAGAI UNIT TEST (tanpa database):
  * Rumus ini adalah **inti keuangan** sistem. Setiap rupiah yang ditampilkan di
  * dashboard & laporan melewatinya. Kalau rumusnya salah, seluruh laporan salah
- * — dan itu baru ketahuan saat ada yang membandingkan dengan buku kas fisik.
+ * - dan itu baru ketahuan saat ada yang membandingkan dengan buku kas fisik.
  *
  * Unit test murni (tanpa DB) membuat pengujian ini:
  *   - cepat (tidak perlu migrate),
@@ -25,9 +25,9 @@ use PHPUnit\Framework\TestCase;
  *   piutang = nilai_spk − sudah_diterima     ← RETENSI TIDAK DIKURANGI
  *
  *   "DILARANG mengurangi piutang dengan retensi 5%. Melakukan itu akan membuat
- *    piutang lebih kecil dari kenyataan sebesar 5% — padahal klien membayar penuh."
+ *    piutang lebih kecil dari kenyataan sebesar 5% - padahal klien membayar penuh."
  *
- *   Laba-rugi juga TIDAK dihitung — sistem murni mencatat.
+ *   Laba-rugi juga TIDAK dihitung - sistem murni mencatat.
  */
 class RumusPiutangTest extends TestCase
 {
@@ -45,9 +45,7 @@ class RumusPiutangTest extends TestCase
         return $spk;
     }
 
-    // ---------------------------------------------------------------
-    // piutangDari() — rumus inti
-    // ---------------------------------------------------------------
+    // piutangDari() - rumus inti
 
     /**
      * @return list<array{0: float, 1: float, 2: float}>
@@ -76,7 +74,7 @@ class RumusPiutangTest extends TestCase
             $diharapkan,
             $spk->piutangDari($penerimaan),
             0.001,
-            'piutang = nilai_spk − sudah_diterima (TANPA retensi — Rules §2)',
+            'piutang = nilai_spk − sudah_diterima (TANPA retensi - Rules §2)',
         );
     }
 
@@ -85,7 +83,7 @@ class RumusPiutangTest extends TestCase
      *
      * Aturan lama (sudah dihapus) mengurangi piutang 5% sebagai "dana ditahan".
      * Uji ini memastikan itu TIDAK terjadi lagi: klien membayar penuh, jadi
-     * piutang harus nol — bukan 5% dari nilai SPK.
+     * piutang harus nol - bukan 5% dari nilai SPK.
      */
     public function test_piutang_tidak_dikurangi_retenksi_lima_persen(): void
     {
@@ -99,18 +97,16 @@ class RumusPiutangTest extends TestCase
             'Klien membayar 100% → piutang harus 0. Retensi 5% SUDAH TIDAK DIPAKAI (Rules §2).',
         );
 
-        // Kalau retensi masih dipakai, hasilnya 5.000.000 — pastikan BUKAN itu.
+        // Kalau retensi masih dipakai, hasilnya 5.000.000 - pastikan BUKAN itu.
         $this->assertNotEqualsWithDelta(
             5_000_000.0,
             $piutang,
             0.001,
-            'Piutang TIDAK BOLEH menyisakan 5% — itu aturan lama yang sudah dihapus.',
+            'Piutang TIDAK BOLEH menyisakan 5% - itu aturan lama yang sudah dihapus.',
         );
     }
 
-    // ---------------------------------------------------------------
-    // sisaTagih() — versi tampilan, tidak pernah negatif
-    // ---------------------------------------------------------------
+    // sisaTagih() - versi tampilan, tidak pernah negatif
     //
     // ⚠️ CATATAN: `sisaTagih()` TIDAK diuji di sini karena memanggil
     // `piutang()` → `totalPenerimaan()` yang membaca relasi `uangMasuk`

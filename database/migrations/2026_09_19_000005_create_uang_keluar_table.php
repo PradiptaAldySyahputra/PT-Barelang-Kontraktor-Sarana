@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tabel `uang_keluar` — pengeluaran dana.
+ * Tabel `uang_keluar` - pengeluaran dana.
  *
  * Asal: skema awal (`uang_keluar`) + revisi user + keputusan user.
  *

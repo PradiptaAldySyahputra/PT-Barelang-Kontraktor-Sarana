@@ -135,7 +135,7 @@ return [
          * Dulu berkas sementara hasil unggah tersimpan di disk default
          * (`FILESYSTEM_DISK=public`) sehingga bisa diunduh tanpa login lewat
          * /storage/livewire-tmp/... selama proses unggah. Nota memuat data
-         * keuangan sensitif — jadi unggahan sementara pun harus privat.
+         * keuangan sensitif - jadi unggahan sementara pun harus privat.
          *
          * `local` = storage/app/private, tidak dijangkau web langsung.
          * PenyimpanBerkas::simpanKe() sudah membaca disk `local` saat
@@ -287,7 +287,7 @@ return [
 
     'payload' => [
         /*
-         * ⚠️ DINAIKKAN (8 Okt 2026) — form Uang Keluar mode Rinci.
+         * ⚠️ DINAIKKAN (8 Okt 2026) - form Uang Keluar mode Rinci.
          *
          * BUG NYATA yang diperbaiki: `max_calls` bawaan 50. Saat satu berkas
          * berisi puluhan nota, mode Rinci membuat puluhan BARIS, dan tiap baris
@@ -300,9 +300,9 @@ return [
          * request (74). Maximum allowed is 50."
          *
          * Batas tetap ADA (bukan null) supaya tetap melindungi dari payload
-         * jahat — hanya dinaikkan agar form 50 baris bisa dirender.
+         * jahat - hanya dinaikkan agar form 50 baris bisa dirender.
          */
-        'max_size' => 5 * 1024 * 1024, // 5MB — state form banyak baris
+        'max_size' => 5 * 1024 * 1024, // 5MB - state form banyak baris
         'max_nesting_depth' => 10,     // Maximum depth of dot-notation property paths
         'max_calls' => 1000,           // Cukup untuk 50 baris × beberapa field live
         'max_components' => 200,       // Maximum components per batch request

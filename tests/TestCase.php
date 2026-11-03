@@ -14,7 +14,7 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * ⚠️ PENGAMAN KERAS — JANGAN DIHAPUS.
+     * ⚠️ PENGAMAN KERAS - JANGAN DIHAPUS.
      *
      * Temuan uji deploy 7 Okt 2026: `php artisan test` yang dijalankan di
      * server dapat berjalan terhadap database PRODUKSI `bks`, bukan `bks_test`.
@@ -23,7 +23,7 @@ abstract class TestCase extends BaseTestCase
      *   1. `.env.testing` TIDAK ikut ter-commit (gitignored). Setelah clone di
      *      server, file itu tidak ada → PHPUnit jatuh ke `.env` (database
      *      produksi). 52 tes memakai `RefreshDatabase`, yang MENGHAPUS seluruh
-     *      isi tabel — artinya data perusahaan bisa hilang.
+     *      isi tabel - artinya data perusahaan bisa hilang.
      *   2. `php artisan config:cache` membekukan nilai `.env` ke
      *      `bootstrap/cache/config.php`, sehingga `APP_ENV=testing` dari
      *      `phpunit.xml` DIABAIKAN → tes kembali menunjuk `bks`.
@@ -58,7 +58,7 @@ abstract class TestCase extends BaseTestCase
             ."Perbaiki salah satu:\n"
             ."  1. Buat `.env.testing` dari contoh: `cp .env.testing.example .env.testing`\n"
             ."     lalu pastikan DB_DATABASE=bks_test.\n"
-            ."  2. Jangan `php artisan config:cache` saat menjalankan tes — jalankan\n"
+            ."  2. Jangan `php artisan config:cache` saat menjalankan tes - jalankan\n"
             ."     `php artisan config:clear` dulu.\n"
         );
     }

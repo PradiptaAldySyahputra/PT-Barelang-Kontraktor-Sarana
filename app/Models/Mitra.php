@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Model `mitra` — pihak terkait.
+ * Model `mitra` - pihak terkait.
  *
  * HANYA 2 kategori (revisi user):
  *   - `mitra`  → pemberi kerja / pihak luar (termasuk PT PLN Batam, pelanggan, vendor)
@@ -54,9 +54,7 @@ class Mitra extends Model
         ];
     }
 
-    // ---------------------------------------------------------
     // Relasi
-    // ---------------------------------------------------------
 
     /**
      * SPK yang diberikan oleh mitra ini (sebagai pemberi kerja).
@@ -78,9 +76,7 @@ class Mitra extends Model
         return $this->hasMany(UangMasuk::class, 'mitra_id');
     }
 
-    // ---------------------------------------------------------
     // Scope
-    // ---------------------------------------------------------
 
     /**
      * @param  Builder<Mitra>  $query

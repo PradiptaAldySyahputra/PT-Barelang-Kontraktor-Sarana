@@ -7,9 +7,6 @@ namespace App\Models;
 use App\Enums\Peran;
 use App\Support\Nota;
 use Database\Factories\PenggunaFactory;
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Models\Contracts\HasName;
-use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -17,14 +14,10 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 
 /**
- * Model `pengguna` — akun pengguna sistem.
+ * Model `pengguna` - akun pengguna sistem.
  *
  * Menggantikan model `User` bawaan Laravel, karena sistem ini memakai
- * tabel `pengguna` sesuai skema awal.
- *
- * Mengimplementasikan HasName karena Filament mencari atribut `name`,
- * sedangkan tabel ini memakai kolom `nama`. Tanpa HasName, dashboard
- * Filament akan error "Return value must be of type string, null returned".
+ * tabel `pengguna` sesuai skema domain BKS.
  *
  * @property int $id
  * @property string $nama
@@ -36,7 +29,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $tanda_tangan
  * @property Carbon|null $terakhir_masuk
  */
-class Pengguna extends Authenticatable implements FilamentUser, HasName
+class Pengguna extends Authenticatable
 {
     /** @use HasFactory<PenggunaFactory> */
     use HasFactory;
@@ -80,9 +73,7 @@ class Pengguna extends Authenticatable implements FilamentUser, HasName
         ];
     }
 
-    // ---------------------------------------------------------
     // Helper peran
-    // ---------------------------------------------------------
 
     public function isAdmin(): bool
     {
@@ -103,26 +94,20 @@ class Pengguna extends Authenticatable implements FilamentUser, HasName
         return $this->peran->bolehInput();
     }
 
-    // ---------------------------------------------------------
-    // Akses panel Filament
-    // ---------------------------------------------------------
-
     /**
-     * Nama yang ditampilkan Filament.
-     *
-     * Filament secara default mencari atribut `name`, sedangkan tabel
-     * `pengguna` memakai kolom `nama`. Method ini menjembataninya.
-     */
-    public function getFilamentName(): string
-    {
-        return $this->nama;
-    }
-
-    /**
-     * URL avatar (disk privat `nota`). Null kalau belum diunggah.
+     * URL avatar (disk privat `nota` atau path template public). Null kalau belum ada.
      */
     public function urlAvatar(): ?string
     {
+        if (blank($this->avatar)) {
+            return null;
+        }
+
+        // Jika merujuk ke avatar bawaan template di public/images/user/
+        if (str_starts_with($this->avatar, 'images/') || str_starts_with($this->avatar, '/images/')) {
+            return '/'.ltrim($this->avatar, '/');
+        }
+
         return Nota::ada($this->avatar)
             ? Nota::url($this->avatar)
             : null;
@@ -146,22 +131,7 @@ class Pengguna extends Authenticatable implements FilamentUser, HasName
         return Nota::ada($this->tanda_tangan);
     }
 
-    /**
-     * Siapa yang boleh masuk panel Filament.
-     *
-     * Admin & Direktur boleh masuk, TAPI akun nonaktif ditolak.
-     * Pembatasan CRUD lebih rinci dilakukan di masing-masing Resource
-     * lewat canViewAny() / canCreate() / canEdit() / canDelete().
-     */
-    public function canAccessPanel(Panel $panel): bool
-    {
-        return $this->is_aktif
-            && in_array($this->peran, [Peran::Admin, Peran::Direktur], true);
-    }
-
-    // ---------------------------------------------------------
     // Relasi
-    // ---------------------------------------------------------
 
     /**
      * SPK yang dibuat oleh pengguna ini.

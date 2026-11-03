@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * TABEL `notifications` (B1-2) — prasyarat notifikasi unduhan ekspor.
+ * TABEL `notifications` (B1-2) - prasyarat notifikasi unduhan ekspor.
  *
  * ⚠️ KENAPA DIUJI:
  * Di repo lama, tabel ini tidak ada sejak awal. Akibatnya ekspor yang selesai

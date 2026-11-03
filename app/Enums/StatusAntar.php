@@ -9,7 +9,7 @@ namespace App\Enums;
  *
  * ⚠️ KENAPA INI ADA (permintaan pengguna 26 Sep 2026):
  * Excel perusahaan ("LIST SPK 2026.xlsx") punya kolom **Keterangan** yang
- * mencatat apakah dokumen SPK sudah diantar ke pihak terkait atau belum —
+ * mencatat apakah dokumen SPK sudah diantar ke pihak terkait atau belum -
  * mis. "diantar ke imperium", "dibawa", "sudah masuk rek BKS".
  *
  * Sebelumnya SPK tidak punya tempat untuk itu, sehingga admin tidak tahu
@@ -42,7 +42,7 @@ enum StatusAntar: string
      * Warna badge Filament.
      *
      * Ditaruh di Enum (bukan di tiap tabel) supaya warna KONSISTEN di seluruh
-     * halaman — pola yang sama dengan StatusSpk::warnaBadge().
+     * halaman - pola yang sama dengan StatusSpk::warnaBadge().
      */
     public function warnaBadge(): string
     {

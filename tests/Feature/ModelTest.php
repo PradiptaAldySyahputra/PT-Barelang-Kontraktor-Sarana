@@ -20,7 +20,7 @@ use Tests\TestCase;
  * Uji model Eloquent: relasi, cast Enum, dan kolom turunan.
  *
  * Kolom turunan (totalPenerimaan, piutang) dihitung
- * on-the-fly — lihat Schema.md §6.
+ * on-the-fly - lihat Schema.md §6.
  */
 class ModelTest extends TestCase
 {
@@ -38,9 +38,7 @@ class ModelTest extends TestCase
         ]);
     }
 
-    // ---------------------------------------------------------
     // Cast Enum
-    // ---------------------------------------------------------
 
     public function test_status_spk_di_cast_ke_enum(): void
     {
@@ -84,21 +82,17 @@ class ModelTest extends TestCase
         $this->assertTrue($this->admin->bolehInput());
     }
 
-    public function test_direktur_tidak_boleh_input(): void
+    public function test_direktur_sebagai_super_admin_boleh_input(): void
     {
-        $direktur = Pengguna::factory()->direktur()->create();
+        $direktur = Pengguna::factory()->make(['peran' => Peran::Direktur]);
 
         $this->assertTrue($direktur->isDirektur());
-        $this->assertFalse($direktur->bolehInput());
+        $this->assertTrue($direktur->bolehInput());
     }
 
-    // ---------------------------------------------------------
-    // Retensi — auto-hitung saat simpan
-    // ---------------------------------------------------------
+    // Retensi - auto-hitung saat simpan
 
-    // ---------------------------------------------------------
     // Relasi
-    // ---------------------------------------------------------
 
     public function test_spk_berelasi_ke_mitra_dan_pembuat(): void
     {
@@ -143,9 +137,7 @@ class ModelTest extends TestCase
         $this->assertCount(3, $spk->uangKeluar);
     }
 
-    // ---------------------------------------------------------
     // Kolom turunan
-    // ---------------------------------------------------------
 
     public function test_perhitungan_laba_rugi_dan_piutang(): void
     {
@@ -164,9 +156,7 @@ class ModelTest extends TestCase
         $this->assertEquals(80_000_000, $spk->piutang());
     }
 
-    // ---------------------------------------------------------
     // Uang masuk: sumber disimpulkan dari spk_id
-    // ---------------------------------------------------------
 
     public function test_sumber_uang_masuk_disimpulkan_dari_spk_id(): void
     {
@@ -206,9 +196,7 @@ class ModelTest extends TestCase
         $this->assertSame(1, UangMasuk::dariLuarSpk()->count());
     }
 
-    // ---------------------------------------------------------
-    // Bukti JSON — jumlah file bebas
-    // ---------------------------------------------------------
+    // Bukti JSON - jumlah file bebas
 
     public function test_bukti_menampung_jumlah_file_bebas(): void
     {
@@ -229,9 +217,7 @@ class ModelTest extends TestCase
         $this->assertSame(0, $tanpa->fresh()->jumlahFileBukti());
     }
 
-    // ---------------------------------------------------------
     // Soft delete
-    // ---------------------------------------------------------
 
     public function test_spk_memakai_soft_delete(): void
     {
