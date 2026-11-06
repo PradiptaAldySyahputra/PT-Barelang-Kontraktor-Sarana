@@ -10,6 +10,7 @@ use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use App\Models\Mitra;
 use App\Models\Spk;
+use App\Observers\SinkronStatusTagihanObserver;
 use App\Services\PenyimpanBerkas;
 use App\Support\Format;
 use Illuminate\Http\RedirectResponse;
@@ -117,7 +118,15 @@ final class SpkController
         $hapus = array_values(array_filter((array) $request->input('hapus_dokumen', [])));
         $data['dokumen'] = $this->simpanDokumen($request, $spk->dokumen ?? [], $hapus);
 
+        $nilaiLama = (float) $spk->nilai_spk;
         $spk->update($data);
+
+        // Jika nilai kontrak berubah, sinkronkan ulang status tagihan otomatis
+        // terhadap pembayaran yang sudah masuk (misal nilai naik dari 10jt ke 20jt
+        // ketika sudah dibayar 10jt -> status kembali ke Menunggu Pembayaran).
+        if (abs($nilaiLama - (float) $spk->nilai_spk) > 0.01) {
+            app(SinkronStatusTagihanObserver::class)->sinkron($spk->id);
+        }
 
         $asal = $this->kodeAsal($request->string('asal')->toString());
         $tujuan = $asal !== '' ? $this->tujuanKembali($asal, $spk) : route('panel.spk.show', $spk);
@@ -171,9 +180,17 @@ final class SpkController
 
         $data = $request->validate([
             'status_spk' => ['required', Rule::in(array_keys(StatusSpk::opsi()))],
+            'keterangan' => ['nullable', 'string', 'max:255', 'required_if:status_spk,'.StatusSpk::Dibatalkan->value],
+        ], [
+            'keterangan.required_if' => 'Alasan pembatalan wajib diisi ketika status SPK diubah menjadi Dibatalkan.',
         ]);
 
-        $spk->update(['status_spk' => $data['status_spk']]);
+        $update = ['status_spk' => $data['status_spk']];
+        if (filled($data['keterangan'] ?? null)) {
+            $update['keterangan'] = trim((string) $data['keterangan']);
+        }
+
+        $spk->update($update);
 
         $asalKode = $this->kodeAsal($request->string('asal')->toString());
 
@@ -303,7 +320,7 @@ final class SpkController
     {
         // Normalisasi format rupiah pengguna (misal "250.000.000" atau "Rp 250.000.000")
         $request->merge([
-            'nilai_spk' => \App\Support\Format::bersihkanUang($request->input('nilai_spk')),
+            'nilai_spk' => Format::bersihkanUang($request->input('nilai_spk')),
         ]);
 
         $data = $request->validate([
@@ -328,6 +345,20 @@ final class SpkController
         $data['nomor_spk'] = trim((string) $data['nomor_spk']);
         $data['nama_pekerjaan'] = trim((string) $data['nama_pekerjaan']);
         $data['nilai_spk'] = (float) $data['nilai_spk'];
+
+        /** @var Spk|null $spkLama */
+        $spkLama = $request->route('spk');
+        if ($spkLama instanceof Spk) {
+            $sudahDiterima = (float) $spkLama->uangMasuk()->sum('jumlah');
+            if ($sudahDiterima > 0 && $sudahDiterima > $data['nilai_spk'] + 0.01) {
+                throw ValidationException::withMessages([
+                    'nilai_spk' => sprintf(
+                        'Nilai SPK tidak boleh lebih kecil dari total pembayaran yang sudah diterima (%s).',
+                        Format::rupiah($sudahDiterima),
+                    ),
+                ]);
+            }
+        }
 
         if ($data['dikerjakan_oleh'] !== DikerjakanOleh::Subkon->value) {
             $data['subkon_id'] = null;

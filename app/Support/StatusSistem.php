@@ -113,6 +113,7 @@ final class StatusSistem
     private static function penyimpanan(): array
     {
         $path = storage_path('app');
+        $pathData = is_dir('/data') ? '/data' : (config('filesystems.backup_path') ?: $path);
 
         try {
             $bebas = disk_free_space($path);
@@ -121,7 +122,7 @@ final class StatusSistem
             if ($bebas === false || $total === false || $total == 0) {
                 return [
                     'kunci' => 'penyimpanan',
-                    'label' => 'Penyimpanan',
+                    'label' => 'Penyimpanan Sistem (SSD)',
                     'nilai' => 'Tidak diketahui',
                     'keterangan' => 'Tidak bisa membaca kapasitas disk.',
                     'sehat' => null,
@@ -131,17 +132,27 @@ final class StatusSistem
             $persenPakai = ($total - $bebas) / $total * 100;
             $sehat = $persenPakai < 90;
 
+            // Cek jika partisi HDD /data terpisah tersedia
+            $infoHdd = '';
+            if (is_dir($pathData) && realpath($pathData) !== realpath($path)) {
+                $bebasHdd = @disk_free_space($pathData);
+                $totalHdd = @disk_total_space($pathData);
+                if ($bebasHdd && $totalHdd) {
+                    $infoHdd = ' · HDD Data: '.StatusBackup::formatUkuran((int) $bebasHdd).' bebas';
+                }
+            }
+
             return [
                 'kunci' => 'penyimpanan',
-                'label' => 'Penyimpanan',
+                'label' => 'Kapasitas Disk Server',
                 'nilai' => StatusBackup::formatUkuran((int) $bebas).' bebas',
-                'keterangan' => round($persenPakai, 1).'% terpakai dari '.StatusBackup::formatUkuran((int) $total),
+                'keterangan' => round($persenPakai, 1).'% SSD terpakai dari '.StatusBackup::formatUkuran((int) $total).$infoHdd,
                 'sehat' => $sehat,
             ];
         } catch (\Throwable $e) {
             return [
                 'kunci' => 'penyimpanan',
-                'label' => 'Penyimpanan',
+                'label' => 'Kapasitas Disk Server',
                 'nilai' => 'Tidak diketahui',
                 'keterangan' => $e->getMessage(),
                 'sehat' => null,

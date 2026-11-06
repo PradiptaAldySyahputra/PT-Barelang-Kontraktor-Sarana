@@ -7,8 +7,8 @@
         '*.show',
         '*.create',
         '*.edit',
-        '*.status',
-        '*.billing',
+        'panel.spk.status',
+        'panel.spk.billing',
         'panel.receipts.upload',
     ]);
 

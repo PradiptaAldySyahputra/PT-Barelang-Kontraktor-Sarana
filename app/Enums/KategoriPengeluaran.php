@@ -54,7 +54,7 @@ enum KategoriPengeluaran: string
     }
 
     /**
-     * Warna badge Filament - konsisten di seluruh halaman.
+     * Warna badge - konsisten di seluruh tabel & panel.
      *
      * Peta warna (sistem desain v1.1 §2, 11 Okt 2026): kategori pengeluaran
      * dipetakan ke warna semantik. Material/Upah/Transportasi = biaya proyek,

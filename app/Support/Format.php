@@ -119,7 +119,7 @@ final class Format
 
         $hasil = self::hitungTerbilang($angka, $baca);
 
-        return trim($hasil) . ' rupiah';
+        return trim($hasil).' rupiah';
     }
 
     private static function hitungTerbilang(int $angka, array $baca): string
@@ -128,30 +128,30 @@ final class Format
             return $baca[$angka];
         }
         if ($angka < 20) {
-            return self::hitungTerbilang($angka - 10, $baca) . ' belas';
+            return self::hitungTerbilang($angka - 10, $baca).' belas';
         }
         if ($angka < 100) {
-            return self::hitungTerbilang((int) ($angka / 10), $baca) . ' puluh' . ($angka % 10 !== 0 ? ' ' . self::hitungTerbilang($angka % 10, $baca) : '');
+            return self::hitungTerbilang((int) ($angka / 10), $baca).' puluh'.($angka % 10 !== 0 ? ' '.self::hitungTerbilang($angka % 10, $baca) : '');
         }
         if ($angka < 200) {
-            return 'seratus' . ($angka - 100 !== 0 ? ' ' . self::hitungTerbilang($angka - 100, $baca) : '');
+            return 'seratus'.($angka - 100 !== 0 ? ' '.self::hitungTerbilang($angka - 100, $baca) : '');
         }
         if ($angka < 1000) {
-            return self::hitungTerbilang((int) ($angka / 100), $baca) . ' ratus' . ($angka % 100 !== 0 ? ' ' . self::hitungTerbilang($angka % 100, $baca) : '');
+            return self::hitungTerbilang((int) ($angka / 100), $baca).' ratus'.($angka % 100 !== 0 ? ' '.self::hitungTerbilang($angka % 100, $baca) : '');
         }
         if ($angka < 2000) {
-            return 'seribu' . ($angka - 1000 !== 0 ? ' ' . self::hitungTerbilang($angka - 1000, $baca) : '');
+            return 'seribu'.($angka - 1000 !== 0 ? ' '.self::hitungTerbilang($angka - 1000, $baca) : '');
         }
         if ($angka < 1000000) {
-            return self::hitungTerbilang((int) ($angka / 1000), $baca) . ' ribu' . ($angka % 1000 !== 0 ? ' ' . self::hitungTerbilang($angka % 1000, $baca) : '');
+            return self::hitungTerbilang((int) ($angka / 1000), $baca).' ribu'.($angka % 1000 !== 0 ? ' '.self::hitungTerbilang($angka % 1000, $baca) : '');
         }
         if ($angka < 1000000000) {
-            return self::hitungTerbilang((int) ($angka / 1000000), $baca) . ' juta' . ($angka % 1000000 !== 0 ? ' ' . self::hitungTerbilang($angka % 1000000, $baca) : '');
+            return self::hitungTerbilang((int) ($angka / 1000000), $baca).' juta'.($angka % 1000000 !== 0 ? ' '.self::hitungTerbilang($angka % 1000000, $baca) : '');
         }
         if ($angka < 1000000000000) {
-            return self::hitungTerbilang((int) ($angka / 1000000000), $baca) . ' milyar' . ($angka % 1000000000 !== 0 ? ' ' . self::hitungTerbilang($angka % 1000000000, $baca) : '');
+            return self::hitungTerbilang((int) ($angka / 1000000000), $baca).' milyar'.($angka % 1000000000 !== 0 ? ' '.self::hitungTerbilang($angka % 1000000000, $baca) : '');
         }
 
-        return self::hitungTerbilang((int) ($angka / 1000000000000), $baca) . ' triliun' . ($angka % 1000000000000 !== 0 ? ' ' . self::hitungTerbilang($angka % 1000000000000, $baca) : '');
+        return self::hitungTerbilang((int) ($angka / 1000000000000), $baca).' triliun'.($angka % 1000000000000 !== 0 ? ' '.self::hitungTerbilang($angka % 1000000000000, $baca) : '');
     }
 }

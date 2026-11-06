@@ -42,8 +42,8 @@ Sistem ini **HANYA** untuk pengelolaan **SPK, uang masuk, uang keluar**, dan kon
 
    > **Bukti dari data perusahaan:** seluruh SPK yang sudah berstatus `Dibayar`
    > diterima **100%** dari nilai SPK — tidak ada satu pun yang ditahan 5%.
-   > Contoh: `0094.SPK/DAN.01.03/PLNBATAM020400/2026` nilai Rp 461.700.000
-   > diterima Rp 461.700.000 (100%).
+   > (Nomor SPK & nominal nyata sengaja **tidak ditulis di repo**; rujukannya ada
+   > di `~/data-perusahaan-bks/`.)
 
    **Konsekuensinya (WAJIB dipatuhi saat coding):**
 
@@ -158,12 +158,18 @@ Sistem hanya memiliki **2 role**:
 
 | Role | Boleh | Tidak Boleh |
 |---|---|---|
-| **Admin** | CRUD SPK, input uang masuk & keluar, upload bukti, kelola Mitra | Kelola Pengguna (hanya Direktur) |
-| **Direktur** | Monitoring dashboard, lihat semua data, ekspor laporan, **kelola Pengguna** (tambah/ubah/hapus akun, kecuali akun sendiri) | CRUD transaksi & SPK (input data) |
+| **Admin** | CRUD SPK, input uang masuk & keluar, upload bukti, kelola Mitra, ekspor laporan | Kelola Pengguna (hanya Direktur) |
+| **Direktur** | **Full akses**: seluruh CRUD SPK & transaksi, laporan & ekspor, backup/impor, **kelola Pengguna** (tambah/ubah/hapus akun, kecuali akun sendiri) | — (tidak ada pembatasan menu) |
+
+> 📌 **Pembaruan 4 November 2026 — Direktur = full akses (super admin).**
+> Sebelumnya Direktur hanya memantau. Sekarang Direktur boleh menginput,
+> mengubah, dan menghapus data seperti Admin; satu-satunya tambahan khusus
+> Direktur adalah menu **Manajemen Akun**. Di kode: rute `peran:admin,direktur`
+> + gate `Pengguna::bolehInput()`; 403 dari `PastikanPeran` untuk peran lain.
 
 > 📌 Catatan (10 Okt 2026): dokumen lama menulis Admin boleh *"manajemen user
 > (jika diberi kewenangan)"*. Kenyataannya kode menetapkan **hanya Direktur**
-> yang boleh mengelola Pengguna (`PenggunaResource::canViewAny()` = Direktur).
+> yang boleh mengelola Pengguna.
 > Direktur juga **tidak boleh** menonaktifkan/menghapus **akunnya sendiri**
 > (pengaman sistem terkunci).
 
@@ -250,9 +256,12 @@ Sistem hanya memiliki **2 role**:
     (password diminta tersembunyi, minimal 8 karakter huruf+angka).
     Seeder demo memakai password dari `BKS_SEEDER_PASSWORD` bila di-set,
     selain itu password acak — **tidak pernah** `password` literal.
-11. **Notifikasi ekspor memerlukan queue worker.** `Filament\Notifications\DatabaseNotification`
-    meng-`implements ShouldQueue`; jalankan `php artisan queue:work` di produksi
-    (`QUEUE_CONNECTION=database`). Status worker terlihat di halaman **Status Sistem**.
+11. **Notifikasi operasional dihitung on-the-fly, bukan dari tabel antrean.**
+    Lonceng header memakai query langsung (SPK lewat/mendekati tenggat,
+    SPK selesai belum ditagihkan) — tidak butuh queue worker.
+    Ekspor diunduh langsung (tanpa notifikasi). Tabel `notifications`
+    (bawaan Laravel) hanya perlu worker bila fitur notifikasi antrean
+    diaktifkan kembali di masa depan (`php artisan queue:work`).
 
 ## 10. Log Aktivitas — ❌ DIHAPUS
 

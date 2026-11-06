@@ -50,7 +50,7 @@ enum StatusTagihan: string
     }
 
     /**
-     * Warna badge Filament.
+     * Warna badge panel.
      *
      * Ditaruh di Enum supaya konsisten di seluruh halaman - lihat catatan
      * di StatusSpk::warnaBadge().

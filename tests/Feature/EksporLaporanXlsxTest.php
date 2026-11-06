@@ -90,8 +90,8 @@ class EksporLaporanXlsxTest extends TestCase
 
             foreach ($reader->getSheetIterator() as $sheet) {
                 foreach ($sheet->getRowIterator() as $row) {
-                    foreach ($row->getCells() as $cell) {
-                        $teks[] = (string) $cell->getValue();
+                    foreach ($row->toArray() as $nilai) {
+                        $teks[] = (string) $nilai;
                     }
                 }
             }
@@ -123,9 +123,9 @@ class EksporLaporanXlsxTest extends TestCase
 
             foreach ($reader->getSheetIterator() as $sheet) {
                 foreach ($sheet->getRowIterator() as $row) {
-                    foreach ($row->getCells() as $cell) {
-                        if (is_int($cell->getValue()) || is_float($cell->getValue())) {
-                            $nilaiNumerik[] = $cell->getValue();
+                    foreach ($row->toArray() as $nilai) {
+                        if (is_int($nilai) || is_float($nilai)) {
+                            $nilaiNumerik[] = $nilai;
                         }
                     }
                 }
@@ -179,8 +179,8 @@ class EksporLaporanXlsxTest extends TestCase
 
             foreach ($reader->getSheetIterator() as $sheet) {
                 foreach ($sheet->getRowIterator() as $row) {
-                    foreach ($row->getCells() as $cell) {
-                        if ((string) $cell->getValue() === 'TOTAL') {
+                    foreach ($row->toArray() as $nilai) {
+                        if ((string) $nilai === 'TOTAL') {
                             $adaLabelTotal = true;
                         }
                     }

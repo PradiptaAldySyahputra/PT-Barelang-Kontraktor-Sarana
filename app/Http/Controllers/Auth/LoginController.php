@@ -14,11 +14,10 @@ use Illuminate\View\View;
 /**
  * Login & logout untuk panel Blade (/panel/login).
  *
- * ⚠️ Login Filament di /admin/login TETAP ADA selama masa transisi. Keduanya
- * memakai guard `web` dan tabel `pengguna` yang sama, jadi sesi yang dibuat
- * di satu antarmuka langsung berlaku di antarmuka lain.
+ * Satu-satunya pintu masuk: rute lama `/admin/login` hanya **redirect** ke
+ * `/panel/login`. Guard `web` + tabel `pengguna` yang sama untuk kedua peran.
  *
- * Pengamanan yang disalin dari panel lama:
+ * Pengamanan:
  *   - akun nonaktif (is_aktif = false) ditolak walau kata sandi benar,
  *   - pembatasan percobaan (5 kali / menit per email+IP),
  *   - sesi diperbarui setelah login (cegah session fixation).

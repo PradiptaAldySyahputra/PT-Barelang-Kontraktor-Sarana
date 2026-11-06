@@ -24,10 +24,10 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Dipasang GLOBAL (web) - murah, tidak mengubah perilaku aplikasi.
  *
- * CATATAN: Content-Security-Policy TIDAK dipasang. Filament + Livewire +
- * Alpine memakai inline script/style yang banyak; CSP yang salah akan
- * membuat panel admin rusak total. Butuh pengujian menyeluruh, jadi
- * sengaja ditunda - jangan dipasang tanpa uji browser.
+ * CATATAN: Content-Security-Policy TIDAK dipasang. Livewire + Alpine
+ * memakai inline script/style (nilai awal komponen, `x-data`), dan ApexCharts
+ * menyuntik style inline; CSP ketat akan membuat panel rusak total. Butuh
+ * pengujian menyeluruh, jadi sengaja ditunda - jangan dipasang tanpa uji browser.
  */
 class HeaderKeamanan
 {

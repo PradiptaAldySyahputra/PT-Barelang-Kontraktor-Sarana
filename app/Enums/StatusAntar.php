@@ -39,7 +39,7 @@ enum StatusAntar: string
     }
 
     /**
-     * Warna badge Filament.
+     * Warna badge panel.
      *
      * Ditaruh di Enum (bukan di tiap tabel) supaya warna KONSISTEN di seluruh
      * halaman - pola yang sama dengan StatusSpk::warnaBadge().

@@ -2,7 +2,7 @@
 
 > Dibaca otomatis oleh agent yang bekerja di folder ini. **Bahasa: Indonesia.**
 > Jangkar konteks: baca ini dulu sebelum bertanya atau menebak.
-> Terakhir diperbarui: 2 Oktober 2026.
+> Terakhir diperbarui: 6 November 2026.
 
 ## 1. Identitas Proyek
 
@@ -13,8 +13,8 @@
 | Sifat | Sistem internal — **tugas magang** Pradipta Aldy Syahputra |
 | Stack | Laravel 13 · Blade + Livewire 4 (`/panel`, TailAdmin) · Tailwind CSS v4 · MySQL/MariaDB · PHP 8.5 |
 | Skema | **5 tabel domain**: `mitra`, `spk`, `uang_masuk`, `uang_keluar`, `pengguna` |
-| Role | **2**: Admin (input) · Direktur (monitor) |
-| Deploy | **Lokal intranet** — PC Direktur = server (Windows, Laragon/XAMPP) |
+| Role | **2**: Admin (input) · Direktur (**full akses**: input/ubah/hapus + kelola Pengguna). Filament sudah dicabut total. |
+| Deploy | **Dedicated Server Intranet 24 Jam (`bks-server`)** — Ubuntu Server 26.04 LTS (i3-10105, RAM 8GB, SSD 256GB OS + HDD 1TB Data di `/data`), LAN kantor `192.168.100.10:8232`, remote admin via Tailscale (`bks-server` / `100.111.175.26`), containerized Docker/Portainer/Beszel |
 | Repo | github.com/PradiptaAldySyahputra/PT-Barelang-Kontraktor-Sarana (private) |
 
 ## 2. Aturan Keras (jangan dilanggar)
@@ -36,6 +36,7 @@
 - `docs/Schema.md` — struktur database
 - `docs/Design.md` — UI/UX
 - `docs/MANUAL-BOOK.md` — panduan Admin & Direktur
+- `docs/PANDUAN-UAT.md` — lembar skenario uji coba & validasi user kantor
 - `docs/arsip-migrasi-lama/` — dokumen historis analisis & panduan Filament lama (arsip)
 
 ## 4. Keputusan Bisnis FINAL
@@ -62,42 +63,44 @@
 ## 5. Peta Menu & Alur
 
 ```
-Dashboard (-10)
-SPK         : List SPK (1) → Status SPK (2) → Tagihan SPK (3) → Tagihan Selesai SPK (4)
-Keuangan    : Uang Masuk (11) → Uang Keluar (12)
-Master Data : Mitra (21) → Pengguna (22)
-Laporan     (31)
+Dashboard              /panel
+SPK         : List SPK → Kalender Tenggat → Status SPK → Tagihan SPK → Tagihan Selesai SPK
+Keuangan    : Uang Masuk → Uang Keluar
+Nota & Bukti: Unggah & Ekstraksi Nota → Arsip Nota
+Laporan     : /panel/reports
+Master Data : Mitra → (Manajemen Akun — khusus Direktur)
+Sistem      : Status Sistem → Backup Database → Impor Data
 ```
 
 - Siklus status SPK: `Draft → Terbit → Berjalan → Selesai → Sudah Ditagihkan` (⇢ `Dibatalkan`)
 - Siklus status tagihan: `Belum Ditagihkan → Sudah Ditagihkan → Revisi Dokumen → Menunggu Pembayaran → Dibayar`
 - Status tagihan sinkron otomatis (`SinkronStatusTagihanObserver`)
-- Aksi khusus SPK: `UbahStatusSpk`, `UbahStatusTagihan` (form terpisah)
+- Aksi khusus SPK: ubah status & ubah tagihan (form terpisah, `?asal=` untuk breadcrumb kembali)
 
 ## 6. Cara Menjalankan & Menguji
 
 ```bash
 cd "/home/pradipta/Project/PT Barelang Kontraktor Sarana"
 php artisan test
-php artisan serve        # http://127.0.0.1:8000/admin
+php artisan serve        # http://127.0.0.1:8000/panel/login
+npm run build            # aset Tailwind v4 (wajib setelah ubah view/CSS)
 ./vendor/bin/pint
+php artisan queue:work   # worker OCR; di mesin ini sudah jalan via systemd --user (bks-queue)
 ```
 
-Akun: `admin@bks.test` / password · `direktur@bks.test` / password
+Akun: `admin@bks.test` dan `direktur@bks.test` — kata sandi dibuat saat seeding/`php artisan app:buat-admin` (tidak ditulis di dokumen)
 
 ## 7. Status Pekerjaan
 
 Selesai:
-- C2 Detail SPK (`ViewSpk` + 2 RelationManager, 10 tes)
-- 5 poin 26 Sep (dokumen SPK, status antar, ekspor Excel/PDF, laporan piutang)
-- Celah PRD/Rules 29 Sep, Kas/Bank B2 & B3
-- `tests/Unit/` terisi
+- Migrasi penuh Filament → **Blade + Livewire 4 (TailAdmin)**; seluruh paket Filament dihapus (`composer update` 4 Nov 2026)
+- Direktur = full akses (route `peran:admin,direktur`, gate `bolehInput()`)
+- Ekspor XLSX/CSV/PDF + bundel ZIP, BAST & kuitansi PDF, arsip nota, backup, impor, status sistem
+- Audit keamanan + perbaikan bug (Bast PDF slug, validasi nilai SPK vs pembayaran, upload nota, responsive 375px, dark mode)
 
-Belum/menunggu:
-- **B1 Saldo berjalan Kas & Bank** (butuh keputusan)
-- B4 Ekspor Excel format perusahaan (terikat B1)
-- C1 Navigasi/UI lebih tegas
-- C3 Menu baru (butuh daftar)
+Belum/menunggu keputusan:
+- Antrean OCR **aktif**: `.env` = `QUEUE_CONNECTION=database`, worker `bks-queue.service` wajib hidup (systemd; `docs/Architecture.md` §12.6a). Worker mati = halaman Unggah Nota berhenti di status menunggu.
+- `docs/STATUS-PENGERJAAN.md` bagian historis (§0x–§4) masih menyebut Filament — arsip, bukan kondisi terkini
 
 ## 8. Jebakan (jangan ulangi)
 

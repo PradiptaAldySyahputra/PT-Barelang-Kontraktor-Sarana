@@ -18,10 +18,15 @@ final class PanelSemuaHalamanTest extends TestCase
     use RefreshDatabase;
 
     private Pengguna $admin;
+
     private Pengguna $direktur;
+
     private Spk $spk;
+
     private UangMasuk $uangMasuk;
+
     private UangKeluar $uangKeluar;
+
     private Mitra $mitra;
 
     protected function setUp(): void
@@ -71,24 +76,24 @@ final class PanelSemuaHalamanTest extends TestCase
             '/panel/spk',
             '/panel/spk/calendar',
             '/panel/spk/create',
-            '/panel/spk/' . $this->spk->id,
-            '/panel/spk/' . $this->spk->id . '/edit',
-            '/panel/spk/' . $this->spk->id . '/status',
-            '/panel/spk/' . $this->spk->id . '/billing',
+            '/panel/spk/'.$this->spk->id,
+            '/panel/spk/'.$this->spk->id.'/edit',
+            '/panel/spk/'.$this->spk->id.'/status',
+            '/panel/spk/'.$this->spk->id.'/billing',
             '/panel/spk/monitoring/status',
             '/panel/spk/monitoring/billing',
             '/panel/spk/monitoring/completed',
             '/panel/cash-in',
             '/panel/cash-in/create',
-            '/panel/cash-in/' . $this->uangMasuk->id . '/edit',
+            '/panel/cash-in/'.$this->uangMasuk->id.'/edit',
             '/panel/cash-out',
             '/panel/cash-out/create',
-            '/panel/cash-out/' . $this->uangKeluar->id . '/edit',
+            '/panel/cash-out/'.$this->uangKeluar->id.'/edit',
             '/panel/receipts',
             '/panel/reports',
             '/panel/partners',
             '/panel/partners/create',
-            '/panel/partners/' . $this->mitra->id . '/edit',
+            '/panel/partners/'.$this->mitra->id.'/edit',
             '/panel/status',
             '/panel/backup',
             '/panel/import',
@@ -119,7 +124,7 @@ final class PanelSemuaHalamanTest extends TestCase
             '/panel',
             '/panel/spk',
             '/panel/spk/calendar',
-            '/panel/spk/' . $this->spk->id,
+            '/panel/spk/'.$this->spk->id,
             '/panel/spk/monitoring/status',
             '/panel/spk/monitoring/billing',
             '/panel/spk/monitoring/completed',
@@ -130,7 +135,7 @@ final class PanelSemuaHalamanTest extends TestCase
             '/panel/partners',
             '/panel/users',
             '/panel/users/create',
-            '/panel/users/' . $this->admin->id . '/edit',
+            '/panel/users/'.$this->admin->id.'/edit',
             '/panel/status',
             '/panel/backup',
             '/panel/import',

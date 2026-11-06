@@ -25,19 +25,20 @@ Schedule::command('bks:backup --hari=30')
     ->description('Backup database harian');
 
 /*
-| Bersihkan potongan nota hasil OCR yang sudah tidak dipakai.
+| Bersihkan nota yang tidak pernah tersimpan + potongan OCR-nya.
 |
-| Setiap OCR menyimpan gambar potongan per nota. Tanpa pembersihan, folder
-| `storage/app/public/uang_keluar/potongan` menumpuk (terbukti 177 MB di mesin
-| pengembangan) dan lama-lama menghabiskan disk server kantor.
+| Setiap unggahan menyimpan berkas ke disk SEBELUM admin menekan Simpan
+| (worker OCR butuh berkasnya). Kalau admin batal/menutup tab, berkas itu
+| yatim. Tanpa pembersihan, folder `storage/app/nota` menumpuk (terbukti
+| 1,3 GB di mesin pengembangan) dan lama-lama menghabiskan disk server.
 |
-| Dijalankan tiap Minggu dini hari - saat tidak ada admin yang bekerja.
+| Masa tenggang 24 jam: unggahan yang sedang diisi tidak ikut terhapus.
 */
-Schedule::command('ocr:bersihkan')
-    ->weeklyOn(0, '02:00')
+Schedule::command('ocr:bersihkan --umur=24')
+    ->dailyAt('02:00')
     ->withoutOverlapping()
     ->onOneServer()
-    ->description('Bersihkan potongan OCR yang menumpuk');
+    ->description('Bersihkan nota yatim & potongan OCR yang menumpuk');
 
 // Rekapitulasi otomatis harian mutasi kas dan SPK kritis (dijalankan tiap pukul 17:30 WIB selesai jam kerja)
 Schedule::command('bks:rekap-harian')

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\Peran;
+use App\Models\Pengguna;
 use App\Models\UangKeluar;
 use App\Support\ArsipNota;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -122,6 +124,9 @@ class ArsipNotaTest extends TestCase
         $this->assertNotNull($zipPath);
         $this->assertFileExists($zipPath);
 
+        // Tidak boleh ada berkas kosong sisa tempnam() di sebelah ZIP.
+        $this->assertFileDoesNotExist(substr($zipPath, 0, -4), 'Berkas dasar tempnam() harus dihapus.');
+
         $zip = new \ZipArchive;
         $zip->open($zipPath);
         $this->assertSame(2, $zip->numFiles);
@@ -213,5 +218,60 @@ class ArsipNotaTest extends TestCase
         $this->assertTrue(ArsipNota::gambar('x.webp'));
         $this->assertFalse(ArsipNota::gambar('x.pdf'));
         $this->assertFalse(ArsipNota::gambar('x.bin'));
+    }
+
+    public function test_hitung_ukuran_hanya_menghitung_berkas_yang_ada(): void
+    {
+        Storage::fake('nota');
+        $this->siapkanNota('uang_keluar/ada.pdf', '12345');
+
+        UangKeluar::factory()->create(['tanggal' => '2026-08-01', 'bukti' => ['uang_keluar/ada.pdf']]);
+        UangKeluar::factory()->create(['tanggal' => '2026-08-02', 'bukti' => ['uang_keluar/hilang.pdf']]);
+
+        $ukuran = ArsipNota::hitungUkuran(ArsipNota::cari());
+
+        $this->assertSame(1, $ukuran['berkas']);
+        $this->assertSame(5, $ukuran['byte']);
+    }
+
+    public function test_unduh_zip_ditolak_bila_melebihi_batas(): void
+    {
+        Storage::fake('nota');
+        config(['filesystems.arsip_zip_maks_berkas' => 1]);
+
+        $this->siapkanNota('uang_keluar/a.pdf', 'A');
+        $this->siapkanNota('uang_keluar/b.pdf', 'B');
+        UangKeluar::factory()->create(['tanggal' => '2026-08-01', 'bukti' => ['uang_keluar/a.pdf']]);
+        UangKeluar::factory()->create(['tanggal' => '2026-08-02', 'bukti' => ['uang_keluar/b.pdf']]);
+
+        $admin = Pengguna::factory()->create(['peran' => Peran::Admin]);
+        $sebelum = glob(sys_get_temp_dir().'/arsip-nota*.zip') ?: [];
+
+        $this->actingAs($admin)
+            ->get('/panel/arsip-nota/zip')
+            ->assertRedirect()
+            ->assertSessionHas('gagal', fn (string $pesan) => str_contains($pesan, 'terlalu besar'));
+
+        // Ditolak sebelum ZIP dibangun → tidak ada berkas temp baru.
+        $baru = array_values(array_diff(glob(sys_get_temp_dir().'/arsip-nota*.zip') ?: [], $sebelum));
+        $this->assertSame([], $baru, 'ZIP tidak boleh dibuat untuk arsip di atas batas.');
+    }
+
+    public function test_unduh_zip_di_bawah_batas_tetap_jalan(): void
+    {
+        Storage::fake('nota');
+        $this->siapkanNota('uang_keluar/a.pdf', 'A');
+        UangKeluar::factory()->create(['tanggal' => '2026-08-01', 'bukti' => ['uang_keluar/a.pdf']]);
+
+        $admin = Pengguna::factory()->create(['peran' => Peran::Admin]);
+        $sebelum = glob(sys_get_temp_dir().'/arsip-nota*.zip') ?: [];
+
+        $this->actingAs($admin)->get('/panel/arsip-nota/zip')->assertOk();
+
+        // Response download di lingkungan tes tidak "mengirim" berkas, jadi
+        // deleteFileAfterSend() belum jalan — bersihkan sendiri.
+        foreach (array_diff(glob(sys_get_temp_dir().'/arsip-nota*.zip') ?: [], $sebelum) as $sisa) {
+            @unlink($sisa);
+        }
     }
 }

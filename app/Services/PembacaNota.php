@@ -15,7 +15,7 @@ use Throwable;
  * Pembaca nota - pembungkus skrip Python `python/ocr_nota.py`.
  *
  * KENAPA DIPISAH KE SERVICE
- * Memanggil proses Python langsung dari komponen Filament akan membuat kode
+ * Memanggil proses Python langsung dari komponen Livewire akan membuat kode
  * form sulit diuji dan rawan crash. Service ini jadi satu-satunya tempat yang
  * tahu cara memanggil OCR, sehingga:
  *   - form cukup memanggil `baca()` dan menerima hasil yang sudah rapi;

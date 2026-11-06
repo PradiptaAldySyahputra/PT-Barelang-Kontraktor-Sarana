@@ -44,7 +44,7 @@ Sistem ini **hanya memiliki 2 role**:
 | Role | Deskripsi | Fokus Aktivitas |
 |---|---|---|
 | **Admin** | Pengguna operasional yang memasukkan dan mengelola data | Input SPK, uang masuk, uang keluar, upload bukti, kelola master data |
-| **Direktur** | Pemantau kondisi keuangan | Monitoring dashboard, lihat laporan, ekspor laporan |
+| **Direktur** | **Super admin** — pengawas sekaligus boleh menginput | Seluruh aktivitas Admin (SPK, transaksi, master data, ekspor) + kelola akun pengguna |
 
 ### Matriks Hak Akses
 

@@ -36,15 +36,11 @@ final class PembacaImpor
 
         foreach ($reader->getSheetIterator() as $sheet) {
             foreach ($sheet->getRowIterator() as $row) {
-                $sel = [];
-
-                foreach ($row->getCells() as $cell) {
-                    $val = $cell->getValue();
-                    if ($val instanceof \DateTimeInterface) {
-                        $val = $val->format('Y-m-d');
-                    }
-                    $sel[] = $val;
-                }
+                // OpenSpout v5 menghapus Row::getCells(); toArray() mengembalikan nilai sel langsung.
+                $sel = array_map(
+                    static fn ($val) => $val instanceof \DateTimeInterface ? $val->format('Y-m-d') : $val,
+                    array_values($row->toArray()),
+                );
 
                 if ($header === null) {
                     $kandidatHeader = array_map(
@@ -77,7 +73,7 @@ final class PembacaImpor
                 }
 
                 // Jika kolom 'jumlah' belum ada tapi ada 'masuk' atau 'keluar', petakan ke 'jumlah'
-                if (!isset($baris['jumlah'])) {
+                if (! isset($baris['jumlah'])) {
                     if (isset($baris['masuk']) && $baris['masuk'] !== null && $baris['masuk'] !== '') {
                         $baris['jumlah'] = $baris['masuk'];
                     } elseif (isset($baris['keluar']) && $baris['keluar'] !== null && $baris['keluar'] !== '') {

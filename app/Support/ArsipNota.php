@@ -175,6 +175,39 @@ final class ArsipNota
     }
 
     /**
+     * Hitung berkas & ukuran total arsip yang benar-benar ada di disk.
+     *
+     * Dipakai untuk menolak unduhan ZIP raksasa sebelum ZIP dibangun —
+     * lebih murah daripada membuat 151 MB lalu membuangnya.
+     *
+     * @param  Collection<int, array<string, mixed>>  $arsip
+     * @return array{berkas: int, byte: int}
+     */
+    public static function hitungUkuran(Collection $arsip): array
+    {
+        $disk = Storage::disk('nota');
+        $berkas = 0;
+        $byte = 0;
+
+        foreach ($arsip as $b) {
+            if (! ($b['ada'] ?? false)) {
+                continue;
+            }
+
+            try {
+                if ($disk->exists($b['path'])) {
+                    $berkas++;
+                    $byte += $disk->size($b['path']);
+                }
+            } catch (\Throwable) {
+                // Berkas hilang di tengah jalan: lewati, jangan gagalkan hitungan.
+            }
+        }
+
+        return ['berkas' => $berkas, 'byte' => $byte];
+    }
+
+    /**
      * Buat berkas ZIP dari daftar arsip (untuk "Unduh semua").
      *
      * ⚠️ KENAPA `addFile` (BUKAN `addFromString`) - perbaikan BUG-3:
@@ -194,7 +227,17 @@ final class ArsipNota
             return null;
         }
 
-        $zipPath = tempnam(sys_get_temp_dir(), 'arsip-nota').'.zip';
+        // tempnam() membuat berkas kosong TANPA ekstensi. Nama itu dipakai
+        // sebagai dasar, lalu berkas kosongnya dihapus - kalau tidak, tiap
+        // unduhan meninggalkan sampah /tmp/arsip-notaXXXX (0 byte).
+        $dasar = tempnam(sys_get_temp_dir(), 'arsip-nota');
+
+        if ($dasar === false) {
+            return null;
+        }
+
+        $zipPath = $dasar.'.zip';
+        @unlink($dasar);
 
         $zip = new \ZipArchive;
 

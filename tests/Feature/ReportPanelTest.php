@@ -12,6 +12,7 @@ use App\Models\Pengguna;
 use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
+use App\Support\LaporanData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -91,8 +92,8 @@ class ReportPanelTest extends TestCase
         // Diuji pada sumber angkanya langsung: pada periode 1 bulan transaksi
         // 6 bulan lalu tidak boleh ikut, pada 12 bulan harus ikut. (Tidak
         // memakai HTML karena angka yang sama wajar muncul sebagai saldo awal.)
-        $this->assertSame(0.0, \App\Support\LaporanData::ringkasan(\App\Support\LaporanData::tanggalAwal(1))['totalMasuk']);
-        $this->assertSame(7_000_000.0, \App\Support\LaporanData::ringkasan(\App\Support\LaporanData::tanggalAwal(12))['totalMasuk']);
+        $this->assertSame(0.0, LaporanData::ringkasan(LaporanData::tanggalAwal(1))['totalMasuk']);
+        $this->assertSame(7_000_000.0, LaporanData::ringkasan(LaporanData::tanggalAwal(12))['totalMasuk']);
     }
 
     public function test_ekspor_memakai_rute_yang_sama_dan_menghormati_periode(): void

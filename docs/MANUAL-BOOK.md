@@ -29,11 +29,12 @@
 
 | Peran | Email | Password awal |
 |:------|:------|:--------------|
-| **Admin** | `admin@bks.test` | `password` |
-| **Direktur** | `direktur@bks.test` | `password` |
+| **Admin** | `admin@bks.test` | dibuat saat seeding (`php artisan db:seed`) |
+| **Direktur** | `direktur@bks.test` | dibuat saat seeding (`php artisan db:seed`) |
 
-> 🔴 **WAJIB diganti sebelum dipakai sungguhan.** Password `password` hanya
-> untuk uji coba. Ganti lewat menu **Master Data → Pengguna**.
+> 🔴 **WAJIB diganti sebelum dipakai sungguhan.** Kata sandi awal hanya untuk uji
+> coba (dibuat acak oleh seeder — tidak ditulis di dokumen). Ganti lewat menu
+> **Master Data → Manajemen Akun**.
 
 ### 1.3 Apa bedanya Admin dan Direktur
 

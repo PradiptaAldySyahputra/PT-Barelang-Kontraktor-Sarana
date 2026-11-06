@@ -94,4 +94,24 @@ class AuditPascaMigrasiTest extends TestCase
         $this->assertFalse(Spk::query()->lewatTenggat()->whereKey($spk->id)->exists());
         $this->assertTrue($spk->sudahSelesai());
     }
+
+    public function test_bast_pdf_dengan_nomor_spk_bergaris_miring_berhasil_diunduh(): void
+    {
+        $spk = Spk::factory()->create([
+            'nomor_spk' => '0000.SPK/UJI.00.00/UJIBATAM000000/2026',
+        ]);
+
+        $this->actingAs($this->masuk())
+            ->get(route('panel.spk.bast', $spk))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_halaman_status_sistem_tidak_menampilkan_tombol_kembali(): void
+    {
+        $this->actingAs($this->masuk())
+            ->get(route('panel.status'))
+            ->assertOk()
+            ->assertDontSee('Kembali ke halaman sebelumnya', false);
+    }
 }

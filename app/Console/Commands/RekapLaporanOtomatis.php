@@ -30,10 +30,11 @@ class RekapLaporanOtomatis extends Command
         $saldo = SaldoKas::ringkasan();
 
         $spkKritis = Spk::query()
-            ->with('mitra')
-            ->where('tanggal_akhir', '<=', now()->addDays(7))
-            ->where('status_tagihan', '!=', 'dibayar')
-            ->count();
+            ->lewatTenggat()
+            ->count()
+            + Spk::query()
+                ->mendekatiTenggat(7)
+                ->count();
 
         $teksRingkasan = sprintf(
             "=== REKAP HARIAN PT BARELANG KONTRAKTOR SARANA [%s] ===\n".

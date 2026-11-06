@@ -15,7 +15,7 @@ final class SpkCalendarController
     {
         $bulanParam = $request->query('bulan');
         // Gunakan '-01' untuk mencegah overflow hari pada bulan yang memiliki < 31 hari
-        $tanggalAktif = $bulanParam ? Carbon::parse($bulanParam . '-01')->startOfMonth() : now()->startOfMonth();
+        $tanggalAktif = $bulanParam ? Carbon::parse($bulanParam.'-01')->startOfMonth() : now()->startOfMonth();
 
         $awalBulan = $tanggalAktif->copy()->startOfMonth();
         $akhirBulan = $tanggalAktif->copy()->endOfMonth();

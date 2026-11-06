@@ -178,7 +178,7 @@ final class CashInController
     private function validasi(Request $request, ?UangMasuk $record): array
     {
         $request->merge([
-            'jumlah' => \App\Support\Format::bersihkanUang($request->input('jumlah')),
+            'jumlah' => Format::bersihkanUang($request->input('jumlah')),
         ]);
 
         $data = $request->validate([

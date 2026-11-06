@@ -42,7 +42,7 @@ class RestoreDatabase extends Command
         $path = StatusBackup::pathAman((string) $nama);
 
         if ($path === null || ! is_file($path)) {
-            $this->error('Berkas backup tidak ditemukan atau path tidak sah: ' . $nama);
+            $this->error('Berkas backup tidak ditemukan atau path tidak sah: '.$nama);
 
             return self::FAILURE;
         }
@@ -53,7 +53,7 @@ class RestoreDatabase extends Command
             return self::SUCCESS;
         }
 
-        $this->info('Mempersiapkan pemulihan dari: ' . basename($path));
+        $this->info('Mempersiapkan pemulihan dari: '.basename($path));
 
         // Ekstrak file .sql bila file adalah .zip
         $sqlPath = $path;
@@ -99,9 +99,9 @@ class RestoreDatabase extends Command
 
         $perintah = [
             'mysql',
-            '--host=' . config('database.connections.mysql.host'),
-            '--port=' . config('database.connections.mysql.port'),
-            '--user=' . config('database.connections.mysql.username'),
+            '--host='.config('database.connections.mysql.host'),
+            '--port='.config('database.connections.mysql.port'),
+            '--user='.config('database.connections.mysql.username'),
             config('database.connections.mysql.database'),
         ];
 
@@ -121,12 +121,12 @@ class RestoreDatabase extends Command
         }
 
         if (! $hasil->successful()) {
-            $this->error('Restore GAGAL: ' . trim($hasil->errorOutput()));
+            $this->error('Restore GAGAL: '.trim($hasil->errorOutput()));
 
             return self::FAILURE;
         }
 
-        $this->info('Restore BERHASIL: Database telah dipulihkan dari ' . basename($path));
+        $this->info('Restore BERHASIL: Database telah dipulihkan dari '.basename($path));
 
         return self::SUCCESS;
     }

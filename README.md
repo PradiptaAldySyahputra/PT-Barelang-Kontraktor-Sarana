@@ -2,9 +2,11 @@
 
 Aplikasi web internal **PT Barelang Kontraktor Sarana** (Batam) untuk mencatat
 SPK, uang masuk, dan uang keluar, serta memantau piutang per SPK. Dua peran:
-**Admin** (input) dan **Direktur** (monitor). Berjalan lokal di jaringan kantor.
+**Admin** (input) dan **Direktur** (full akses + kelola akun). Berjalan lokal di
+jaringan kantor.
 
-Stack: Laravel 13 · Filament 5 · MySQL/MariaDB · PHP 8.5.
+Stack: Laravel 13 · Blade + Livewire 4 (TailAdmin) · Tailwind CSS v4 ·
+MySQL/MariaDB · PHP 8.5.
 
 ---
 
@@ -17,11 +19,17 @@ php artisan key:generate
 
 # Sesuaikan DB_* di .env (database: bks), lalu:
 php artisan migrate --seed
-php artisan serve            # http://127.0.0.1:8000/admin
+npm install && npm run build   # aset Tailwind v4
+php artisan serve              # http://127.0.0.1:8000/panel/login
+php artisan queue:work         # WAJIB di terminal kedua: worker OCR nota (QUEUE_CONNECTION=database)
 ```
 
-Akun awal: `admin@bks.test` / `password` · `direktur@bks.test` / `password`
-(**ganti sebelum dipakai kerja**).
+> Tanpa `queue:work`, unggahan nota berhenti di status "OCR berjalan di latar belakang".
+> Di server, jalankan sebagai service systemd — lihat `docs/Architecture.md` §12.6a.
+
+Akun demo (dari seeder): `admin@bks.test` & `direktur@bks.test` — password **acak**
+dan dicetak di terminal (atau dari `SEEDER_PASSWORD` bila di-set). Akun produksi
+dibuat dengan `php artisan app:buat-admin`.
 
 ```bash
 php artisan test             # seluruh suite
@@ -55,15 +63,20 @@ Semua dokumen ada di `docs/`. Baca sesuai kebutuhan.
 app/
   Enums/            Status & kategori (pengganti tabel master)
   Models/           5 model Eloquent
-  Filament/         Panel admin: Resources, Pages, Widgets, Exports
-  Services/         OCR nota, penyimpanan berkas
-  Support/          Format rupiah, helper nota
+  Http/             Controller + middleware (peran, header keamanan)
+  Livewire/         Komponen tabel & form (SPK, uang masuk/keluar, mitra, pengguna, nota)
+  Services/         Ekspor laporan, OCR nota, penyimpanan berkas
+  Support/          Format rupiah, saldo kas, nota, laporan
+resources/views/
+  components/       Layout TailAdmin, sidebar, breadcrumb, komponen tabel
+  livewire/         View komponen Livewire
+  spk/ cash-in/ ... Halaman Blade per modul
 database/
   migrations/       Skema 5 tabel + tabel infrastruktur
   factories/  seeders/
 tests/
   Unit/             Logika murni (rumus piutang, tenggat, enum)
-  Feature/          Resource, alur, keamanan, ekspor
+  Feature/          Halaman, alur, keamanan, ekspor
 python/             Skrip OCR nota (opsional)
 ```
 

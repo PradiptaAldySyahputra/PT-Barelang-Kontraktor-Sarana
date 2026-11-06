@@ -15,11 +15,10 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * Angka-angka halaman Laporan untuk panel Blade.
+ * Angka-angka halaman Laporan untuk panel Blade (/panel/reports).
  *
- * CATATAN MASA TRANSISI: halaman Filament (`Pages/Laporan`) masih memakai
- * salinan logikanya sendiri. Saat Filament dicabut, kelas inilah yang
- * tersisa - jadi jangan menambah perhitungan baru di halaman Filament.
+ * Satu-satunya sumber perhitungan laporan: halaman Laporan, ekspor CSV/XLSX/PDF,
+ * dan bundel ZIP semuanya membaca dari sini.
  *
  * Semua method statis & murni (tanpa state Livewire), jadi bisa diuji tanpa
  * browser.

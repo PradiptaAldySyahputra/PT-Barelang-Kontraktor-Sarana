@@ -252,4 +252,36 @@ class SpkPanelTest extends TestCase
             ->assertSee('SPK-STATUS-A')
             ->assertSee('SPK-STATUS-B');
     }
+
+    public function test_ubah_nilai_spk_di_bawah_pembayaran_yang_sudah_masuk_ditolak(): void
+    {
+        $spk = Spk::factory()->create(['nilai_spk' => 20_000_000]);
+        UangMasuk::factory()->create(['spk_id' => $spk->id, 'jumlah' => 15_000_000]);
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->put(route('panel.spk.update', $spk), $this->isian([
+                'nomor_spk' => $spk->nomor_spk,
+                'nilai_spk' => '10.000.000',
+            ]))
+            ->assertSessionHasErrors('nilai_spk');
+
+        $this->assertSame(20_000_000.0, (float) $spk->fresh()?->nilai_spk);
+    }
+
+    public function test_menaikkan_nilai_spk_yang_sudah_lunas_mengembalikan_status_menunggu_pembayaran(): void
+    {
+        $spk = Spk::factory()->create(['nilai_spk' => 10_000_000]);
+        UangMasuk::factory()->create(['spk_id' => $spk->id, 'jumlah' => 10_000_000]);
+
+        $this->assertSame(StatusTagihan::Dibayar, $spk->fresh()?->status_tagihan);
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->put(route('panel.spk.update', $spk), $this->isian([
+                'nomor_spk' => $spk->nomor_spk,
+                'nilai_spk' => '25.000.000',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(StatusTagihan::MenungguPembayaran, $spk->fresh()?->status_tagihan);
+    }
 }

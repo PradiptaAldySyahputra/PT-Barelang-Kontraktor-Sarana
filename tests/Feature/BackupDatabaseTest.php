@@ -33,21 +33,16 @@ class BackupDatabaseTest extends TestCase
     {
         parent::setUp();
 
-        $this->dir = storage_path('app/backup');
-
-        // Mulai dari keadaan bersih agar tidak mengganggu backup nyata.
+        // Folder SEMENTARA, bukan storage/app/backup: tes tidak boleh
+        // menyentuh (apalagi menghapus) backup sungguhan di server.
+        $this->dir = sys_get_temp_dir().'/bks-backup-uji-'.uniqid();
         File::ensureDirectoryExists($this->dir);
-
-        foreach (File::files($this->dir) as $f) {
-            File::delete($f->getPathname());
-        }
+        config(['filesystems.backup_path' => $this->dir]);
     }
 
     protected function tearDown(): void
     {
-        foreach (File::files($this->dir) as $f) {
-            File::delete($f->getPathname());
-        }
+        File::deleteDirectory($this->dir);
 
         parent::tearDown();
     }

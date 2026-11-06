@@ -34,8 +34,8 @@ class AppServiceProvider extends ServiceProvider
          * Akibatnya tombol "Ekspor Excel"/PDF di daftar SPK (dan menu lain)
          * gagal - file tidak pernah terunduh.
          *
-         * Perbaikan: beri tahu container model autentikasi yang BENAR. Ini
-         * juga dipakai Filament untuk ImportAction.
+         * Perbaikan: beri tahu container model autentikasi yang BENAR. Dipakai
+         * juga oleh model `Export` saat memetakan kolom `user_id`.
          */
         $this->app->bind(Authenticatable::class, Pengguna::class);
     }

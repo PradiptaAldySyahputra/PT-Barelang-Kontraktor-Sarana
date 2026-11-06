@@ -105,19 +105,18 @@ final class NotaPengeluaran
     ];
 
     /**
-     * Ambil path file dari state FileUpload.
+     * Ambil path file dari state unggahan.
      *
-     * PENTING: pakai `getStatePath()` karena Filament sudah menyimpan file ke
-     * folder yang benar. Jangan panggil `store($disk)` - argumen pertama
-     * `store()` adalah NAMA FOLDER, bukan disk; pernah menyebabkan file
-     * tersimpan di `storage/app/public/public/` dan tidak bisa dibuka.
+     * PENTING: jangan panggil `store($disk)` - argumen pertama `store()` adalah
+     * NAMA FOLDER, bukan disk; pernah menyebabkan file tersimpan di
+     * `storage/app/public/public/` dan tidak bisa dibuka.
      *
-     * Menerima ARRAY juga, karena FileUpload memakai `multiple()` (state-nya
-     * array walau isinya satu berkas).
+     * Menerima ARRAY juga, karena unggahan bisa berbentuk array walau isinya
+     * satu berkas.
      */
     public static function pathFile(mixed $file): ?string
     {
-        // State `multiple()` berbentuk array - ambil berkas pertamanya.
+        // State berbentuk array - ambil berkas pertamanya.
         if (is_array($file)) {
             foreach ($file as $satu) {
                 if (filled($path = self::pathFile($satu))) {
@@ -136,10 +135,6 @@ final class NotaPengeluaran
             return null;
         }
 
-        if (method_exists($file, 'getStatePath') && filled($path = $file->getStatePath())) {
-            return $path;
-        }
-
         /*
          * ⚠️ JANGAN kembalikan path berkas SEMENTARA (livewire-tmp/...).
          *
@@ -150,7 +145,7 @@ final class NotaPengeluaran
          * Sekarang berkas diringankan (kompres) lalu DISIMPAN ke disk, dan yang
          * dikembalikan adalah path RELATIF yang benar (mis. uang_keluar/x.jpg).
          * Karena nama berkas deterministik, pemanggilan berulang tidak membuat
-         * salinan ganda - Filament memakai path yang SAMA saat Simpan.
+         * salinan ganda - pemanggilan berikutnya memakai path yang SAMA saat Simpan.
          */
         if ($file instanceof UploadedFile) {
             return app(PenyimpanBerkas::class)->simpanKe($file, 'uang_keluar', 'nota');

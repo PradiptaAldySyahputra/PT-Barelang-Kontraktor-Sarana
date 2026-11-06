@@ -12,15 +12,21 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Spk\IndexController as SpkIndexController;
 use App\Http\Controllers\Spk\MonitoringController as SpkMonitoringController;
+use App\Http\Controllers\Spk\SpkCalendarController;
 use App\Http\Controllers\Spk\SpkController;
 use App\Http\Controllers\System\SystemController;
 use App\Http\Controllers\User\UserController;
 use App\Models\Export;
 use App\Models\Pengguna;
+use App\Models\Spk;
+use App\Models\UangMasuk;
 use App\Services\LaporanEkspor;
 use App\Support\ArsipNota;
+use App\Support\Format;
 use App\Support\Nota;
 use App\Support\StatusBackup;
+use App\Support\TandaTangan;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -47,7 +53,7 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
 
         // SPK
         Route::get('spk', SpkIndexController::class)->name('spk.index');
-        Route::get('spk/calendar', [\App\Http\Controllers\Spk\SpkCalendarController::class, 'index'])->name('spk.calendar');
+        Route::get('spk/calendar', [SpkCalendarController::class, 'index'])->name('spk.calendar');
         Route::get('spk/monitoring/{mode}', SpkMonitoringController::class)->name('spk.monitoring');
         Route::middleware('peran:admin,direktur')->group(function (): void {
             Route::get('spk/create', [SpkController::class, 'create'])->name('spk.create');
@@ -61,22 +67,23 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
             Route::put('spk/{spk}/billing', [SpkController::class, 'billingUpdate'])->name('spk.billing.update');
         });
         Route::get('spk/{spk}', [SpkController::class, 'show'])->name('spk.show');
-        Route::get('spk/{spk}/termin-drawer', function (App\Models\Spk $spk) {
+        Route::get('spk/{spk}/termin-drawer', function (Spk $spk) {
             $uangMasuk = $spk->uangMasuk()->orderBy('tanggal', 'asc')->get();
+
             return response()->json([
                 'nomor_spk' => $spk->nomor_spk,
                 'pekerjaan' => $spk->nama_pekerjaan,
                 'mitra' => $spk->mitra?->nama ?? 'Tanpa Mitra',
-                'nilai_spk' => \App\Support\Format::rupiah($spk->nilai_spk),
-                'total_masuk' => \App\Support\Format::rupiah((float) $spk->totalPenerimaan()),
-                'sisa_piutang' => \App\Support\Format::rupiah((float) $spk->sisaTagih()),
+                'nilai_spk' => Format::rupiah($spk->nilai_spk),
+                'total_masuk' => Format::rupiah((float) $spk->totalPenerimaan()),
+                'sisa_piutang' => Format::rupiah((float) $spk->sisaTagih()),
                 'status_tagihan' => $spk->status_tagihan?->label() ?? 'Belum Ditagihkan',
                 'transaksi' => $uangMasuk->map(fn ($m) => [
                     'id' => $m->id,
                     'tanggal' => $m->tanggal?->format('d/m/Y') ?? '-',
                     'akun' => $m->akun?->label() ?? '-',
                     'keterangan' => $m->keterangan ?: 'Penerimaan Termin',
-                    'jumlah' => \App\Support\Format::rupiah($m->jumlah),
+                    'jumlah' => Format::rupiah($m->jumlah),
                     'kuitansi_url' => route('panel.cash-in.kuitansi', $m),
                 ]),
             ]);
@@ -189,29 +196,30 @@ $handlerBundel = function (LaporanEkspor $ekspor) {
 Route::get('/panel/laporan/bundel-zip', $handlerBundel)->middleware(['auth', 'peran:admin,direktur'])->name('laporan.bundel');
 Route::get('/admin/laporan/bundel-zip', $handlerBundel)->middleware(['auth', 'peran:admin,direktur']);
 
-Route::get('/panel/spk/{spk}/bast-pdf', function (App\Models\Spk $spk) {
-    $direktur = App\Models\Pengguna::where('peran', App\Enums\Peran::Direktur)->first();
-    $pdf = Barryvdh\DomPDF\Facade\Pdf::loadView('reports.bast-pdf', [
+Route::get('/panel/spk/{spk}/bast-pdf', function (Spk $spk) {
+    $direktur = Pengguna::where('peran', Peran::Direktur)->first();
+    $pdf = Pdf::loadView('reports.bast-pdf', [
         'spk' => $spk->load('mitra'),
         'direkturUser' => $direktur,
+        'tandaTangan' => TandaTangan::untukPdf(),
     ])->setPaper('a4', 'portrait');
 
-    return $pdf->stream('bast-'.$spk->nomor_spk.'.pdf');
+    return $pdf->stream('bast-'.str($spk->nomor_spk)->slug().'.pdf');
 })->middleware(['auth', 'peran:admin,direktur'])->name('panel.spk.bast');
 
-Route::get('/panel/cash-in/{uangMasuk}/kuitansi', function (App\Models\UangMasuk $uangMasuk) {
+Route::get('/panel/cash-in/{uangMasuk}/kuitansi', function (UangMasuk $uangMasuk) {
     $uangMasuk->loadMissing(['spk.mitra', 'spk', 'mitra']);
     $mitraNama = $uangMasuk->spk?->mitra?->nama ?? $uangMasuk->mitra?->nama ?? 'PT PLN Batam';
     $nomorKuitansi = 'KW-'.($uangMasuk->tanggal?->format('Ymd') ?? now()->format('Ymd')).'-'.str_pad((string) $uangMasuk->id, 4, '0', STR_PAD_LEFT);
-    $terbilang = App\Support\Format::terbilang($uangMasuk->jumlah);
+    $terbilang = Format::terbilang($uangMasuk->jumlah);
 
-    $pdf = Barryvdh\DomPDF\Facade\Pdf::loadView('reports.kuitansi-pdf', [
+    $pdf = Pdf::loadView('reports.kuitansi-pdf', [
         'uangMasuk' => $uangMasuk,
         'spk' => $uangMasuk->spk,
         'mitraNama' => $mitraNama,
         'nomorKuitansi' => $nomorKuitansi,
         'terbilang' => $terbilang,
-        'tandaTangan' => App\Support\TandaTangan::untukPdf(),
+        'tandaTangan' => TandaTangan::untukPdf(),
     ]);
 
     return $pdf->download('kuitansi-'.strtolower($nomorKuitansi).'.pdf');
@@ -250,6 +258,22 @@ $handlerArsipZip = function () {
         'q' => request()->string('q')->toString() ?: null,
     ];
     $arsip = ArsipNota::cari($filter);
+    $ukuran = ArsipNota::hitungUkuran($arsip);
+    $maksBerkas = (int) config('filesystems.arsip_zip_maks_berkas', 1000);
+    $maksByte = (int) config('filesystems.arsip_zip_maks_byte', 500 * 1024 * 1024);
+
+    // Tolak SEBELUM ZIP dibangun: membungkus 1.800 berkas butuh waktu & ruang
+    // temp besar, sementara pengguna bisa menyaring dulu.
+    if ($ukuran['berkas'] > $maksBerkas || $ukuran['byte'] > $maksByte) {
+        return back()->with('gagal', sprintf(
+            'Arsip terlalu besar untuk diunduh sekaligus (%s berkas, %s MB). Saring dulu berdasarkan tanggal, akun, atau kata kunci — maksimal %s berkas / %s MB per unduhan.',
+            number_format($ukuran['berkas'], 0, ',', '.'),
+            number_format($ukuran['byte'] / 1048576, 1, ',', '.'),
+            number_format($maksBerkas, 0, ',', '.'),
+            number_format($maksByte / 1048576, 0, ',', '.'),
+        ));
+    }
+
     $zip = ArsipNota::buatZip($arsip);
     abort_if($zip === null, 404, 'Tidak ada berkas untuk diunduh.');
 

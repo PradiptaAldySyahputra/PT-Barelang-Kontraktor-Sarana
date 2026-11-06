@@ -278,10 +278,10 @@
                 </div>
 
                 <div class="flex-1 overflow-auto py-4 flex items-center justify-center min-h-[300px]">
-                    <template x-if="isImage">
+                    <template x-if="isImage && previewUrl">
                         <img :src="previewUrl" :alt="previewNama" class="max-h-[70vh] w-auto rounded-lg object-contain shadow-sm">
                     </template>
-                    <template x-if="!isImage">
+                    <template x-if="!isImage && previewUrl">
                         <iframe :src="previewUrl" class="w-full h-[65vh] rounded-lg border border-gray-200 dark:border-gray-800"></iframe>
                     </template>
                 </div>

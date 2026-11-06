@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Support\StatusBackup;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -35,7 +36,7 @@ class BackupDatabase extends Command
 
     public function handle(): int
     {
-        $dir = storage_path('app/backup');
+        $dir = StatusBackup::direktori();
 
         if (! File::isDirectory($dir)) {
             File::makeDirectory($dir, 0755, true);

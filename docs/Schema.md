@@ -34,7 +34,7 @@
 
 > **Tabel infrastruktur (bukan tabel domain ke-6):** `sessions`, `cache`, `jobs`,
 > `failed_jobs`, `job_batches`, `exports`, `notifications`. Ini bawaan
-> framework/Filament, bukan domain — tidak melanggar aturan "5 tabel" (`Rules.md` §1).
+> framework Laravel, bukan domain — tidak melanggar aturan "5 tabel" (`Rules.md` §1).
 > `notifications` ditambahkan 11 Okt 2026 untuk notifikasi unduhan ekspor (B1-2).
 
 ## 3. Konvensi Umum

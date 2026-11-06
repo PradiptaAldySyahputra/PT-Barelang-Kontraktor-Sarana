@@ -34,7 +34,7 @@ enum StatusSpk: string
     }
 
     /**
-     * Warna badge Filament.
+     * Warna badge panel.
      *
      * Ditaruh di Enum (bukan di tiap tabel) supaya warna status SPK
      * KONSISTEN di seluruh halaman - sebelumnya logika yang sama disalin

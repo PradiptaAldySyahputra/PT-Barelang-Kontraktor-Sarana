@@ -18,6 +18,12 @@ return [
     // Batas unggah nota (KB). Dibaca lewat config() agar tetap jalan setelah config:cache.
     'nota_maks_ukuran_kb' => (int) env('NOTA_MAKS_UKURAN_KB', 25600),
 
+    // Batas unduhan Arsip Nota (.zip). Tanpa batas, satu klik bisa membungkus
+    // ribuan berkas (1,3 GB di data uji) dan menahan proses lama.
+    'arsip_zip_maks_berkas' => (int) env('ARSIP_ZIP_MAKS_BERKAS', 1000),
+    'arsip_zip_maks_byte' => (int) env('ARSIP_ZIP_MAKS_BYTE', 500 * 1024 * 1024),
+    'backup_path' => env('STORAGE_BACKUP_PATH'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
@@ -61,7 +67,7 @@ return [
         */
         'nota' => [
             'driver' => 'local',
-            'root' => storage_path('app/nota'),
+            'root' => env('STORAGE_NOTA_PATH', storage_path('app/nota')),
             'throw' => false,
             'report' => false,
         ],

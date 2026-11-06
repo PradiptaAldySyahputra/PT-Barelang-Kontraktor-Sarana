@@ -3,10 +3,73 @@
 > Dibuat agar sesi berikutnya bisa **lanjut tanpa menebak**.
 > Bahasa: Indonesia. Verifikasi ulang sebelum menulis angka/nama (aturan AGENTS.md §2.5).
 >
-> **Terakhir diperbarui:** 11 Oktober 2026
+> **Terakhir diperbarui:** 5 November 2026
 > **Cabang:** `main` · Perubahan sesi ini **belum di-commit** (aturan: user yang commit)
+>
+> ⚠️ **Bagian §0q ke bawah adalah ARSIP era Filament** (Deskripsi Resources/Pages/Widgets,
+> `/admin`, tes Filament). Jangan dibaca sebagai kondisi terkini. Kondisi terkini: §0B + §0A + §1.
 
 ---
+
+## 0B. Sesi 5 November 2026 — Audit menyeluruh (kode, rute, dokumen UAT)
+
+**Mandat user:** "cek dan analisa kembali secara menyeluruh … celah keamanan, bug, fitur,
+frontend, backend, testing menyeluruh dengan browser MCP".
+
+| # | Tindakan | Hasil |
+|:--|:---------|:------|
+| 1 | Audit rute (`route:list` + cek middleware) | Dari seluruh rute, hanya 13 yang publik dan semuanya aman: 10 redirect alias (`/`, `/login`, `/admin*`, `/profile`, …), `/up` (health check), dan `/storage/{path}` (disk `local` = `storage/app/private`, URL bertanda tangan). Rute `/panel/*` semuanya `auth` + `peran:admin,direktur`; `/panel/users/*` hanya `peran:direktur`. |
+| 2 | Uji `/storage/{path}` tanpa login | **403** (butuh signed URL) — berkas impor/ekspor tidak bisa diunduh publik. |
+| 3 | Kebocoran berkas impor | `importStore()` menghapus CSV mentah dengan `@unlink` **setelah** pembacaan; bila pembacaan melempar exception, berkas berisi data keuangan tertinggal. Sekarang `try { baca } finally { unlink }`. 82 berkas sisa (>1 hari, 332 KB) dihapus. |
+| 4 | `bks:rekap-harian` — hitungan SPK kritis | Dulu `tanggal_akhir <= now()+7 AND status_tagihan != dibayar`: SPK **Selesai/Dibatalkan** ikut dihitung (alarm palsu) dan SPK lewat tenggat yang belum ditagih bisa lolos. Sekarang memakai scope `lewatTenggat()` + `mendekatiTenggat(7)` — sumber yang sama dengan dashboard. |
+| 5 | `docs/PANDUAN-UAT.md` — akurasi | Password demo dihapus dari dokumen (dibuat acak saat seeding). Nama menu/tombol disamakan dengan UI: *Unggah & Ekstraksi Nota*, *Simpan N Nota ke Arsip & Sistem*, *Master Data → Manajemen Akun*, *Buat Backup Sekarang*, hasil backup `.zip` berisi `.sql` (bukan `.sql.gz`). Klaim "grafik berlebih" & "zoom in-app" diganti sesuai tampilan nyata (grafik arus kas 6 bulan; pratinjau modal ukuran besar). 4 baris tabel yang kehilangan kolom centang diperbaiki. |
+| 6 | Sisa referensi Filament di kode | Komentar yang sudah tidak benar diperbarui (`LoginController`, `HeaderKeamanan`, `Export`, `DashboardController`, `SpkTable`, `LaporanData`, `DashboardSummary`, `RiwayatEkspor`, `AppServiceProvider`, `PembacaNota`); cabang mati `getStatePath()` (khusus Filament) dihapus dari `NotaPengeluaran::pathFile()`. |
+| 7 | Verifikasi | `php artisan test` → **375 lulus · 1.346 assertions**; `pint` bersih; `composer audit` tanpa advisory. |
+| 8 | **AUD-6 — OCR tidak lagi memblokir request** | OCR dipindah ke job `App\Jobs\EkstrakNotaOcr` (timeout 600 dtk, `tries=1`). Hasilnya dititipkan ke cache `ocr-nota:{uuid}` selama 1 jam; komponen `ReceiptUploadForm` mengambilnya lewat `periksaHasilOcr()` yang dipanggil `wire:poll.2s` selama `$sedangProses`. Kalau OCR melempar exception, job tetap menitipkan `ok=false` supaya form turun ke kartu manual, bukan macet. |
+| 9 | Tes AUD-6 | `tests/Feature/NotaOcrQueueTest.php` (4 tes): job menitipkan hasil, job gagal tetap menitipkan, komponen mengubah cache → 2 kartu, polling tanpa hasil tidak mengubah state. |
+| 10 | Uji browser mode antrean | `.env` sementara `QUEUE_CONNECTION=database`: unggah nota → halaman menampilkan "OCR berjalan di latar belakang" + `wire:poll` aktif; `queue:work --once` menjalankan job (420 ms) → kartu nota muncul sendiri tanpa reload. `.env` dikembalikan ke `sync`, berkas uji dihapus. |
+| 11 | Sapu browser: Admin (21 halaman) | Semua 200, tanpa error konsol, tanpa gambar rusak, tanpa overflow horizontal di 1440px maupun 375px. Redireksi yang disengaja: `/panel/exports` → `/panel/reports` (rute alias). Admin ditolak `/panel/users` dengan halaman **403**. |
+| 12 | Sapu browser: Direktur (14 halaman) | Semua 200 termasuk `/panel/users` & `/panel/users/create`; tanpa error konsol, tanpa overflow 375px. Filter tabel SPK (cari + status) berfungsi: kata kunci tak ada → 0 baris + pesan kosong; status `draft` → 0 baris. Mode gelap aktif tanpa error. |
+| 13 | Unduhan diuji langsung (sesi login) | Ekspor `spk/masuk/keluar/tenggat/piutang/buku-kas/buku-bank` × `xlsx/csv/pdf` → 200 + MIME benar; bundel ZIP, arsip ZIP, template impor, BAST PDF, kuitansi PDF → 200. Catatan: arsip ZIP tanpa filter berisi 1.834 berkas = **151 MB**; sebaiknya unduh dengan filter tanggal. |
+| 14 | **Bug ditemukan & diperbaiki — sampah `/tmp`** | `ArsipNota::buatZip()` memakai `tempnam()...'.zip'`: berkas kosong dasar dari `tempnam()` tidak pernah dihapus, jadi tiap unduhan arsip meninggalkan `/tmp/arsip-notaXXXX` 0 byte (sama jenisnya dengan bug `temp-bundel-*` sebelumnya). Sekarang berkas dasar langsung dihapus; tes `ArsipNotaTest` ditambah assertion. Diverifikasi: unduhan via browser 200 dan `/tmp/arsip-nota*` = 0. |
+| 15 | Uji impor & backup di browser | Impor CSV lewat form → "2 ditambah · 0 dilewati · 0 gagal", dan folder `storage/app/private/impor` tetap kosong (memvalidasi `try/finally` butir 3). Tombol *Buat Backup Sekarang* → `bks:backup` menghasilkan `bks-2026-11-06-023228.zip` (26,5 KB). 2 transaksi uji dihapus lagi; `uang_masuk` kembali 87. |
+| 16 | **Bug ditemukan & diperbaiki — tes menghapus backup nyata** | `BackupDatabaseTest`, `RestoreDatabaseTest`, dan satu tes di `SystemPanelTest` memakai `storage_path('app/backup')` dan mengosongkan folder itu di `setUp`/`tearDown`. Artinya `php artisan test` **menghapus backup sungguhan** (dan meninggalkan `test-backup.zip` 17 byte berisi teks dummy yang muncul di panel sebagai "1 backup"). Ketiganya kini memakai folder sementara + `config(['filesystems.backup_path' => ...])`. Verifikasi: berkas penanda di `storage/app/backup` selamat setelah suite penuh; berkas dummy dihapus. Pelajaran dicatat di skill `bks-testing`. |
+| 17 | **Batas unduhan Arsip Nota** | Tanpa filter, arsip berisi 410 berkas / 165 MB (1.834 berkas di disk termasuk yatim). Kini `hitungUkuran()` menghitung berkas & byte sebelum ZIP dibangun; batas `arsip_zip_maks_berkas` (1000) / `arsip_zip_maks_byte` (500 MB) di `config/filesystems.php` (bisa lewat `.env`). Di atas batas → kembali ke halaman arsip dengan pesan "Arsip terlalu besar … saring dulu", tanpa membuat ZIP temp. Diuji: 3 tes baru di `ArsipNotaTest` (hitungan, ditolak, di bawah batas) + klik nyata di browser (pesan muncul dengan angka 410 berkas/165,1 MB). |
+| 18 | **Antrean OCR diaktifkan permanen** | `.env` → `QUEUE_CONNECTION=database`; worker dijalankan sebagai unit systemd pengguna `bks-queue.service` (`~/.config/systemd/user/`, `Restart=always`). Verifikasi: unggah nota di browser → status "OCR berjalan di latar belakang" → job `EkstrakNotaOcr` RUNNING 695 ms di journal → kartu nota muncul otomatis tanpa reload; `jobs`/`failed_jobs` = 0. Panduan server & laptop ada di `docs/Architecture.md` §12.6a. |
+
+**Keputusan yang masih menunggu user:**
+
+- **Antrean OCR aktif** — `.env` = `QUEUE_CONNECTION=database`; worker `bks-queue.service` wajib
+  hidup (systemd, lihat `docs/Architecture.md` §12.6a). Kalau worker mati, OCR tidak pernah
+  selesai dan halaman Unggah Nota berhenti di status menunggu.
+- `docs/STATUS-PENGERJAAN.md` §0x–§4 masih menyebut Filament — arsip historis, bukan kondisi kini.
+
+---
+
+## 0A. Sesi 4 November 2026 — Filament dicabut total, OpenSpout v5, dokumen diselaraskan
+
+**Mandat user:** "poin 1 sekarang direktur full akses, poin 2 lakukan composer update,
+poin 3 perbarui karena filament tidak digunakan lagi, poin 4 cek lagi saya mau push ke github".
+
+| # | Tindakan | Hasil |
+|:--|:---------|:------|
+| 1 | Verifikasi Direktur full akses | Sudah berlaku di kode: rute `peran:admin,direktur` + gate `Pengguna::bolehInput()` (Admin & Direktur = true). Yang keliru justru **dokumen** (`Rules.md` §4, `PRD.md` §3, `AGENTS.md`, `README.md` masih menulis "Direktur = monitor"). Dokumen diperbaiki. |
+| 2 | `composer update` (nyata) | **134 paket** (dari 167). **33 paket terhapus**, termasuk 12 `filament/*`, `danharrin/*`, `blade-heroicons`, `chillerlan/php-qrcode`. `vendor/filament` tidak ada lagi; `composer.lock` menyusut −4.418/+2.324 baris. |
+| 3 | Filament dihapus dari kode | `extra.laravel.dont-discover` di `composer.json` dibuang (tidak perlu lagi). Rute `/filament/*` hilang → 404 (dulu `/filament/imports/1/failed-rows/download` = 500 tanpa login). |
+| 4 | Migrasi **OpenSpout 4 → 5.13** (dipicu composer update) | API immutable: `Style::setFontBold()` → `withFontBold(true)`, `Row::fromValues($v, $style)` → `fromValuesWithStyle()`, `SheetView::setFreezeRow()` → `withFreezeRow()`, `Row::getCells()` → `toArray()`. `LaporanEkspor` juga di-DRY: blok penulisan XLSX (dulu duplikat di 2 method) → satu `tulisXlsx()`. |
+| 5 | Format & tes | `pint` bersih (29 berkas dirapikan). **375 tes lulus · 1.346 assertions**. |
+| 6 | Bug kebocoran disk saat verifikasi | `bundelZip()` meninggalkan `storage/app/temp-bundel-*` kosong tiap kali respons tidak terkirim (tes/unduhan batal): ZIP masih ada → `rmdir` gagal. Sekarang `unlink($zipPath)` dulu di shutdown. 19 direktori sisa dibersihkan; unduhan live tetap 200 & ZIP valid. |
+
+**Dokumen yang diperbarui:** `AGENTS.md` (role, peta menu, status), `README.md` (stack, struktur,
+akun demo = password acak dari seeder), `docs/Rules.md` (§4 hak akses + §9.11 notifikasi),
+`docs/PRD.md` (§3 Direktur), `docs/Design.md` (mode gelap & sidebar), `docs/Schema.md` (tabel infrastruktur).
+
+**Catatan:** nama tabel/route lama `/admin/...` masih dipertahankan sebagai alias
+(`/admin/nota/*`, `/admin/laporan/ekspor/*`, dan redirect `/admin` → `/panel`) supaya
+bookmark lama tidak rusak. Panel utama tetap `/panel`.
+
+---
+
 
 ## 0u. Sesi 12 Okt 2026 (lanjutan 2) — Perbaikan "AI-Slop" TAMPILAN + BUG komentar bocor
 
@@ -131,7 +194,7 @@ aturan "satu warna aksen saja" yang dikunci `DesainBaruTest`.
 
 **Verifikasi (browser + ukur DOM):**
 - Donut: `.bks-donut` ada, `conic-gradient(rgb(37,99,235) 0% ...)`; total tengah
-  Rp 1.699.557.067; daftar Material 55.1% / Upah 36.1% / dst.
+  Rp <total uang keluar>; daftar Material 55.1% / Upah 36.1% / dst.
 - Feed: 8 heading dashboard termasuk "Aktivitas Terbaru", 6 item; widget
   terdaftar di `Dashboard::getWidgets()` (daftar eksplisit, bukan discover).
 - **890/890 tes lulus · 2.478 assertions** (naik dari 885); pint bersih.
@@ -402,7 +465,7 @@ memakai `assertSchemaComponentStateSet()` sehingga benar-benar menguji isi
 preview (`diterima`, `sisa_tagih`, dst.).
 
 **Verifikasi browser (sungguhan):** List SPK 8 kolom tanpa scroll samping; Uang
-Keluar menampilkan **satu** bar "TOTAL UANG KELUAR (TERFILTER) Rp 1.699.557.067
+Keluar menampilkan **satu** bar "TOTAL UANG KELUAR (TERFILTER) Rp <total uang keluar>
 dari 31 transaksi"; ringkasan bawah tabel hilang.
 
 **Suite:** 839 lulus · 2.340 assertions · pint bersih.
@@ -698,7 +761,7 @@ User minta lanjut **selain** "ganti password paksa" (T6).
   **halaman Laporan** (3 kartu di seksi Ringkasan).
 
 **Tes baru:** `SaldoKasTest` (6) · `SaldoKasTampilTest` (2).
-**Verifikasi browser:** halaman `/admin/laporan` menampilkan "SALDO KAS Rp -187.297.224", "SALDO BANK Rp 0", "Total Saldo".
+**Verifikasi browser:** halaman `/admin/laporan` menampilkan "SALDO KAS Rp <nominal>", "SALDO BANK Rp 0", "Total Saldo".
 (Catatan: kartu widget dashboard di harness headless tampil "Loading..." untuk SEMUA widget — perilaku lazy-load Livewire yang sudah ada sebelumnya, bukan regresi; kode widget diverifikasi lewat tinker: 15 kartu render benar.)
 
 **Status:** 740 tes lulus · 2.007 assertions · 1 *risky* pra-ada.
@@ -784,9 +847,10 @@ T4 rekening koran, T5 import data lama, T6 ganti password paksa, T7 notifikasi t
 
 | Item | Nilai |
 |:-----|:------|
-| Tes | **689 lulus · 1.865 assertions** · 1 *risky* (pra-ada: `KompresiUntukOcrTest`) |
+| Tes | **375 lulus · 1.346 assertions** · 0 *risky* |
 | Formatter | `./vendor/bin/pint` bersih |
-| `composer audit` | **bersih** (commonmark 2.10.3) |
+| `composer audit` | **bersih** (tidak ada advisory) |
+| Paket | **134** (Filament & dependensinya sudah dihapus; OpenSpout **v5.13**) |
 | Aset | `npm run build` OK |
 | Sinkron remote | ⚠️ ada perubahan belum di-commit di working tree |
 
@@ -910,10 +974,10 @@ Sesi admin bisa dibuat **server-side** (aturan melarang mengetik password). Cata
 - Driver sesi `database`, serialization JSON, cookie `spk-kontrol-keuangan-session`.
 - Guard key: `login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d`.
 
-Menu monitoring (slug benar):
-- `/admin/monitoring-spk/status-spks`
-- `/admin/monitoring-spk/tagihan-spks`
-- `/admin/monitoring-spk/tagihan-selesai-spks`
+Menu monitoring (slug benar, panel Blade):
+- `/panel/spk/monitoring/status`
+- `/panel/spk/monitoring/billing`
+- `/panel/spk/monitoring/completed`
 
 ---
 

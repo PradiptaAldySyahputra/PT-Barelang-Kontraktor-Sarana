@@ -194,7 +194,9 @@
                                     @mouseleave="endDrag()"
                                     class="relative h-[280px] w-full max-w-[340px] overflow-hidden rounded-2xl bg-gray-950 flex items-center justify-center cursor-move select-none">
                                     
-                                    <img x-ref="cropImage" src="" alt="Pratinjau Crop"
+                                    {{-- `src` sengaja tidak diisi: gambar dipasang lewat JS saat berkas dipilih.
+                                         `src=""` akan membuat browser meminta halaman ini lagi sebagai gambar. --}}
+                                    <img x-ref="cropImage" alt="Pratinjau Crop"
                                         :style="`transform: translate(${posX}px, ${posY}px) scale(${zoom}); max-height: 240px; pointer-events: none;`"
                                         class="transition-transform duration-75">
 

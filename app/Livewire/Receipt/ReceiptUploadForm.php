@@ -6,13 +6,15 @@ namespace App\Livewire\Receipt;
 
 use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
+use App\Jobs\EkstrakNotaOcr;
 use App\Models\Spk;
 use App\Models\UangKeluar;
-use App\Services\PembacaNota;
 use App\Services\PenyimpanBerkas;
+use App\Support\Format;
 use App\Support\Nota;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -40,6 +42,9 @@ final class ReceiptUploadForm extends Component
 
     public ?string $berkasTersimpanPath = null;
 
+    /** Kunci cache tempat job OCR menitipkan hasilnya (lihat EkstrakNotaOcr). */
+    public ?string $kunciOcr = null;
+
     /**
      * Daftar hasil pemotongan dan pembacaan nota.
      * Tiap item: [
@@ -62,6 +67,7 @@ final class ReceiptUploadForm extends Component
         abort_unless((bool) auth()->user()?->bolehInput(), 403);
 
         $this->daftarNota = [];
+        $this->kunciOcr = null;
     }
 
     public function updatedBerkasNota(): void
@@ -84,13 +90,22 @@ final class ReceiptUploadForm extends Component
         }
 
         $this->sedangProses = true;
-        $this->pesanStatus = 'Mengunggah & memproses OCR pada berkas...';
+        $this->pesanStatus = 'Mengunggah berkas nota...';
+
+        // Berkas dari unggahan sebelumnya (bila admin mengganti berkas) tidak
+        // akan pernah tersimpan ke database - buang sekarang, jangan menunggu
+        // pembersih harian.
+        $sebelumnya = $this->berkasTersimpanPath;
 
         // 1. Validasi & Kompres Berkas Langsung via PenyimpanBerkas
         // PenyimpanBerkas otomatis mengompres gambar/scan (kualitas 80, max 2400px)
         // sehingga proses OCR ringan, cepat, dan latensi upload minimal.
         $pathRelatif = app(PenyimpanBerkas::class)->simpanKe($this->berkasNota, 'uang_keluar', 'nota');
         $this->berkasTersimpanPath = $pathRelatif;
+
+        if ($sebelumnya && $sebelumnya !== $pathRelatif) {
+            Storage::disk('nota')->delete($sebelumnya);
+        }
 
         if (! $pathRelatif) {
             $this->pesanStatus = 'Gagal menyimpan berkas nota.';
@@ -99,10 +114,45 @@ final class ReceiptUploadForm extends Component
             return;
         }
 
-        // 2. Jalankan PembacaNota (OCR Python)
-        $pembaca = app(PembacaNota::class);
-        $hasil = $pembaca->baca($pathRelatif, 'nota');
+        // 2. OCR dijalankan sebagai job (AUD-6): request tidak menggantung
+        //    menunggu Python, hasilnya diambil lewat polling `periksaHasilOcr`.
+        $this->kunciOcr = (string) Str::uuid();
+        EkstrakNotaOcr::dispatch($this->kunciOcr, $pathRelatif);
+        $this->pesanStatus = 'Berkas terunggah. OCR berjalan di latar belakang - kartu nota muncul otomatis.';
 
+        // Antrean `sync` menyelesaikan job seketika: ambil hasilnya sekarang.
+        $this->periksaHasilOcr();
+    }
+
+    /**
+     * Dipanggil berkala (`wire:poll`) selama OCR belum selesai.
+     */
+    public function periksaHasilOcr(): void
+    {
+        if (! $this->kunciOcr) {
+            return;
+        }
+
+        $hasil = Cache::get(EkstrakNotaOcr::kunciCache($this->kunciOcr));
+
+        if (! is_array($hasil)) {
+            return; // job belum selesai - biarkan spinner berputar
+        }
+
+        Cache::forget(EkstrakNotaOcr::kunciCache($this->kunciOcr));
+        $this->kunciOcr = null;
+
+        $this->terapkanHasil($hasil);
+        $this->sedangProses = false;
+    }
+
+    /**
+     * Ubah hasil OCR menjadi kartu isian.
+     *
+     * @param  array<string, mixed>  $hasil
+     */
+    private function terapkanHasil(array $hasil): void
+    {
         $this->daftarNota = [];
         $tglDefault = now()->toDateString();
 
@@ -150,8 +200,6 @@ final class ReceiptUploadForm extends Component
             $this->tambahBarisSatu(1, null, null, null, null, null);
             $this->pesanStatus = 'Berkas tersimpan. OCR tidak aktif atau teks belum terbaca — silakan isi rincian secara manual.';
         }
-
-        $this->sedangProses = false;
     }
 
     private function tambahBarisSatu(int $ke, ?string $potongan, ?int $nominal, ?string $penerima, ?string $kategori, ?string $keterangan): void
@@ -197,7 +245,7 @@ final class ReceiptUploadForm extends Component
 
         // Angka bertitik ("1.500.000") dinormalisasi dulu supaya lolos `numeric`.
         foreach ($this->daftarNota as $i => $n) {
-            $this->daftarNota[$i]['nominal'] = \App\Support\Format::bersihkanUang($n['nominal'] ?? '');
+            $this->daftarNota[$i]['nominal'] = Format::bersihkanUang($n['nominal'] ?? '');
         }
 
         $this->validate([
@@ -214,6 +262,14 @@ final class ReceiptUploadForm extends Component
             'daftarNota.*.nominal.required' => 'Nominal nota wajib diisi.',
             'daftarNota.*.nominal.min' => 'Nominal minimal Rp 0,01.',
         ]);
+
+        foreach ($this->daftarNota as $idx => $n) {
+            if (($n['kategori'] ?? null) === KategoriPengeluaran::Lainnya->value && blank($n['keterangan'] ?? null)) {
+                $this->addError("daftarNota.$idx.keterangan", 'Keterangan / rincian wajib diisi bila kategori "Lainnya".');
+
+                return;
+            }
+        }
 
         // SPK Dibatalkan tidak menerima transaksi baru (Rules §5.3).
         $dibatalkan = Spk::query()
@@ -243,6 +299,9 @@ final class ReceiptUploadForm extends Component
                 'akun' => $item['akun'],
                 'jumlah' => $item['nominal'],
                 'kategori' => $item['kategori'],
+                'detail_kategori' => $item['kategori'] === KategoriPengeluaran::Lainnya->value
+                    ? ($item['keterangan'] ?: 'Lainnya')
+                    : null,
                 'penerima' => $item['penerima'] ?: null,
                 'spk_id' => $item['spk_id'] ?: null,
                 'keterangan' => $item['keterangan'] ?: 'Input dari Ekstraksi Nota OCR',

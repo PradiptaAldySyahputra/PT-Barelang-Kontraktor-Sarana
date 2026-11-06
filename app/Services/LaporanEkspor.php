@@ -16,6 +16,7 @@ use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Entity\SheetView;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -152,25 +153,40 @@ class LaporanEkspor
     {
         $path = (string) tempnam(sys_get_temp_dir(), 'laporan').'.xlsx';
 
+        $this->tulisXlsx($path, $judul, $header, $baris);
+
+        return Response::streamDownload(function () use ($path): void {
+            readfile($path);
+            @unlink($path);
+        }, $namaFile.'.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Satu-satunya tempat penulisan XLSX: KOP, header beku & tebal, baris TOTAL, kolom tanda tangan.
+     *
+     * ponytail: OpenSpout v5 membuat Style/Row immutable (`with*`, `fromValuesWithStyle`).
+     * Sebelumnya blok ini terduplikasi di unduhXlsx() dan simpanBerkasXlsx().
+     */
+    private function tulisXlsx(string $path, string $judul, array $header, array $baris): void
+    {
         $writer = new XlsxWriter;
         $writer->openToFile($path);
 
-        $writer->getCurrentSheet()->setSheetView(
-            (new SheetView)->setFreezeRow(7),
-        );
+        $writer->getCurrentSheet()->setSheetView((new SheetView)->withFreezeRow(7));
 
-        $kopStyle = (new Style)->setFontBold()->setFontSize(14);
-        $subKopStyle = (new Style)->setFontItalic()->setFontSize(10);
-        $judulStyle = (new Style)->setFontBold()->setFontSize(12);
-        $headerStyle = (new Style)->setFontBold();
-        $ttdStyle = (new Style)->setFontBold();
+        $kopStyle = (new Style)->withFontBold(true)->withFontSize(14);
+        $subKopStyle = (new Style)->withFontItalic(true)->withFontSize(10);
+        $judulStyle = (new Style)->withFontBold(true)->withFontSize(12);
+        $tebalStyle = (new Style)->withFontBold(true);
 
-        $writer->addRow(Row::fromValues(['PT. BARELANG KONTRAKTOR SARANA'], $kopStyle));
-        $writer->addRow(Row::fromValues(['Subkontraktor PT PLN Batam · Pulau Batam'], $subKopStyle));
-        $writer->addRow(Row::fromValues([$judul], $judulStyle));
+        $writer->addRow(Row::fromValuesWithStyle(['PT. BARELANG KONTRAKTOR SARANA'], $kopStyle));
+        $writer->addRow(Row::fromValuesWithStyle(['Subkontraktor PT PLN Batam · Pulau Batam'], $subKopStyle));
+        $writer->addRow(Row::fromValuesWithStyle([$judul], $judulStyle));
         $writer->addRow(Row::fromValues(['Dicetak: '.now()->translatedFormat('d F Y H:i').' WIB · Sistem Kontrol Keuangan']));
         $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues($header, $headerStyle));
+        $writer->addRow(Row::fromValuesWithStyle($header, $tebalStyle));
 
         foreach ($baris as $r) {
             $writer->addRow(Row::fromValues(array_values((array) $r)));
@@ -180,26 +196,19 @@ class LaporanEkspor
 
         if ($total !== null) {
             $writer->addRow(Row::fromValues([]));
-            $writer->addRow(Row::fromValues($total, $headerStyle));
+            $writer->addRow(Row::fromValuesWithStyle($total, $tebalStyle));
         }
 
         // Tanda Tangan Resmi Format Perusahaan
         $writer->addRow(Row::fromValues([]));
         $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues(['Mengetahui,', '', '', '', 'Dibuat Oleh,'], $ttdStyle));
+        $writer->addRow(Row::fromValuesWithStyle(['Mengetahui,', '', '', '', 'Dibuat Oleh,'], $tebalStyle));
         $writer->addRow(Row::fromValues(['Direktur Utama', '', '', '', 'Admin Keuangan']));
         $writer->addRow(Row::fromValues([]));
         $writer->addRow(Row::fromValues([]));
         $writer->addRow(Row::fromValues(['( .................................... )', '', '', '', '( .................................... )']));
 
         $writer->close();
-
-        return Response::streamDownload(function () use ($path): void {
-            readfile($path);
-            @unlink($path);
-        }, $namaFile.'.xlsx', [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
     }
 
     private function unduhCsv(string $judul, array $header, array $baris, string $namaFile): StreamedResponse
@@ -299,50 +308,10 @@ class LaporanEkspor
     {
         [$judul, $header, $baris] = $this->siapkanDataEkspor($jenis, $periode);
 
-        $writer = new XlsxWriter;
-        $writer->openToFile($tujuanPath);
-
-        $sheetView = new SheetView;
-        $sheetView->setFreezeRow(7);
-        $writer->getCurrentSheet()->setSheetView($sheetView);
-
-        $kopStyle = (new Style)->setFontBold()->setFontSize(14);
-        $subKopStyle = (new Style)->setFontItalic()->setFontSize(10);
-        $judulStyle = (new Style)->setFontBold()->setFontSize(12);
-        $headerStyle = (new Style)->setFontBold();
-        $ttdStyle = (new Style)->setFontBold();
-
-        $writer->addRow(Row::fromValues(['PT. BARELANG KONTRAKTOR SARANA'], $kopStyle));
-        $writer->addRow(Row::fromValues(['Subkontraktor PT PLN Batam · Pulau Batam'], $subKopStyle));
-        $writer->addRow(Row::fromValues([$judul], $judulStyle));
-        $writer->addRow(Row::fromValues(['Dicetak: '.now()->translatedFormat('d F Y H:i').' WIB · Sistem Kontrol Keuangan']));
-        $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues($header, $headerStyle));
-
-        foreach ($baris as $r) {
-            $writer->addRow(Row::fromValues(array_values((array) $r)));
-        }
-
-        $total = self::hitungBarisTotal($header, $baris);
-
-        if ($total !== null) {
-            $writer->addRow(Row::fromValues([]));
-            $writer->addRow(Row::fromValues($total, $headerStyle));
-        }
-
-        // Tanda Tangan Resmi Format Perusahaan
-        $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues(['Mengetahui,', '', '', '', 'Dibuat Oleh,'], $ttdStyle));
-        $writer->addRow(Row::fromValues(['Direktur Utama', '', '', '', 'Admin Keuangan']));
-        $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues(['( .................................... )', '', '', '', '( .................................... )']));
-
-        $writer->close();
+        $this->tulisXlsx($tujuanPath, $judul, $header, $baris);
     }
 
-    public function bundelZip(int $periode = 12): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function bundelZip(int $periode = 12): BinaryFileResponse
     {
         $label = str($this->labelPeriode($periode))->slug();
         $zipNama = 'bundel-laporan-bks-'.$label.'-'.now()->format('Y-m-d').'.zip';
@@ -381,11 +350,12 @@ class LaporanEkspor
             'Content-Type' => 'application/zip',
         ])->deleteFileAfterSend(true);
 
-        // Bersihkan direktori penampung setelah berkas terkirim
-        register_shutdown_function(static function () use ($tempDir): void {
-            if (is_dir($tempDir)) {
-                @rmdir($tempDir);
-            }
+        // Bersihkan berkas + direktori penampung setelah terkirim.
+        // `unlink` dulu: bila respons tidak pernah dikirim (tes/permintaan batal),
+        // deleteFileAfterSend() tidak jalan dan ZIP tertinggal -> rmdir gagal.
+        register_shutdown_function(static function () use ($tempDir, $zipPath): void {
+            @unlink($zipPath);
+            @rmdir($tempDir);
         });
 
         return $response;

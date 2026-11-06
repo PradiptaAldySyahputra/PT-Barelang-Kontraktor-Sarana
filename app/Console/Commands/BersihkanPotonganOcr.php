@@ -4,98 +4,97 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\Pengguna;
+use App\Models\Spk;
 use App\Models\UangKeluar;
+use App\Models\UangMasuk;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Bersihkan potongan nota hasil OCR yang sudah tidak dipakai.
+ * Bersihkan nota yang TIDAK PERNAH DISIMPAN, beserta potongan OCR-nya.
  *
  * KENAPA PERINTAH INI ADA
- * Setiap kali OCR membaca satu berkas nota, ia menyimpan gambar potongan
- * (satu per nota) di `storage/app/public/uang_keluar/potongan/<hash>/`.
+ * Form Unggah Nota menyimpan berkas ke disk SAAT DIUNGGAH (dibutuhkan worker
+ * OCR yang berjalan di latar belakang). Kalau admin batal, menutup tab, atau
+ * mengganti berkas, berkas itu tidak pernah tercatat di database - tapi tetap
+ * menumpuk di disk. Terbukti di mesin pengembangan: 1,3 GB / 1.837 berkas,
+ * sementara yang benar-benar dirujuk transaksi hanya puluhan.
  *
- * Masalahnya: potongan TIDAK PERNAH dihapus. Terbukti di mesin pengembangan,
- * folder potongan mencapai 177 MB / 36 folder - sebagian besar sudah tidak
- * dipakai (berkas sumbernya sudah hilang). Kalau dibiarkan, disk server kantor
- * akan penuh dan aplikasi berhenti bisa menyimpan nota.
+ * ATURAN
+ * Database adalah sumber kebenaran: berkas yang TIDAK dirujuk kolom
+ * `uang_keluar.bukti`, `uang_masuk.bukti`, `spk.dokumen`, atau
+ * `pengguna.tanda_tangan` (termasuk data soft delete) dibuang setelah
+ * melewati masa tenggang.
  *
- * CARA KERJA
- * Nama folder potongan = md5(path berkas sumber). Jadi kita bisa tahu folder
- * mana yang masih dipakai (ada berkas sumbernya) dan mana yang yatim
- * (berkas sumbernya sudah tidak ada) - lalu buang yang yatim saja.
+ * Masa tenggang (bawaan 24 jam) melindungi unggahan yang sedang diisi:
+ * berkas baru belum punya rujukan sampai admin menekan Simpan.
  *
  * Pakai:
- *     php artisan ocr:bersihkan          # buang potongan yatim
- *     php artisan ocr:bersihkan --kering # hanya tampilkan, tidak menghapus
- *     php artisan ocr:bersihkan --semua  # buang SEMUA potongan (dibuat ulang
- *                                        # otomatis saat form dibuka lagi)
+ *     php artisan ocr:bersihkan              # buang yang yatim & lebih tua dari 24 jam
+ *     php artisan ocr:bersihkan --kering     # hanya tampilkan, tidak menghapus
+ *     php artisan ocr:bersihkan --umur=2     # masa tenggang 2 jam
+ *     php artisan ocr:bersihkan --semua       # buang SEMUA potongan OCR
  */
 class BersihkanPotonganOcr extends Command
 {
     protected $signature = 'ocr:bersihkan
                             {--kering : Hanya tampilkan yang akan dibuang, jangan hapus}
-                            {--tak-dipakai : Buang juga potongan berkas yang TIDAK dirujuk pengeluaran tersimpan}
-                            {--semua : Buang SEMUA potongan (bukan hanya yang yatim)}';
+                            {--umur=24 : Masa tenggang (jam) sebelum berkas yatim dibuang}
+                            {--semua : Buang SEMUA potongan OCR (dibuat ulang saat form dibuka lagi)}';
 
-    protected $description = 'Buang gambar potongan nota hasil OCR yang sudah tidak dipakai';
+    protected $description = 'Buang nota yatim (tidak tersimpan di database) dan potongan OCR yang menumpuk';
 
-    private const FOLDER = 'uang_keluar/potongan';
+    /** Folder transaksi yang disapu. */
+    private const FOLDER = ['uang_keluar', 'uang_masuk'];
+
+    private const FOLDER_POTONGAN = 'uang_keluar/potongan';
 
     public function handle(): int
     {
-        // ⚠️ Potongan OCR disimpan di disk PRIVAT `nota` (lihat PembacaNota),
-        // BUKAN disk default `public`. Dulu perintah ini membaca disk `public`
-        // sehingga TIDAK PERNAH menemukan potongan sama sekali.
+        // ⚠️ Berkas nota ada di disk PRIVAT `nota` (lihat PembacaNota), BUKAN
+        // disk `public`. Dulu perintah ini membaca disk `public` sehingga tidak
+        // pernah menemukan apa pun.
         $disk = Storage::disk('nota');
-
-        if (! $disk->exists(self::FOLDER)) {
-            $this->info('Tidak ada folder potongan - tidak ada yang perlu dibersihkan.');
-
-            return self::SUCCESS;
-        }
 
         $kering = (bool) $this->option('kering');
         $semua = (bool) $this->option('semua');
-        $takDipakai = (bool) $this->option('tak-dipakai');
+        $batas = now()->subHours(max(0, (int) $this->option('umur')))->getTimestamp();
 
-        // Kumpulkan berkas sumber yang masih ada (untuk tahu mana yang yatim).
-        $sumberAda = $this->berkasSumberAda($disk);
+        $dirujuk = $this->pathDirujuk();
 
-        // Path berkas yang BENAR-BENAR dirujuk pengeluaran tersimpan.
-        // Potongan untuk berkas yang tidak dirujuk = murni sisa (tidak akan
-        // pernah tampil lagi), jadi paling aman dibuang.
-        $dirujuk = $takDipakai || $semua ? $this->berkasDirujuk() : [];
-
-        $folder = $disk->directories(self::FOLDER);
         $dibuang = 0;
-        $disimpan = 0;
         $byteDibuang = 0;
+        $disimpan = 0;
 
-        foreach ($folder as $dir) {
-            $hash = basename($dir);
-
-            $masihAdaSumber = in_array($hash, $sumberAda, true);
-            $masihDirujuk = in_array($hash, $dirujuk, true);
-
-            // Aturan simpan:
-            //   - default      : simpan kalau berkas sumbernya masih ada
-            //   - --tak-dipakai: simpan HANYA kalau dirujuk pengeluaran tersimpan
-            //   - --semua      : tidak menyimpan apa pun
-            $simpan = match (true) {
-                $semua => false,
-                $takDipakai => $masihDirujuk,
-                default => $masihAdaSumber,
-            };
-
-            if ($simpan) {
-                $disimpan++;
-
+        foreach (self::FOLDER as $folder) {
+            if (! $disk->exists($folder)) {
                 continue;
             }
 
-            foreach ($disk->files($dir) as $file) {
+            foreach ($disk->allFiles($folder) as $file) {
+                $potongan = str_starts_with($file, self::FOLDER_POTONGAN.'/');
+
+                if ($potongan && $semua) {
+                    // Potongan selalu bisa dibuat ulang saat form dibuka lagi.
+                    $buang = true;
+                } elseif (isset($dirujuk[$file])) {
+                    $disimpan++;
+
+                    continue;
+                } else {
+                    // Berkas baru (belum disimpan) masih muda: beri kesempatan
+                    // admin menyelesaikan isian sebelum disapu.
+                    $buang = $disk->lastModified($file) < $batas;
+                }
+
+                if (! $buang) {
+                    $disimpan++;
+
+                    continue;
+                }
+
                 $byteDibuang += (int) $disk->size($file);
 
                 if (! $kering) {
@@ -104,68 +103,94 @@ class BersihkanPotonganOcr extends Command
 
                 $dibuang++;
             }
+        }
 
-            if (! $kering) {
-                $disk->deleteDirectory($dir);
-            }
+        if (! $kering) {
+            $this->hapusFolderKosong($disk);
         }
 
         $mb = round($byteDibuang / 1024 / 1024, 1);
 
         if ($kering) {
-            $this->warn("[KERING] Akan dibuang: {$dibuang} potongan ({$mb} MB). Disimpan: {$disimpan} folder.");
+            $this->warn("[KERING] Akan dibuang: {$dibuang} berkas ({$mb} MB). Disimpan: {$disimpan} berkas.");
             $this->line('Jalankan tanpa --kering untuk benar-benar menghapus.');
         } else {
-            $this->info("Dibuang: {$dibuang} potongan ({$mb} MB). Disimpan: {$disimpan} folder yang masih dipakai.");
+            $this->info("Dibuang: {$dibuang} berkas ({$mb} MB). Disimpan: {$disimpan} berkas yang masih dirujuk.");
         }
 
         return self::SUCCESS;
     }
 
     /**
-     * Daftar md5(path) untuk semua berkas sumber yang masih ada.
+     * Semua path berkas yang dirujuk database (termasuk data soft delete).
      *
-     * @return array<int, string>
+     * @return array<string, true>
      */
-    private function berkasSumberAda(FilesystemAdapter $disk): array
+    private function pathDirujuk(): array
     {
-        $hash = [];
+        $dirujuk = [];
 
-        // ⚠️ PINDAI REKURSIF: berkas nota BARU tersimpan di sub-folder bertanggal
-        // (mis. uang_keluar/2026/10/11/nota-x.jpg). Pemindaian NON-rekursif
-        // akan menganggap SEMUA potongan "yatim" lalu menghapusnya.
-        foreach ($disk->allFiles() as $file) {
-            // Lewati folder potongan itu sendiri.
-            if (str_starts_with($file, self::FOLDER.'/')) {
-                continue;
+        $tambah = function (mixed $nilai) use (&$dirujuk): void {
+            foreach (is_array($nilai) ? $nilai : [$nilai] as $path) {
+                if (is_string($path) && $path !== '') {
+                    $dirujuk[str_replace('\\', '/', ltrim($path, '/'))] = true;
+                }
             }
+        };
 
-            $hash[] = md5($file);
+        foreach (UangKeluar::withTrashed()->get(['bukti']) as $record) {
+            $tambah($record->bukti);
         }
 
-        return $hash;
+        foreach (UangMasuk::withTrashed()->get(['bukti']) as $record) {
+            $tambah($record->bukti);
+        }
+
+        foreach (Spk::withTrashed()->get(['dokumen']) as $record) {
+            $tambah($record->dokumen);
+        }
+
+        foreach (Pengguna::query()->get(['tanda_tangan']) as $record) {
+            $tambah($record->tanda_tangan);
+        }
+
+        return $dirujuk;
     }
 
     /**
-     * Daftar md5(path) untuk berkas yang dirujuk pengeluaran TERSIMPAN.
-     *
-     * Potongan untuk berkas di luar daftar ini tidak akan pernah tampil lagi,
-     * jadi aman dibuang.
-     *
-     * @return array<int, string>
+     * Buang folder bertanggal yang kini kosong.
      */
-    private function berkasDirujuk(): array
+    private function hapusFolderKosong(FilesystemAdapter $disk): void
     {
-        $hash = [];
+        foreach (self::FOLDER as $folder) {
+            if (! $disk->exists($folder)) {
+                continue;
+            }
 
-        foreach (UangKeluar::query()->get(['bukti']) as $record) {
-            foreach ((array) ($record->bukti ?? []) as $path) {
-                if (is_string($path) && filled($path)) {
-                    $hash[] = md5($path);
+            // Terdalam dulu supaya induk ikut terhapus bila kosong.
+            $daftar = collect($disk->directories($folder))
+                ->flatMap(fn (string $dir): array => $this->semuaSubfolder($disk, $dir))
+                ->sortByDesc(fn (string $dir): int => substr_count($dir, '/'));
+
+            foreach ($daftar as $dir) {
+                if ($disk->files($dir) === [] && $disk->directories($dir) === []) {
+                    $disk->deleteDirectory($dir);
                 }
             }
         }
+    }
 
-        return array_values(array_unique($hash));
+    /**
+     * @return array<int, string>
+     */
+    private function semuaSubfolder(FilesystemAdapter $disk, string $folder): array
+    {
+        $hasil = [$folder];
+
+        foreach ($disk->directories($folder) as $sub) {
+            $hasil = [...$hasil, ...$this->semuaSubfolder($disk, $sub)];
+        }
+
+        return $hasil;
     }
 }

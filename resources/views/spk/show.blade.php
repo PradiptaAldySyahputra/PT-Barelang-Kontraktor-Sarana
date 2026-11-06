@@ -59,9 +59,9 @@
         {{-- 1. Header Toolbar & Tindakan Cepat Navigasi --}}
         <div class="{{ $kelasKartu }} p-5 md:p-6">
             <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+                <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2.5">
-                        <span class="angka text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                        <span class="angka break-all text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                             {{ $spk->nomor_spk }}
                         </span>
                         <span class="inline-flex rounded-lg px-2.5 py-0.5 text-xs font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
@@ -232,9 +232,9 @@
                 </h3>
 
                 <dl class="mt-4 grid gap-4 sm:grid-cols-3">
-                    <div>
+                    <div class="min-w-0">
                         <dt class="{{ $kelasLabel }}">Nomor SPK</dt>
-                        <dd class="{{ $kelasNilai }} angka">{{ $spk->nomor_spk }}</dd>
+                        <dd class="{{ $kelasNilai }} angka break-all">{{ $spk->nomor_spk }}</dd>
                     </div>
                     <div class="sm:col-span-2">
                         <dt class="{{ $kelasLabel }}">Nama Pekerjaan</dt>

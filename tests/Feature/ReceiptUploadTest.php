@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
 use App\Enums\Peran;
+use App\Enums\StatusSpk;
 use App\Livewire\Receipt\ReceiptUploadForm;
 use App\Models\Pengguna;
 use App\Models\Spk;
@@ -79,6 +80,31 @@ class ReceiptUploadTest extends TestCase
                 'daftarNota.0.tanggal',
                 'daftarNota.0.nominal',
             ]);
+
+        $this->assertSame(0, UangKeluar::query()->count());
+    }
+
+    public function test_kategori_lainnya_wajib_isi_keterangan_dan_spk_dibatalkan_ditolak(): void
+    {
+        $spkBatal = Spk::factory()->create(['status_spk' => StatusSpk::Dibatalkan]);
+
+        $komponen = Livewire::actingAs($this->admin())
+            ->test(ReceiptUploadForm::class)
+            ->call('tambahNotaManual');
+
+        $komponen->set('daftarNota.0.tanggal', now()->toDateString());
+        $komponen->set('daftarNota.0.nominal', 100000);
+        $komponen->set('daftarNota.0.kategori', KategoriPengeluaran::Lainnya->value);
+        $komponen->set('daftarNota.0.keterangan', '');
+
+        $komponen->call('simpanSemua')
+            ->assertHasErrors(['daftarNota.0.keterangan']);
+
+        $komponen->set('daftarNota.0.keterangan', 'Biaya parkir proyek');
+        $komponen->set('daftarNota.0.spk_id', $spkBatal->id);
+
+        $komponen->call('simpanSemua')
+            ->assertHasErrors(['berkasNota']);
 
         $this->assertSame(0, UangKeluar::query()->count());
     }

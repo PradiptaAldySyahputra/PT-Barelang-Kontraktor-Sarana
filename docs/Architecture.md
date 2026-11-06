@@ -10,7 +10,8 @@
 ## 1. Prinsip Arsitektur
 
 1. **Monolitik** — sederhana, mudah dirawat tim kecil (1–3 developer).
-2. **Tidak menggunakan microservices**, message queue, atau container orchestration.
+2. **Tidak menggunakan microservices** atau container orchestration. Antrean memakai tabel
+   `jobs` bawaan Laravel (tanpa broker eksternal) dan hanya dipakai untuk OCR nota — lihat §12.6a.
 3. **Server-rendered** dengan Blade Template — tanpa build pipeline berlebihan.
 4. **On-premise / lokal** — berjalan di jaringan kantor, bukan cloud.
 5. **Satu sumber data** — database hanya di satu PC (server), mencegah data terpecah.
@@ -39,7 +40,7 @@
 | File Storage | Laravel Storage | Simpan bukti transaksi (uang masuk & keluar) |
 | Grafik | ApexCharts (bawaan template) | Grafik arus kas, status SPK, kategori |
 | Export Laporan | **XLSX & CSV** (OpenSpout) | Format persis file kas & bank kantor BKS, CSV UTF-8 |
-| **Deployment** | **Lokal di PC Direktur (jaringan kantor)** | Biaya rendah, data tetap di perusahaan |
+| **Deployment** | **Dedicated Server Intranet 24 Jam (Ubuntu Server)** | PC server rakitan di kantor via LAN + Tailscale remote access |
 | Web Server Lokal | Apache/Nginx (via Laragon/XAMPP) | Menjalankan aplikasi di port lokal |
 | Backup | `php artisan bks:backup` + Laravel Scheduler | Dump harian `.sql.gz`, retensi 30 hari |
 
@@ -510,6 +511,43 @@ Cek: `php artisan schedule:list` · uji: `php artisan bks:backup`.
 - **Artisan serve:** buat systemd service (`/etc/systemd/system/bks.service`),
   `ExecStart=/usr/bin/php artisan serve --host=0.0.0.0 --port=8000`, `Restart=always`.
 - **Windows:** Laragon auto-start, atau NSSM untuk web server & MariaDB.
+
+### 12.6a Antrean OCR nota
+
+Antrean memakai tabel `jobs` bawaan Laravel; `.env` di repo ini sudah
+`QUEUE_CONNECTION=database`. **Konsekuensinya worker wajib hidup** — tanpa worker, halaman
+Unggah Nota berhenti di "OCR berjalan di latar belakang" (berkasnya tetap tersimpan, jadi
+kartu bisa diisi manual lewat *Tambah Nota Manual*).
+
+Server (Ubuntu, `www-data`) — `/etc/systemd/system/bks-queue.service`:
+
+```ini
+[Unit]
+Description=BKS queue worker (OCR nota)
+After=network.target mysql.service
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/bks
+ExecStart=/usr/bin/php artisan queue:work --sleep=1 --tries=1 --timeout=600
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+`sudo systemctl daemon-reload && sudo systemctl enable --now bks-queue`, lalu
+`journalctl -u bks-queue -f` untuk melihat `EkstrakNotaOcr .. RUNNING / DONE`.
+Setiap kali kode berubah: `sudo systemctl restart bks-queue` (worker memuat kode lama).
+
+Laptop pengembangan (tanpa sudo) — unit pengguna
+`~/.config/systemd/user/bks-queue.service` dengan `WorkingDirectory` = folder proyek,
+lalu `systemctl --user enable --now bks-queue`. Supaya tetap hidup setelah logout:
+`loginctl enable-linger $USER`.
+
+Kalau ingin kembali sinkron (tanpa worker): `QUEUE_CONNECTION=sync` — OCR selesai di
+request yang sama, tapi unggahan PDF tumpuk akan menunggu lebih lama.
 
 ### 12.7 Dari PC client
 

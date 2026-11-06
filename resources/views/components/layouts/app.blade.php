@@ -169,7 +169,18 @@
                 @if (session('berhasil'))
                     <div class="mb-5 flex items-start gap-3 rounded-xl border border-success-500/20 bg-success-500/10 p-4 text-sm text-success-700 dark:text-success-400">
                         <span class="mt-0.5 font-bold">✓</span>
-                        <p>{{ session('berhasil') }}</p>
+                        <div class="flex flex-1 flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <p>{{ session('berhasil') }}</p>
+                            @if (session('backup_baru'))
+                                <a href="{{ route('backup.unduh', session('backup_baru')) }}"
+                                    class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-success-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-success-700 transition shadow-xs shrink-0">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Unduh ke Flashdisk Sekarang
+                                </a>
+                            @endif
+                        </div>
                     </div>
                 @endif
 

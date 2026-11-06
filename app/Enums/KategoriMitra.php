@@ -54,7 +54,7 @@ enum KategoriMitra: string
     }
 
     /**
-     * Warna badge Filament - konsisten di seluruh halaman.
+     * Warna badge - konsisten di seluruh tabel & panel.
      */
     public function warnaBadge(): string
     {

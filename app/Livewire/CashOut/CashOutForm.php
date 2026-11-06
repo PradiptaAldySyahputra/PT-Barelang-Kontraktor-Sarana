@@ -10,10 +10,13 @@ use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Services\PembacaNota;
 use App\Services\PenyimpanBerkas;
+use App\Support\Format;
+use App\Support\SaldoKas;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Throwable;
@@ -57,7 +60,7 @@ final class CashOutForm extends Component
             $this->baris = [(string) Str::uuid() => [
                 'tanggal' => $record->tanggal?->format('Y-m-d'),
                 'akun' => $record->akun?->value ?? AkunKas::Kas->value,
-                'jumlah' => \App\Support\Format::untukInputUang($record->jumlah),
+                'jumlah' => Format::untukInputUang($record->jumlah),
                 'kategori' => $record->kategori?->value,
                 'detail_kategori' => $record->detail_kategori,
                 'penerima' => $record->penerima,
@@ -224,7 +227,7 @@ final class CashOutForm extends Component
 
         // Angka bertitik ("1.500.000") dinormalisasi dulu supaya lolos `numeric`.
         foreach ($this->baris as $kunci => $r) {
-            $this->baris[$kunci]['jumlah'] = \App\Support\Format::bersihkanUang($r['jumlah'] ?? '');
+            $this->baris[$kunci]['jumlah'] = Format::bersihkanUang($r['jumlah'] ?? '');
         }
 
         $this->validate($aturan, [], [
@@ -307,7 +310,7 @@ final class CashOutForm extends Component
             $kunci = collect($this->baris)->search(fn (array $r): bool => (int) ($r['spk_id'] ?? 0) === $ditolak->id);
             $this->addError("$prefix.$kunci.spk_id", 'SPK '.$ditolak->nomor_spk.' berstatus Dibatalkan dan tidak bisa menerima transaksi baru.');
 
-            throw new \Illuminate\Validation\ValidationException($this->getErrorBag());
+            throw new ValidationException($this->getErrorBag());
         }
     }
 
@@ -329,10 +332,10 @@ final class CashOutForm extends Component
 
     public function render(): View
     {
-        $saldoKasSaatIni = \App\Support\SaldoKas::saldo(AkunKas::Kas);
+        $saldoKasSaatIni = SaldoKas::saldo(AkunKas::Kas);
         $totalPengeluaranKas = collect($this->baris)
             ->filter(fn ($b) => ($b['akun'] ?? 'kas') === 'kas')
-            ->sum(fn ($b) => \App\Support\Format::bersihkanUang($b['jumlah'] ?? 0));
+            ->sum(fn ($b) => Format::bersihkanUang($b['jumlah'] ?? 0));
 
         $peringatanSaldoKas = $totalPengeluaranKas > $saldoKasSaatIni;
 

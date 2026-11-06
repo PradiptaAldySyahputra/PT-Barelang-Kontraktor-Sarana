@@ -105,7 +105,7 @@ class MenuHelper
             return request()->is('panel');
         }
 
-        return request()->is($cleanPath) || request()->is($cleanPath . '/*');
+        return request()->is($cleanPath) || request()->is($cleanPath.'/*');
     }
 
     public static function getIconSvg($iconName)

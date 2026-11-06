@@ -183,10 +183,12 @@
                                     <span class="angka block font-bold text-success-600 dark:text-success-400">
                                         + {{ Format::rupiah($trx->jumlah) }}
                                     </span>
-                                    @if ($trx->jumlahFileBukti() > 0)
-                                        <span class="mt-0.5 inline-flex rounded px-1.5 py-0.2 text-[10px] font-medium {{ $badge('info') }}" title="{{ $trx->jumlahFileBukti() }} berkas nota">
+                                    @if ($trx->jumlahFileBukti() > 0 && filled($trx->bukti))
+                                        <a href="{{ Nota::url($trx->bukti[0]) }}" target="_blank" rel="noopener"
+                                            class="mt-0.5 inline-flex rounded px-1.5 py-0.2 text-[10px] font-medium hover:underline {{ $badge('info') }}"
+                                            title="Klik untuk membuka berkas bukti ({{ $trx->jumlahFileBukti() }} berkas)">
                                             📎 {{ $trx->jumlahFileBukti() }} nota
-                                        </span>
+                                        </a>
                                     @endif
                                 </td>
 
@@ -194,6 +196,13 @@
                                 @if ($bolehUbah)
                                     <td class="px-4 py-2.5 text-right whitespace-nowrap">
                                         <div class="inline-flex items-center justify-end gap-1.5">
+                                            @if (filled($trx->bukti))
+                                                <a href="{{ Nota::url($trx->bukti[0]) }}" target="_blank" rel="noopener"
+                                                    class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-brand-600 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-brand-400 dark:hover:bg-gray-700 transition"
+                                                    title="Lihat Bukti Pembayaran">
+                                                    📎 Bukti
+                                                </a>
+                                            @endif
                                             <a href="{{ route('panel.cash-in.kuitansi', $trx) }}"
                                                 class="inline-flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400 transition"
                                                 title="Cetak Kuitansi Resmi PDF">
@@ -266,10 +275,11 @@
 
                         <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
                             <span>{{ $trx->nomor_spk ?: ($trx->mitra?->nama ?? '—') }}</span>
-                            @if ($trx->jumlahFileBukti() > 0)
-                                <span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium {{ $badge('info') }}">
-                                    {{ $trx->jumlahFileBukti() }} nota
-                                </span>
+                            @if ($trx->jumlahFileBukti() > 0 && filled($trx->bukti))
+                                <a href="{{ Nota::url($trx->bukti[0]) }}" target="_blank" rel="noopener"
+                                    class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium hover:underline {{ $badge('info') }}">
+                                    📎 {{ $trx->jumlahFileBukti() }} nota
+                                </a>
                             @endif
                         </div>
 

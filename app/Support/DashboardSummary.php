@@ -18,10 +18,10 @@ use Illuminate\Support\Collection;
  * RINGKASAN DASBOR PANEL BLADE - satu-satunya sumber angka dashboard.
  *
  * ⚠️ KENAPA JADI KELAS SENDIRI (bukan query di controller):
- * Dashboard Filament (`RingkasanDirektur`, `AdminActionBar`) dan dashboard
- * Blade membaca tabel yang sama. Kalau rumusnya ditulis dua kali, cepat atau
+ * Dashboard Direktur (`director.dashboard`) dan Dashboard Admin
+ * (`admin.dashboard`) membaca tabel yang sama. Kalau rumusnya ditulis dua kali, cepat atau
  * lambat angkanya akan berbeda diam-diam - jenis bug paling mahal di aplikasi
- * keuangan. Semua agregasi dikumpulkan di sini, lalu kedua antarmuka memakainya.
+ * keuangan. Semua agregasi dikumpulkan di sini, lalu kedua dashboard memakainya.
  *
  * Kelas ini MURNI BACA: tidak menulis, tidak menyimpan, tidak menambah tabel
  * (Rules.md §1). Semua dihitung dari transaksi yang sudah ada.
@@ -346,8 +346,8 @@ final class DashboardSummary
             if ($lewat->isNotEmpty()) {
                 $alerts[] = [
                     'tipe' => 'error',
-                    'judul' => 'Peringatan: ' . $lewat->count() . ' SPK Melewati Batas Waktu!',
-                    'pesan' => 'Ada SPK yang telah melewati tenggat jadwal dan memerlukan tindak lanjut segera (' . $lewat->pluck('nomor_spk')->take(3)->implode(', ') . ($lewat->count() > 3 ? '...' : '') . ').',
+                    'judul' => 'Peringatan: '.$lewat->count().' SPK Melewati Batas Waktu!',
+                    'pesan' => 'Ada SPK yang telah melewati tenggat jadwal dan memerlukan tindak lanjut segera ('.$lewat->pluck('nomor_spk')->take(3)->implode(', ').($lewat->count() > 3 ? '...' : '').').',
                     'aksi_url' => route('panel.spk.monitoring', 'status'),
                     'aksi_label' => 'Periksa SPK',
                 ];
@@ -357,7 +357,7 @@ final class DashboardSummary
             if ($mendekati > 0) {
                 $alerts[] = [
                     'tipe' => 'warning',
-                    'judul' => 'Perhatian: ' . $mendekati . ' SPK Mendekati Tenggat (≤ 14 Hari)',
+                    'judul' => 'Perhatian: '.$mendekati.' SPK Mendekati Tenggat (≤ 14 Hari)',
                     'pesan' => 'Periksa kemajuan fisik dan siapkan dokumen berita acara sebelum masa kontrak berakhir.',
                     'aksi_url' => route('panel.spk.monitoring', 'status'),
                     'aksi_label' => 'Pantau Progres',
@@ -373,7 +373,7 @@ final class DashboardSummary
             if ($belumTagih > 0) {
                 $alerts[] = [
                     'tipe' => 'info',
-                    'judul' => $belumTagih . ' SPK Selesai Belum Diterbitkan Tagihan',
+                    'judul' => $belumTagih.' SPK Selesai Belum Diterbitkan Tagihan',
                     'pesan' => 'Pekerjaan fisik telah selesai. Terbitkan dokumen penagihan ke mitra agar pencairan dana tidak tertunda.',
                     'aksi_url' => route('panel.spk.monitoring', 'billing'),
                     'aksi_label' => 'Buka Penagihan',

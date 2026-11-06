@@ -6,10 +6,13 @@ namespace Tests\Feature;
 
 use App\Enums\AkunKas;
 use App\Enums\Peran;
+use App\Models\Mitra;
 use App\Models\Pengguna;
+use App\Models\Spk;
 use App\Models\UangMasuk;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -212,8 +215,8 @@ class SystemPanelTest extends TestCase
 
     public function test_cetak_kuitansi_uang_masuk_pdf(): void
     {
-        $mitra = \App\Models\Mitra::factory()->create();
-        $spk = \App\Models\Spk::factory()->create(['mitra_id' => $mitra->id, 'nilai_spk' => 20_000_000]);
+        $mitra = Mitra::factory()->create();
+        $spk = Spk::factory()->create(['mitra_id' => $mitra->id, 'nilai_spk' => 20_000_000]);
         $uangMasuk = UangMasuk::factory()->create([
             'spk_id' => $spk->id,
             'jumlah' => 5_000_000,
@@ -229,7 +232,7 @@ class SystemPanelTest extends TestCase
 
     public function test_api_termin_drawer_spk(): void
     {
-        $spk = \App\Models\Spk::factory()->create(['nilai_spk' => 15_000_000]);
+        $spk = Spk::factory()->create(['nilai_spk' => 15_000_000]);
         UangMasuk::factory()->create([
             'spk_id' => $spk->id,
             'jumlah' => 5_000_000,
@@ -251,15 +254,17 @@ class SystemPanelTest extends TestCase
 
     public function test_unduh_backup_bisa_oleh_admin_dan_direktur(): void
     {
-        $dir = storage_path('app/backup');
-        \Illuminate\Support\Facades\File::ensureDirectoryExists($dir);
+        // Folder sementara: berkas uji tidak boleh nyasar ke backup sungguhan.
+        $dir = sys_get_temp_dir().'/bks-unduh-uji-'.uniqid();
+        File::ensureDirectoryExists($dir);
+        config(['filesystems.backup_path' => $dir]);
         $nama = 'test-backup.zip';
-        \Illuminate\Support\Facades\File::put($dir . '/' . $nama, 'dummy zip content');
+        File::put($dir.'/'.$nama, 'dummy zip content');
 
         foreach ([Peran::Admin, Peran::Direktur] as $peran) {
             $pengguna = $this->pengguna($peran);
             $this->actingAs($pengguna)
-                ->get('/admin/backup/unduh/' . $nama)
+                ->get('/admin/backup/unduh/'.$nama)
                 ->assertOk()
                 ->assertHeader('content-type', 'application/zip');
         }
@@ -268,5 +273,7 @@ class SystemPanelTest extends TestCase
         $this->actingAs($this->pengguna(Peran::Admin))
             ->get('/admin/backup/unduh/../../etc/passwd')
             ->assertNotFound();
+
+        File::deleteDirectory($dir);
     }
 }

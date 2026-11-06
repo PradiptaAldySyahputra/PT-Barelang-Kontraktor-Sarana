@@ -39,7 +39,7 @@
                     </div>
 
                     {{-- Form Rentang Tanggal Kustom --}}
-                    <form method="GET" action="{{ route('panel.reports') }}" class="flex items-center gap-1.5 pl-2 sm:border-l border-gray-200 dark:border-gray-800">
+                    <form method="GET" action="{{ route('panel.reports') }}" class="flex flex-wrap items-center gap-1.5 sm:pl-2 sm:border-l border-gray-200 dark:border-gray-800">
                         <input type="hidden" name="periode" value="0">
                         <label for="lap-mulai" class="sr-only">Tanggal Mulai</label>
                         <input id="lap-mulai" type="date" name="mulai" value="{{ $tanggalMulai }}"
@@ -397,7 +397,7 @@
             {{-- Quick Links ke Rincian Piutang & Tenggat --}}
             <div class="grid gap-6 lg:grid-cols-2">
                 {{-- Piutang Terbesar --}}
-                <div class="{{ $kelasKartu }} p-5">
+                <div class="{{ $kelasKartu }} p-5 min-w-0 overflow-hidden">
                     <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
                         <h4 class="text-base font-semibold text-gray-900 dark:text-white">Piutang SPK Berjalan</h4>
                         <button type="button" @click="activeTab = 'piutang'" class="text-theme-xs font-semibold text-brand-600 hover:underline dark:text-brand-400">
@@ -430,7 +430,7 @@
                 </div>
 
                 {{-- Status Tenggat Waktu --}}
-                <div class="{{ $kelasKartu }} p-5">
+                <div class="{{ $kelasKartu }} p-5 min-w-0 overflow-hidden">
                     <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
                         <h4 class="text-base font-semibold text-gray-900 dark:text-white">Perhatian Tenggat Waktu</h4>
                         <button type="button" @click="activeTab = 'tenggat'" class="text-theme-xs font-semibold text-brand-600 hover:underline dark:text-brand-400">
@@ -510,7 +510,7 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                @foreach ($buku['baris'] as $baris)
+                                @foreach ($buku['baris']->take($batasBaris ?? $buku['baris']->count()) as $baris)
                                     <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
                                         <td class="px-4 py-2.5 whitespace-nowrap text-theme-xs text-gray-700 dark:text-gray-300">
                                             {{ $baris['tanggal']?->format('d/m/Y') }}
@@ -543,6 +543,7 @@
                             </tfoot>
                         </table>
                     </div>
+                    @include('reports.partials.batas-baris', ['buku' => $buku, 'batasBaris' => $batasBaris])
                 @endif
             </section>
         </div>
@@ -583,7 +584,7 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                @foreach ($buku['baris'] as $baris)
+                                @foreach ($buku['baris']->take($batasBaris ?? $buku['baris']->count()) as $baris)
                                     <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
                                         <td class="px-4 py-2.5 whitespace-nowrap text-theme-xs text-gray-700 dark:text-gray-300">
                                             {{ $baris['tanggal']?->format('d/m/Y') }}
@@ -616,6 +617,7 @@
                             </tfoot>
                         </table>
                     </div>
+                    @include('reports.partials.batas-baris', ['buku' => $buku, 'batasBaris' => $batasBaris])
                 @endif
             </section>
         </div>

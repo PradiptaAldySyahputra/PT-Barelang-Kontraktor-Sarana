@@ -168,11 +168,11 @@
             <td>
                 <div>Pihak Pertama (Penyedia)</div>
                 <div style="font-weight: bold; margin-top: 2px;">PT BARELANG KONTRAKTOR SARANA</div>
-                @if ($direkturUser?->urlTandaTangan())
+                @if ($tandaTangan['gambar'] ?? null)
                     <div style="margin-top: 10px;">
-                        <img src="{{ public_path(ltrim(parse_url($direkturUser->urlTandaTangan(), PHP_URL_PATH), '/')) }}" style="height: 50px; object-contain;" alt="TTD">
+                        <img src="{{ $tandaTangan['gambar'] }}" style="height: 50px; object-fit: contain;" alt="TTD">
                     </div>
-                    <div style="font-weight: bold; text-decoration: underline;">{{ $direkturUser->nama }}</div>
+                    <div style="font-weight: bold; text-decoration: underline;">{{ $direkturUser?->nama ?? $tandaTangan['nama'] }}</div>
                 @else
                     <div class="garis-nama">{{ $direkturUser?->nama ?? 'Direktur Utama' }}</div>
                 @endif

@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -23,9 +24,9 @@ use Illuminate\Support\Facades\Storage;
  * @property int $total_rows
  * @property int $successful_rows
  * @property int $user_id
- * @property \Illuminate\Support\Carbon|null $completed_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $completed_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Export extends Model
 {
@@ -75,6 +76,8 @@ class Export extends Model
 
     public function getFileDirectory(): string
     {
+        // Nama folder dipertahankan demi kompatibilitas berkas ekspor lama
+        // (era Filament). Mengganti nama akan memutus unduhan riwayat.
         return 'filament_exports';
     }
 }

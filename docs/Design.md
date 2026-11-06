@@ -24,7 +24,7 @@
 | **Primary color** | **Biru enterprise `#2563eb`** (blue-600) — tombol utama, menu aktif, link. SATU aksen saja, jangan warna-warni (sistem desain v1.1, 11 Okt 2026) |
 | **Warna semantik** | Hijau = pemasukan/untung; Merah = pengeluaran/rugi; Abu = arsip/dibatalkan |
 | **Warna netral** | `zinc` untuk teks dan elemen netral; putih untuk permukaan utama |
-| **Mode gelap** | Aktif (bawaan Filament 5). Latar `#09090b`, teks `#fafafa`, aksen biru terang `#60a5fa` |
+| **Mode gelap** | Aktif (bawaan panel Blade + TailAdmin, `class="dark"` + CSS variables). Latar `#09090b`, teks `#fafafa`, aksen biru terang `#60a5fa` |
 | **Typography** | Font sistem (`system-ui`, `-apple-system`, …) — benar-benar dimuat, bukan Inter. Diperbaiki 12 Okt 2026 (lihat §14) |
 | **Komponen** | Kartu radius moderat, whitespace cukup, ikon sederhana, hierarki heading konsisten |
 | **Prinsip** | Mobile-first, jelas, ramah pengguna, konsisten, aksesibel |
@@ -33,7 +33,7 @@
 
 ## 3. Struktur Navigasi Sidebar
 
-> ⚠️ **SUDAH DIIMPLEMENTASI di Filament** (`/admin`). Sidebar bisa
+> ⚠️ **SUDAH DIIMPLEMENTASI di panel Blade + Livewire (`/panel`).** Sidebar bisa
 > **ditutup/dibuka** (`sidebarFullyCollapsibleOnDesktop`) dan **grup menu bisa
 > dilipat** (`collapsibleNavigationGroups`). Tema: **Clean Minimalist Enterprise**
 > (monokrom, border tipis, font sistem).

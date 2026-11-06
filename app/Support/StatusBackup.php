@@ -92,7 +92,17 @@ final class StatusBackup
 
     public static function direktori(): string
     {
+        $custom = config('filesystems.backup_path');
+        if (filled($custom)) {
+            return (string) $custom;
+        }
+
         return storage_path('app/backup');
+    }
+
+    public static function folder(): string
+    {
+        return self::direktori();
     }
 
     public static function formatUkuran(int $bytes): string

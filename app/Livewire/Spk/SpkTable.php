@@ -25,8 +25,8 @@ use Livewire\WithPagination;
  *     bookmark, dan kirim-tautan-ke-rekan kerja tetap berfungsi.
  *   - Nama kolom pengurutan DIVALIDASI terhadap daftar putih
  *     (`URUT_SAH`), karena `?urut=` datang dari luar.
- *   - Baris yang diklik tetap menuju halaman Filament selama masa transisi,
- *     jadi tidak ada fitur yang hilang saat dipakai.
+ *   - Baris yang diklik membuka halaman detail SPK (/panel/spk/{id}),
+ *     jadi tidak ada fitur yang hilang.
  */
 final class SpkTable extends Component
 {

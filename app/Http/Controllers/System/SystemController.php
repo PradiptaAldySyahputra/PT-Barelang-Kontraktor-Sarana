@@ -15,6 +15,7 @@ use App\Support\StatusBackup;
 use App\Support\StatusSistem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -46,7 +47,7 @@ final class SystemController
         $total = $semuaArsip->count();
         $arsipSlice = $semuaArsip->slice(($halaman - 1) * $perHalaman, $perHalaman)->values();
 
-        $arsipPaginated = new \Illuminate\Pagination\LengthAwarePaginator(
+        $arsipPaginated = new LengthAwarePaginator(
             $arsipSlice,
             $total,
             $perHalaman,
@@ -122,8 +123,15 @@ final class SystemController
         $exit = Artisan::call('bks:backup', ['--hari' => 30]);
         $keluaran = trim(Artisan::output());
 
+        $fileTerbaru = null;
+        if ($exit === 0) {
+            $daftar = StatusBackup::daftar();
+            $fileTerbaru = $daftar[0]['nama'] ?? null;
+        }
+
         return redirect()
             ->route('panel.backup')
+            ->with('backup_baru', $fileTerbaru)
             ->with(
                 $exit === 0 ? 'berhasil' : 'gagal',
                 $keluaran !== ''
@@ -169,8 +177,13 @@ final class SystemController
             return back()->with('gagal', 'Berkas gagal disimpan.');
         }
 
-        $baris = PembacaImpor::baca($path);
-        @unlink($path);
+        // Berkas mentah berisi data keuangan: hapus apa pun yang terjadi,
+        // termasuk bila pembacaan gagal di tengah jalan.
+        try {
+            $baris = PembacaImpor::baca($path);
+        } finally {
+            @unlink($path);
+        }
 
         $hasil = $data['jenis'] === 'keluar'
             ? ImporTransaksi::uangKeluar($baris)

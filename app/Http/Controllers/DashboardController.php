@@ -17,7 +17,7 @@ use Illuminate\View\View;
  *   Admin    -> admin.dashboard    : operasional, aksi cepat.
  *
  * Semua angka berasal dari App\Support\DashboardSummary, satu sumber yang
- * sama dengan dashboard Filament selama /admin masih hidup.
+ * sama untuk kedua varian dashboard.
  */
 final class DashboardController
 {

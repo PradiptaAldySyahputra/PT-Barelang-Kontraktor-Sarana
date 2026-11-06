@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
  * (sedang diproses / selesai / gagal) dan mengunduhnya kembali tanpa menunggu
  * notifikasi.
  *
- * ⚠️ Data diambil dari tabel `exports` bawaan Filament - TIDAK ada tabel baru.
+ * ⚠️ Data diambil dari tabel `exports` (tabel infrastruktur, bukan tabel domain) - TIDAK ada tabel baru.
  */
 final class RiwayatEkspor
 {

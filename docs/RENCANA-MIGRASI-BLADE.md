@@ -1,6 +1,9 @@
 # Rencana Migrasi Filament → Blade + TailAdmin
 
 Status: **SELESAI (Filament Berhasil Dicabut Penuh)** · 31 Okt 2026 · Branch: `main`
+> 📌 **4 Nov 2026 — pencabutan tuntas:** paket `filament/*` + `danharrin/*`
+> baru benar-benar dihapus dari `vendor/` & `composer.lock` lewat `composer update`
+> (sebelumnya hanya dinonaktifkan dari auto-discovery). Rute `/filament/*` kini 404.
 Keputusan pemilik proyek: **Jalur B — lepas Filament sepenuhnya**, template
 TailAdmin Laravel, interaktivitas memakai **Livewire**. Arsitektur bersih (Clean Architecture).
 

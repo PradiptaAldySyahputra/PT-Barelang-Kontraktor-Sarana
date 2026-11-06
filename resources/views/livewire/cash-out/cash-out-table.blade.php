@@ -192,10 +192,12 @@
                                     <span class="angka block font-bold text-error-600 dark:text-error-400">
                                         − {{ Format::rupiah($trx->jumlah) }}
                                     </span>
-                                    @if ($trx->jumlahFileBukti() > 0)
-                                        <span class="mt-0.5 inline-flex rounded px-1.5 py-0.2 text-[10px] font-medium {{ $badge('info') }}">
+                                    @if ($trx->jumlahFileBukti() > 0 && filled($trx->bukti))
+                                        <a href="{{ Nota::url($trx->bukti[0]) }}" target="_blank" rel="noopener"
+                                            class="mt-0.5 inline-flex rounded px-1.5 py-0.2 text-[10px] font-medium hover:underline {{ $badge('info') }}"
+                                            title="Klik untuk membuka berkas nota ({{ $trx->jumlahFileBukti() }} berkas)">
                                             📎 {{ $trx->jumlahFileBukti() }} nota
-                                        </span>
+                                        </a>
                                     @endif
                                 </td>
                                 @if ($bolehUbah)
@@ -274,10 +276,11 @@
                             @else
                                 <span>Operasional</span>
                             @endif
-                            @if ($trx->jumlahFileBukti() > 0)
-                                <span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium {{ $badge('info') }}">
-                                    {{ $trx->jumlahFileBukti() }} nota
-                                </span>
+                            @if ($trx->jumlahFileBukti() > 0 && filled($trx->bukti))
+                                <a href="{{ Nota::url($trx->bukti[0]) }}" target="_blank" rel="noopener"
+                                    class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium hover:underline {{ $badge('info') }}">
+                                    📎 {{ $trx->jumlahFileBukti() }} nota
+                                </a>
                             @endif
                         </div>
 

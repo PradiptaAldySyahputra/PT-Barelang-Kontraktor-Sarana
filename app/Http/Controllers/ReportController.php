@@ -49,6 +49,9 @@ final class ReportController
                 0 => 'Semua',
             ],
             'data' => LaporanData::lengkap($periode, $tanggalMulai, $tanggalSelesai),
+            // Tabel buku kas/bank bisa berisi ratusan baris. Batasi tampilan agar
+            // halaman tidak membengkak; daftar lengkap ada di unduhan Excel/PDF.
+            'batasBaris' => $request->boolean('semua') ? null : 60,
         ]);
     }
 
