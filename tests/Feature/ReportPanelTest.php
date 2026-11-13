@@ -110,4 +110,42 @@ class ReportPanelTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
+
+    public function test_ekspor_menghormati_rentang_tanggal_kustom_mulai_dan_selesai(): void
+    {
+        UangMasuk::factory()->create([
+            'jumlah' => 2_000_000,
+            'akun' => AkunKas::Kas,
+            'tanggal' => '2026-03-15',
+            'keterangan' => 'Pemasukan Maret 2026',
+            'spk_id' => null,
+        ]);
+
+        UangMasuk::factory()->create([
+            'jumlah' => 8_000_000,
+            'akun' => AkunKas::Kas,
+            'tanggal' => '2026-09-10',
+            'keterangan' => 'Pemasukan September 2026',
+            'spk_id' => null,
+        ]);
+
+        $res = $this->actingAs($this->pengguna(Peran::Admin))
+            ->get(route('laporan.ekspor', [
+                'jenis' => 'buku-kas',
+                'format' => 'csv',
+                'periode' => 0,
+                'mulai' => '2026-03-01',
+                'selesai' => '2026-03-31',
+            ]));
+
+        $res->assertOk();
+        $isi = $res->streamedContent();
+        $this->assertStringContainsString('Pemasukan Maret 2026', $isi);
+        $this->assertStringNotContainsString('Pemasukan September 2026', $isi);
+
+        // Pastikan jejak riwayat ekspor tercatat di tabel exports
+        $this->assertDatabaseHas('exports', [
+            'exporter' => 'laporan:buku-kas',
+        ]);
+    }
 }

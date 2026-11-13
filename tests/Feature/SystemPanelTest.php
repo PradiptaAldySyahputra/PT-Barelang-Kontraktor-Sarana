@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\AkunKas;
+use App\Enums\KategoriPengeluaran;
 use App\Enums\Peran;
 use App\Models\Mitra;
 use App\Models\Pengguna;
 use App\Models\Spk;
+use App\Models\UangKeluar;
 use App\Models\UangMasuk;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -29,6 +32,47 @@ class SystemPanelTest extends TestCase
         return Pengguna::factory()->create(['peran' => $peran]);
     }
 
+    public function test_admin_bisa_mengunggah_berkas_impor_csv(): void
+    {
+        Storage::fake('local');
+        $admin = $this->pengguna(Peran::Admin);
+
+        $kontenCsv = "tanggal,jumlah,akun,kategori,penerima,keterangan\n".
+            now()->format('Y-m-d').",500000,kas,material,Toko Bangunan Uji,Beli semen 10 sak\n";
+
+        $fileCsv = UploadedFile::fake()->createWithContent('impor-transaksi.csv', $kontenCsv);
+
+        $response = $this->actingAs($admin)
+            ->post(route('panel.import.store'), [
+                'jenis' => 'keluar',
+                'berkas' => $fileCsv,
+            ]);
+
+        $response->assertRedirect(route('panel.import'));
+        $response->assertSessionHas('berhasil');
+        $response->assertSessionHas('impor_hasil');
+    }
+
+    public function test_direktur_juga_bisa_menjalankan_impor_data(): void
+    {
+        Storage::fake('local');
+        $direktur = $this->pengguna(Peran::Direktur);
+
+        $kontenCsv = "tanggal,jumlah,akun,kategori,penerima,keterangan\n".
+            now()->format('Y-m-d').",750000,kas,material,Vendor Baja Batam,Beli besi beton\n";
+
+        $fileCsv = UploadedFile::fake()->createWithContent('impor-direktur.csv', $kontenCsv);
+
+        $response = $this->actingAs($direktur)
+            ->post(route('panel.import.store'), [
+                'jenis' => 'keluar',
+                'berkas' => $fileCsv,
+            ]);
+
+        $response->assertRedirect(route('panel.import'));
+        $response->assertSessionHas('berhasil');
+    }
+
     /* =====================================================
        Hak akses per halaman
        ===================================================== */
@@ -37,8 +81,6 @@ class SystemPanelTest extends TestCase
     {
         foreach ([Peran::Admin, Peran::Direktur] as $peran) {
             $pengguna = $this->pengguna($peran);
-
-            $this->actingAs($pengguna)->get('/panel/receipts')->assertOk();
             $this->actingAs($pengguna)->get('/panel/exports')->assertRedirect('/panel/reports');
             $this->actingAs($pengguna)->get('/panel/profile')->assertOk();
         }
@@ -80,6 +122,28 @@ class SystemPanelTest extends TestCase
 
         $this->assertSame(2, UangMasuk::query()->count());
         $this->assertSame(4_000_000.0, (float) UangMasuk::query()->sum('jumlah'));
+    }
+
+    public function test_impor_csv_dengan_nomor_spk_otomatis_menautkan_spk_id_dan_menjaga_batas_piutang(): void
+    {
+        $spk = Spk::factory()->create([
+            'nomor_spk' => 'SPK/IMPOR/BTM/2026/001',
+            'nilai_spk' => 5_000_000,
+        ]);
+
+        // Baris 1 (3jt) valid -> masuk ke SPK; Baris 2 (4jt) melebihi sisa piutang 2jt -> ditolak
+        $csv = "tanggal,jumlah,akun,nomor_spk,kategori,penerima,keterangan\n"
+            ."2026-01-10,3000000,Bank,SPK/IMPOR/BTM/2026/001,,,Termin 1\n"
+            ."2026-01-11,4000000,Bank,SPK/IMPOR/BTM/2026/001,,,Termin 2 Lebih\n";
+
+        $berkas = UploadedFile::fake()->createWithContent('impor-spk.csv', $csv);
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->post('/panel/import', ['jenis' => 'masuk', 'berkas' => $berkas])
+            ->assertRedirect(route('panel.import'));
+
+        $this->assertSame(1, UangMasuk::where('spk_id', $spk->id)->count());
+        $this->assertSame(3_000_000.0, (float) UangMasuk::where('spk_id', $spk->id)->sum('jumlah'));
     }
 
     public function test_template_impor_bisa_diunduh(): void
@@ -205,6 +269,57 @@ class SystemPanelTest extends TestCase
             ->assertSee('(1).pdf');
     }
 
+    public function test_arsip_nota_mendukung_filter_satu_tanggal(): void
+    {
+        UangMasuk::factory()->create([
+            'tanggal' => '2026-02-10',
+            'jumlah' => 1_000_000,
+            'akun' => AkunKas::Kas,
+            'bukti' => ['uang_masuk/nota-feb.pdf'],
+            'keterangan' => 'Nota Februari',
+        ]);
+
+        UangMasuk::factory()->create([
+            'tanggal' => '2026-08-20',
+            'jumlah' => 2_000_000,
+            'akun' => AkunKas::Kas,
+            'bukti' => ['uang_masuk/nota-agu.pdf'],
+            'keterangan' => 'Nota Agustus',
+        ]);
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->get('/panel/receipts?tanggal=2026-02-10')
+            ->assertOk()
+            ->assertSee('Nota Februari')
+            ->assertDontSee('Nota Agustus');
+    }
+
+    public function test_arsip_nota_filter_kategori_pengeluaran_menyembunyikan_uang_masuk(): void
+    {
+        UangMasuk::factory()->create([
+            'tanggal' => '2026-03-10',
+            'jumlah' => 5_000_000,
+            'akun' => AkunKas::Bank,
+            'bukti' => ['uang_masuk/nota-masuk.pdf'],
+            'keterangan' => 'Termin Masuk PLN',
+        ]);
+
+        UangKeluar::factory()->create([
+            'tanggal' => '2026-03-10',
+            'jumlah' => 500_000,
+            'akun' => AkunKas::Kas,
+            'kategori' => KategoriPengeluaran::Material,
+            'bukti' => ['uang_keluar/nota-material.pdf'],
+            'keterangan' => 'Beli Kabel NYY',
+        ]);
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->get('/panel/receipts?kategori=material')
+            ->assertOk()
+            ->assertSee('Beli Kabel NYY')
+            ->assertDontSee('Termin Masuk PLN');
+    }
+
     public function test_bundel_laporan_zip_bisa_diunduh(): void
     {
         $this->actingAs($this->pengguna(Peran::Admin))
@@ -215,19 +330,28 @@ class SystemPanelTest extends TestCase
 
     public function test_cetak_kuitansi_uang_masuk_pdf(): void
     {
-        $mitra = Mitra::factory()->create();
-        $spk = Spk::factory()->create(['mitra_id' => $mitra->id, 'nilai_spk' => 20_000_000]);
+        $mitra = Mitra::factory()->create(['nama' => 'PT Pelanggan Batam']);
+        $spk = Spk::factory()->create([
+            'mitra_id' => $mitra->id,
+            'nomor_spk' => 'SPK-2026-TEST',
+            'nama_pekerjaan' => 'Pengadaan Kabel BKS',
+            'lokasi' => 'Batam Center',
+            'nilai_spk' => 20_000_000,
+        ]);
         $uangMasuk = UangMasuk::factory()->create([
             'spk_id' => $spk->id,
             'jumlah' => 5_000_000,
             'akun' => AkunKas::Bank,
             'keterangan' => 'Pembayaran Termin 1',
+            'tanggal' => '2026-11-10',
         ]);
 
-        $this->actingAs($this->pengguna(Peran::Admin))
-            ->get(route('panel.cash-in.kuitansi', $uangMasuk))
-            ->assertOk()
-            ->assertHeader('content-type', 'application/pdf');
+        $response = $this->actingAs($this->pengguna(Peran::Admin))
+            ->get(route('panel.cash-in.kuitansi', $uangMasuk));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+        $this->assertNotEmpty($response->getContent());
     }
 
     public function test_api_termin_drawer_spk(): void

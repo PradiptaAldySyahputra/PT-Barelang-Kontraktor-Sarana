@@ -1,6 +1,9 @@
 # PRD — Sistem Informasi SPK & Kontrol Keuangan
 ## PT Barelang Kontraktor Sarana
 
+> **Perubahan 12 Nov 2026:** fitur cetak **BAST (Berita Acara Serah Terima)** dihapus dari sistem karena di luar ruang lingkup proyek. Rujukan BAST di bawah ini bersifat historis.
+
+
 > **Inti proyek.** Kebutuhan fitur & ruang lingkup.
 > **Keputusan kunci:** MySQL + full Laravel · schema **5 tabel** · status & kategori pakai **PHP Enum**.
 

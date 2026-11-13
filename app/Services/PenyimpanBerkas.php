@@ -6,6 +6,7 @@ namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -76,6 +77,9 @@ class PenyimpanBerkas
         $sumber = null;
         $ekstensi = 'bin';
 
+        // Daftar ekstensi aman yang diizinkan sistem (mencegah unggah .php, .sh, .exe)
+        $ekstensiDiizinkan = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+
         if ($file instanceof UploadedFile) {
             $sumber = $file->getRealPath() ?: null;
             $ekstensi = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'bin');
@@ -94,6 +98,12 @@ class PenyimpanBerkas
                     }
                 }
             }
+        }
+
+        if (! in_array($ekstensi, $ekstensiDiizinkan, true)) {
+            Log::warning('PenyimpanBerkas menolak berkas dengan ekstensi tidak diizinkan: '.$ekstensi);
+
+            return null;
         }
 
         if ($sumber === null || ! is_file($sumber)) {

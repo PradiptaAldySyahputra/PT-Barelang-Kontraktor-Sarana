@@ -25,7 +25,7 @@
                     <input id="nama" name="nama" type="text" required maxlength="200"
                         value="{{ old('nama', $pengguna->nama) }}" class="{{ $kelasInput }}">
                     @error('nama')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -34,7 +34,7 @@
                     <input id="email" name="email" type="email" required maxlength="200"
                         value="{{ old('email', $pengguna->email) }}" class="{{ $kelasInput }}">
                     @error('email')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -159,19 +159,19 @@
                             <div class="flex flex-wrap items-center gap-3">
                                 <template x-if="pratinjauHasil">
                                     <button type="button" @click="batalBaru()"
-                                        class="text-xs font-semibold text-error-600 hover:underline">
+                                        class="text-xs font-semibold text-error-600 dark:text-error-400 hover:underline">
                                         &times; Batalkan Foto Baru
                                     </button>
                                 </template>
 
                                 @if ($pengguna->urlAvatar())
                                     <label class="inline-flex items-center gap-1.5 text-xs text-error-600 dark:text-error-400 cursor-pointer">
-                                        <input type="checkbox" name="hapus_avatar" value="1" class="rounded border-gray-300 text-error-600 focus:ring-error-500">
+                                        <input type="checkbox" name="hapus_avatar" value="1" class="rounded border-gray-300 text-error-600 dark:text-error-400 focus:ring-error-500">
                                         <span>Hapus foto profil saat ini (gunakan inisial)</span>
                                     </label>
                                 @endif
                             </div>
-                            <p class="text-[11px] text-gray-400">
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
                                 Pilih foto untuk membuka editor pangkas (crop) &amp; posisi sebelum disimpan.
                             </p>
                         </div>
@@ -183,7 +183,7 @@
                             <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex flex-col items-center">
                                 <div class="w-full flex items-center justify-between border-b border-gray-100 pb-3 mb-4 dark:border-gray-800">
                                     <h3 class="text-sm font-bold text-gray-900 dark:text-white">Sesuaikan &amp; Pangkas Foto Profil</h3>
-                                    <button type="button" @click="batalBaru()" class="text-gray-400 hover:text-gray-600 text-lg">&times;</button>
+                                    <button type="button" @click="batalBaru()" class="text-gray-500 dark:text-gray-400 hover:text-gray-600 text-lg">&times;</button>
                                 </div>
 
                                 {{-- Area Canvas Interaktif --}}
@@ -211,12 +211,12 @@
                                         class="h-1.5 w-full bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
                                     <span class="text-xs text-gray-500">Perbesar</span>
                                 </div>
-                                <span class="text-[11px] text-gray-400 mt-1">Geser gambar untuk mengatur posisi wajah</span>
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Geser gambar untuk mengatur posisi wajah</span>
 
                                 {{-- Tombol Aksi Modal --}}
                                 <div class="mt-6 flex items-center justify-end gap-2.5 w-full border-t border-gray-100 pt-3 dark:border-gray-800">
                                     <button type="button" @click="batalBaru()"
-                                        class="rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                        class="rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                                         Batal
                                     </button>
                                     <button type="button" @click="terapkanCrop()"
@@ -229,7 +229,7 @@
                     </div>
 
                     @error('avatar')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -240,7 +240,7 @@
                             <img src="{{ $pengguna->urlTandaTangan() }}" alt="Tanda tangan saat ini"
                                 class="h-16 object-contain border border-gray-200 dark:border-gray-700 rounded-lg p-1 bg-white">
                             <label class="inline-flex items-center gap-1.5 text-xs text-error-600 dark:text-error-400 cursor-pointer">
-                                <input type="checkbox" name="hapus_tanda_tangan" value="1" class="rounded border-gray-300 text-error-600 focus:ring-error-500">
+                                <input type="checkbox" name="hapus_tanda_tangan" value="1" class="rounded border-gray-300 text-error-600 dark:text-error-400 focus:ring-error-500">
                                 <span>Hapus</span>
                             </label>
                         </div>
@@ -248,7 +248,7 @@
                     <input id="tanda_tangan" name="tanda_tangan" type="file" accept="image/jpeg,image/png,image/webp"
                         class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-theme-xs text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-theme-xs file:font-medium dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:file:bg-white/10">
                     @error('tanda_tangan')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
@@ -277,7 +277,7 @@
                     <input id="password_lama" name="password_lama" type="password" required autocomplete="current-password"
                         class="{{ $kelasInput }}">
                     @error('password_lama')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
@@ -285,7 +285,7 @@
                     <input id="password" name="password" type="password" required autocomplete="new-password"
                         class="{{ $kelasInput }}">
                     @error('password')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>

@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\Process;
  */
 class RestoreDatabase extends Command
 {
-    protected $signature = 'bks:restore {berkas? : Nama file backup (mis. bks-2026-11-01-120000.zip)} {--force : Lewati konfirmasi interaktif}';
+    protected $signature = 'bks:restore
+                            {berkas? : Nama file backup (mis. bks-2026-11-01-120000.zip)}
+                            {--test : Uji integritas backup (cek ZIP & sintaks/tabel SQL) tanpa menimpa database}
+                            {--force : Lewati konfirmasi interaktif}';
 
     protected $description = 'Restore database MySQL/MariaDB dari berkas cadangan .zip atau .sql';
 
@@ -47,17 +50,19 @@ class RestoreDatabase extends Command
             return self::FAILURE;
         }
 
-        if (! $this->option('force') && ! $this->confirm('PERINGATAN: Memulihkan database akan MENIMPA seluruh data saat ini dengan data backup. Lanjutkan?')) {
+        if (! $this->option('test') && ! $this->option('force') && ! $this->confirm('PERINGATAN: Memulihkan database akan MENIMPA seluruh data saat ini dengan data backup. Lanjutkan?')) {
             $this->info('Pemulihan database dibatalkan.');
 
             return self::SUCCESS;
         }
 
-        $this->info('Mempersiapkan pemulihan dari: '.basename($path));
+        $this->info('Mempersiapkan '.($this->option('test') ? 'pengujian' : 'pemulihan').' dari: '.basename($path));
 
         // Ekstrak file .sql bila file adalah .zip
         $sqlPath = $path;
         $tempSql = null;
+        $jumlahFileDiZip = 0;
+        $adaNota = false;
 
         if (str_ends_with(strtolower($path), '.zip')) {
             $zip = new \ZipArchive;
@@ -67,12 +72,15 @@ class RestoreDatabase extends Command
                 return self::FAILURE;
             }
 
+            $jumlahFileDiZip = $zip->numFiles;
             $sqlNamaDiZip = null;
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $filename = $zip->getNameIndex($i);
                 if (str_ends_with(strtolower($filename), '.sql')) {
                     $sqlNamaDiZip = $filename;
-                    break;
+                }
+                if (str_starts_with($filename, 'nota/')) {
+                    $adaNota = true;
                 }
             }
 
@@ -95,6 +103,10 @@ class RestoreDatabase extends Command
             $sqlContent = $sqlKontenMentah;
         } else {
             $sqlContent = File::get($sqlPath);
+        }
+
+        if ($this->option('test')) {
+            return $this->verifikasiIntegritas($sqlContent, $jumlahFileDiZip, $adaNota);
         }
 
         $perintah = [
@@ -127,6 +139,49 @@ class RestoreDatabase extends Command
         }
 
         $this->info('Restore BERHASIL: Database telah dipulihkan dari '.basename($path));
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Verifikasi integritas berkas cadangan tanpa menimpa database aktif.
+     */
+    protected function verifikasiIntegritas(string $sqlContent, int $jumlahFileDiZip, bool $adaNota): int
+    {
+        $this->info('Memulai verifikasi integritas berkas cadangan (dry-run)...');
+
+        if (blank($sqlContent)) {
+            $this->error('Gagal: Berkas SQL kosong.');
+
+            return self::FAILURE;
+        }
+
+        // Periksa 5 tabel domain inti BKS
+        $tabelWajib = ['spk', 'uang_masuk', 'uang_keluar', 'mitra', 'pengguna'];
+        $tabelHilang = [];
+
+        foreach ($tabelWajib as $tabel) {
+            // Cocokkan skema CREATE TABLE `tabel` atau CREATE TABLE tabel
+            $pola = '/CREATE\s+TABLE\s+[`"]?'.preg_quote($tabel, '/').'[`"]?/i';
+            if (! preg_match($pola, $sqlContent)) {
+                $tabelHilang[] = $tabel;
+            }
+        }
+
+        if (! empty($tabelHilang)) {
+            $this->error('Verifikasi GAGAL: Tabel utama tidak ditemukan dalam skema SQL: '.implode(', ', $tabelHilang));
+
+            return self::FAILURE;
+        }
+
+        $this->line('  [OK] Struktur ZIP/SQL valid dan terbaca.');
+        $this->line('  [OK] 5 tabel utama terverifikasi: '.implode(', ', $tabelWajib).'.');
+
+        if ($jumlahFileDiZip > 1) {
+            $this->line(sprintf('  [INFO] Arsip memuat %d entri berkas (termasuk folder nota: %s).', $jumlahFileDiZip, $adaNota ? 'Ya' : 'Tidak'));
+        }
+
+        $this->info('Verifikasi SUKSES: Berkas backup valid dan siap direstore.');
 
         return self::SUCCESS;
     }

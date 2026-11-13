@@ -76,6 +76,8 @@ final class LoginController
             ]);
         }
 
+        $pengguna->forceFill(['terakhir_masuk' => now()])->saveQuietly();
+
         RateLimiter::clear($kunci);
         $request->session()->regenerate();
 

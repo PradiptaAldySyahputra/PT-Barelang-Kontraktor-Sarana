@@ -95,7 +95,7 @@ class SpkTableTest extends TestCase
             ->assertDontSee('SPK-MITRA-2');
     }
 
-    public function test_ringkasan_mengikuti_penyaring_bukan_seluruh_tabel(): void
+    public function test_ringkasan_mengikuti_penyaring_dan_tanpa_total_nominal(): void
     {
         Spk::factory()->create([
             'nomor_spk' => 'SPK-RINGKAS-DRAFT',
@@ -108,10 +108,13 @@ class SpkTableTest extends TestCase
             'nilai_spk' => 90_000_000,
         ]);
 
+        // Kepala tabel hanya menampilkan jumlah SPK yang lolos penyaring;
+        // total nominal sengaja tidak dirender karena sudah ada di Laporan.
         Livewire::actingAs($this->admin())
             ->test(SpkTable::class)
             ->set('status', StatusSpk::Draft->value)
-            ->assertViewHas('ringkas', fn (array $r): bool => $r['jumlah'] === 1 && $r['nilai'] === 10_000_000.0);
+            ->assertViewHas('ringkas', fn (array $r): bool => $r['jumlah'] === 1 && ! array_key_exists('nilai', $r))
+            ->assertDontSee('90.000.000');
     }
 
     /* =====================================================

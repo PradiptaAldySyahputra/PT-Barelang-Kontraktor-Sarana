@@ -49,7 +49,7 @@
     $nilaiKontrak = (float) $spk->nilai_spk;
     $rasioBiaya = $nilaiKontrak > 0 ? min(100, round(($totalKeluar / $nilaiKontrak) * 100, 1)) : 0;
     $persenBiayaAsli = $nilaiKontrak > 0 ? round(($totalKeluar / $nilaiKontrak) * 100, 1) : 0;
-    $warnaText = $persenBiayaAsli > 100 ? 'text-error-600 dark:text-error-400' : ($persenBiayaAsli > 80 ? 'text-warning-600 dark:text-warning-400' : 'text-success-600 dark:text-success-400');
+    $warnaText = $persenBiayaAsli > 100 ? 'text-error-600 dark:text-error-400' : ($persenBiayaAsli > 80 ? 'text-warning-700 dark:text-warning-400' : 'text-success-700 dark:text-success-400');
     $warnaBar = $persenBiayaAsli > 100 ? 'bg-error-500' : ($persenBiayaAsli > 80 ? 'bg-warning-500' : 'bg-success-500');
 @endphp
 
@@ -59,9 +59,9 @@
         {{-- 1. Header Toolbar & Tindakan Cepat Navigasi --}}
         <div class="{{ $kelasKartu }} p-5 md:p-6">
             <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2.5">
-                        <span class="angka break-all text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                        <span class="angka min-w-0 break-all text-xl font-bold text-gray-900 dark:text-white md:text-2xl">
                             {{ $spk->nomor_spk }}
                         </span>
                         <span class="inline-flex rounded-lg px-2.5 py-0.5 text-xs font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
@@ -79,31 +79,23 @@
                 @if ($bolehUbah)
                     <div class="flex flex-wrap items-center gap-2">
                         <a href="{{ route('panel.spk.edit', ['spk' => $spk, 'asal' => 'show']) }}"
-                            class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition">
-                            <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 sm:flex-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                            <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                             </svg>
                             Ubah SPK
                         </a>
                         <a href="{{ route('panel.spk.status', ['spk' => $spk, 'asal' => 'show']) }}"
-                            class="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 transition"
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 sm:flex-none dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400"
                             title="Ubah tahapan pengerjaan">
                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
                             </svg>
                             Ubah Status Pekerjaan
                         </a>
-                        <a href="{{ route('panel.spk.bast', $spk) }}" target="_blank"
-                            class="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 transition"
-                            title="Cetak Berita Acara Serah Terima (BAST) Resmi">
-                            <svg class="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                            </svg>
-                            Cetak BAST
-                        </a>
 
                         <a href="{{ route('panel.spk.billing', ['spk' => $spk, 'asal' => 'show']) }}"
-                            class="inline-flex items-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400 transition"
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 sm:flex-none dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400"
                             title="Ubah status penagihan & pembayaran">
                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v8.25m0 0a60.073 60.073 0 0 0 15.797 2.101c.727.198 1.453-.342 1.453-1.096V6.75A.75.75 0 0 0 18.75 6H18m-1.5-1.5H3.75" />
@@ -111,11 +103,11 @@
                             Ubah Status Tagihan
                         </a>
                         <form method="POST" action="{{ route('panel.spk.destroy', $spk) }}"
-                            onsubmit="return konfirmasiAksi(this, 'Hapus SPK {{ addslashes($spk->nomor_spk) }}? Data akan dipindahkan ke tempat sampah dan dapat dipulihkan kapan saja.');" class="inline">
+                            onsubmit="return konfirmasiAksi(this, 'Hapus SPK {{ addslashes($spk->nomor_spk) }}? Data akan dipindahkan ke tempat sampah dan dapat dipulihkan kapan saja.');" class="flex-1 sm:flex-none">
                             @csrf
                             @method('DELETE')
                             <button type="submit"
-                                class="inline-flex items-center gap-1 rounded-xl px-2.5 py-2 text-xs font-semibold text-error-600 hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-500/10 transition"
+                                class="inline-flex w-full items-center justify-center gap-1 rounded-xl px-2.5 py-2 text-xs font-semibold text-error-600 transition hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-500/10"
                                 title="Hapus SPK ini">
                                 Hapus
                             </button>
@@ -130,17 +122,23 @@
                     Alur Progres Pekerjaan
                 </span>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    @foreach (['draft' => '1. Draft', 'terbit' => '2. Terbit', 'berjalan' => '3. Berjalan', 'selesai' => '4. Selesai'] as $key => $lbl)
+                    @foreach (['draft' => 'Draft', 'terbit' => 'Terbit', 'berjalan' => 'Berjalan', 'selesai' => 'Selesai'] as $key => $lbl)
                         @php
                             $stepNum = $urutanStatusSpk[$key] ?? 1;
                             $isCurrent = $spk->status_spk?->value === $key;
                             $isDone = $posisiStatus >= $stepNum;
                         @endphp
-                        <div class="flex items-center gap-2 p-2.5 rounded-xl border text-xs font-semibold transition {{ $isCurrent ? 'border-brand-500 bg-brand-50/50 text-brand-700 dark:border-brand-400 dark:bg-brand-500/10 dark:text-brand-300' : ($isDone ? 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-300' : 'border-dashed border-gray-200 text-gray-400 dark:border-gray-800') }}">
-                            <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] {{ $isDone ? 'bg-brand-500 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">
-                                {{ $isDone ? '✓' : $stepNum }}
+                        <div class="flex min-w-0 items-center gap-2 rounded-xl border p-2.5 text-[11px] font-semibold transition sm:text-xs {{ $isCurrent ? 'border-brand-500 bg-brand-50/50 text-brand-700 dark:border-brand-400 dark:bg-brand-500/10 dark:text-brand-300' : ($isDone ? 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-300' : 'border-dashed border-gray-200 text-gray-500 dark:text-gray-400 dark:border-gray-700 dark:text-gray-500') }}">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] {{ $isDone ? 'bg-brand-500 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">
+                                @if ($isDone)
+                                    <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+                                    </svg>
+                                @else
+                                    {{ $stepNum }}
+                                @endif
                             </span>
-                            <span>{{ $lbl }}</span>
+                            <span class="min-w-0 truncate">{{ $lbl }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -148,7 +146,7 @@
         </div>
 
         {{-- 2. Ringkasan Finansial Utama (4 Kartu Stat TailAdmin) --}}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
             <div class="{{ $kelasKartu }} p-5">
                 <span class="{{ $kelasLabel }}">Nilai Pagu SPK</span>
                 <h4 class="{{ $kelasNilai }} angka text-gray-900 dark:text-white">
@@ -159,7 +157,7 @@
 
             <div class="{{ $kelasKartu }} p-5">
                 <span class="{{ $kelasLabel }}">Sudah Diterima</span>
-                <h4 class="{{ $kelasNilai }} angka text-success-600 dark:text-success-500">
+                <h4 class="{{ $kelasNilai }} angka text-success-700 dark:text-success-500">
                     {{ Format::rupiah($diterima) }}
                 </h4>
                 <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">Penerimaan dari PLN/Mitra</span>
@@ -167,7 +165,7 @@
 
             <div class="{{ $kelasKartu }} p-5">
                 <span class="{{ $kelasLabel }}">Sisa Piutang</span>
-                <h4 class="{{ $kelasNilai }} angka {{ $sisa > 0.01 ? 'text-warning-600 dark:text-warning-500' : 'text-success-600 dark:text-success-500' }}">
+                <h4 class="{{ $kelasNilai }} angka {{ $sisa > 0.01 ? 'text-warning-700 dark:text-warning-500' : 'text-success-700 dark:text-success-500' }}">
                     {{ Format::rupiah($sisa) }}
                 </h4>
                 <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">Belum dibayarkan</span>
@@ -175,7 +173,7 @@
 
             <div class="{{ $kelasKartu }} p-5">
                 <span class="{{ $kelasLabel }}">Pengeluaran Lapangan</span>
-                <h4 class="{{ $kelasNilai }} angka text-error-600 dark:text-error-500">
+                <h4 class="{{ $kelasNilai }} angka text-error-600 dark:text-error-400 dark:text-error-500">
                     {{ Format::rupiah($totalKeluar) }}
                 </h4>
                 <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">Biaya material & subkon</span>
@@ -197,7 +195,7 @@
                     <span class="text-theme-sm font-bold {{ $warnaText }}">
                         {{ $persenBiayaAsli }}%
                     </span>
-                    <span class="text-theme-xs text-gray-400">terpakai</span>
+                    <span class="text-theme-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">terpakai</span>
                 </div>
             </div>
 
@@ -286,6 +284,26 @@
                         </div>
                     </dl>
 
+                    @if ($spk->pernahDiperpanjang())
+                        <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+                            <p class="{{ $kelasLabel }}">Riwayat Perpanjangan ({{ $spk->jumlahPerpanjangan() }}x)</p>
+                            <ul class="mt-2 space-y-1.5 text-theme-xs text-gray-600 dark:text-gray-300">
+                                @foreach ($spk->perpanjangan as $item)
+                                    <li class="flex flex-wrap items-center justify-between gap-1">
+                                        <span class="angka font-medium">
+                                            {{ ! empty($item['dari']) ? \Illuminate\Support\Carbon::parse($item['dari'])->format('d/m/Y') : '—' }}
+                                            &rarr;
+                                            {{ ! empty($item['ke']) ? \Illuminate\Support\Carbon::parse($item['ke'])->format('d/m/Y') : '—' }}
+                                        </span>
+                                        @if (! empty($item['alasan']))
+                                            <span class="text-gray-500 dark:text-gray-400 dark:text-gray-500">({{ $item['alasan'] }})</span>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     @if ($spk->dokumen)
                         <div class="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800">
                             <p class="{{ $kelasLabel }}">Dokumen SPK Tersimpan ({{ count($spk->dokumen) }})</p>
@@ -295,7 +313,7 @@
                                         <a href="{{ Nota::url($path) }}" target="_blank" rel="noopener"
                                             class="inline-flex items-center gap-2 truncate text-theme-xs font-semibold text-brand-600 hover:underline dark:text-brand-400"
                                             title="{{ basename($path) }}">
-                                            <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <svg class="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
                                             </svg>
                                             <span class="truncate">{{ basename($path) }}</span>
@@ -352,7 +370,7 @@
                                         </td>
                                         <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300">{{ $masuk->akun?->label() ?? '—' }}</td>
                                         <td class="px-3 py-2.5 text-gray-600 dark:text-gray-400">{{ $masuk->keterangan ?: '—' }}</td>
-                                        <td class="px-4 py-2.5 text-right font-bold angka text-success-600 dark:text-success-500">
+                                        <td class="px-4 py-2.5 text-right font-bold angka text-success-700 dark:text-success-500">
                                             + {{ Format::rupiah($masuk->jumlah) }}
                                         </td>
                                         <td class="px-3 py-2.5 text-right">
@@ -411,9 +429,9 @@
                                         <td class="px-4 py-2.5 whitespace-nowrap text-gray-700 dark:text-gray-300">
                                             {{ $keluar->tanggal?->format('d/m/Y') ?? '—' }}
                                         </td>
-                                        <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300">{{ $keluar->detail_kategori ?: ($keluar->kategori ?: '—') }}</td>
+                                        <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300">{{ $keluar->detail_kategori ?: ($keluar->kategori?->label() ?? '—') }}</td>
                                         <td class="px-3 py-2.5 text-gray-600 dark:text-gray-400">{{ $keluar->penerima ?: '—' }}</td>
-                                        <td class="px-4 py-2.5 text-right font-bold angka text-error-600 dark:text-error-500">
+                                        <td class="px-4 py-2.5 text-right font-bold angka text-error-600 dark:text-error-400 dark:text-error-500">
                                             − {{ Format::rupiah($keluar->jumlah) }}
                                         </td>
                                     </tr>

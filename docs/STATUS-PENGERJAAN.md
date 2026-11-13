@@ -3,8 +3,12 @@
 > Dibuat agar sesi berikutnya bisa **lanjut tanpa menebak**.
 > Bahasa: Indonesia. Verifikasi ulang sebelum menulis angka/nama (aturan AGENTS.md §2.5).
 >
-> **Terakhir diperbarui:** 5 November 2026
+> **Terakhir diperbarui:** 12 November 2026
 > **Cabang:** `main` · Perubahan sesi ini **belum di-commit** (aturan: user yang commit)
+>
+> **Perubahan 12 Nov 2026:** fitur **BAST dihapus** dari sistem (di luar ruang lingkup proyek).
+> Rujukan BAST di bagian arsip dokumen ini bersifat historis, bukan fitur yang masih ada.
+> Untuk kondisi terkini lihat `docs/MASTER-PLAN-FINAL.md` §13.
 >
 > ⚠️ **Bagian §0q ke bawah adalah ARSIP era Filament** (Deskripsi Resources/Pages/Widgets,
 > `/admin`, tes Filament). Jangan dibaca sebagai kondisi terkini. Kondisi terkini: §0B + §0A + §1.
@@ -30,7 +34,7 @@ frontend, backend, testing menyeluruh dengan browser MCP".
 | 10 | Uji browser mode antrean | `.env` sementara `QUEUE_CONNECTION=database`: unggah nota → halaman menampilkan "OCR berjalan di latar belakang" + `wire:poll` aktif; `queue:work --once` menjalankan job (420 ms) → kartu nota muncul sendiri tanpa reload. `.env` dikembalikan ke `sync`, berkas uji dihapus. |
 | 11 | Sapu browser: Admin (21 halaman) | Semua 200, tanpa error konsol, tanpa gambar rusak, tanpa overflow horizontal di 1440px maupun 375px. Redireksi yang disengaja: `/panel/exports` → `/panel/reports` (rute alias). Admin ditolak `/panel/users` dengan halaman **403**. |
 | 12 | Sapu browser: Direktur (14 halaman) | Semua 200 termasuk `/panel/users` & `/panel/users/create`; tanpa error konsol, tanpa overflow 375px. Filter tabel SPK (cari + status) berfungsi: kata kunci tak ada → 0 baris + pesan kosong; status `draft` → 0 baris. Mode gelap aktif tanpa error. |
-| 13 | Unduhan diuji langsung (sesi login) | Ekspor `spk/masuk/keluar/tenggat/piutang/buku-kas/buku-bank` × `xlsx/csv/pdf` → 200 + MIME benar; bundel ZIP, arsip ZIP, template impor, BAST PDF, kuitansi PDF → 200. Catatan: arsip ZIP tanpa filter berisi 1.834 berkas = **151 MB**; sebaiknya unduh dengan filter tanggal. |
+| 13 | Unduhan diuji langsung (sesi login) | Ekspor `spk/masuk/keluar/tenggat/piutang/buku-kas/buku-bank` × `xlsx/csv/pdf` → 200 + MIME benar; bundel ZIP, arsip ZIP, template impor, kuitansi PDF → 200. (BAST PDF dicabut 12 Nov 2026.) Catatan: arsip ZIP tanpa filter berisi 1.834 berkas = **151 MB**; sebaiknya unduh dengan filter tanggal. |
 | 14 | **Bug ditemukan & diperbaiki — sampah `/tmp`** | `ArsipNota::buatZip()` memakai `tempnam()...'.zip'`: berkas kosong dasar dari `tempnam()` tidak pernah dihapus, jadi tiap unduhan arsip meninggalkan `/tmp/arsip-notaXXXX` 0 byte (sama jenisnya dengan bug `temp-bundel-*` sebelumnya). Sekarang berkas dasar langsung dihapus; tes `ArsipNotaTest` ditambah assertion. Diverifikasi: unduhan via browser 200 dan `/tmp/arsip-nota*` = 0. |
 | 15 | Uji impor & backup di browser | Impor CSV lewat form → "2 ditambah · 0 dilewati · 0 gagal", dan folder `storage/app/private/impor` tetap kosong (memvalidasi `try/finally` butir 3). Tombol *Buat Backup Sekarang* → `bks:backup` menghasilkan `bks-2026-11-06-023228.zip` (26,5 KB). 2 transaksi uji dihapus lagi; `uang_masuk` kembali 87. |
 | 16 | **Bug ditemukan & diperbaiki — tes menghapus backup nyata** | `BackupDatabaseTest`, `RestoreDatabaseTest`, dan satu tes di `SystemPanelTest` memakai `storage_path('app/backup')` dan mengosongkan folder itu di `setUp`/`tearDown`. Artinya `php artisan test` **menghapus backup sungguhan** (dan meninggalkan `test-backup.zip` 17 byte berisi teks dummy yang muncul di panel sebagai "1 backup"). Ketiganya kini memakai folder sementara + `config(['filesystems.backup_path' => ...])`. Verifikasi: berkas penanda di `storage/app/backup` selamat setelah suite penuh; berkas dummy dihapus. Pelajaran dicatat di skill `bks-testing`. |
@@ -945,15 +949,114 @@ Keluhan user: *"halaman uang masuk dan keluar kenapa ada total begitu? membuang 
 
 ---
 
-## 5. Status Item Fitur & Keputusan Sesi Ini
+### 4g. Pembaruan Fitur Impor Excel & Daftar SPK (November 2026)
+Peningkatan kapabilitas impor data spreadsheet (`.xlsx`, `.csv`) untuk migrasi dan sinkronisasi data operasional:
+- **Penambahan Impor Daftar SPK**: Admin kini dapat memilih jenis data **Daftar SPK** selain Uang Masuk dan Uang Keluar di `/panel/import`.
+- **Fleksibilitas Template & Toleransi Kop Excel**:
+  - `PembacaImpor` otomatis memindai dan mendeteksi baris header data sesungguhnya, mengabaikan kop surat, judul laporan di baris atas, baris kosong, dan baris kalkulasi/rumus total Excel (`=SUM(...)`).
+  - Mendukung pembacaan sheet spesifik serta penentuan akun otomatis bila nama sheet merujuk ke Kas/Bank.
+  - Normalisasi sinonim nama kolom yang fleksibel (misal `uraian_pekerjaan`, `nilai_kontrak`, `tgl_po`, `rekanan`).
+- **Dukungan Format Tanggal Indonesia & Serial Excel**:
+  - Format garis miring: `DD/MM/YYYY`, `D/M/YY`, dsb.
+  - Format strip: `DD-MM-YYYY`, `DD-MM-YY`.
+  - Serial date number bawaan Excel (misal angka serial `45469` yang dikonversi presisi berdasarkan epoch Excel 1899-12-30).
+- **Aturan Bisnis & Deduplikasi**:
+  - Penomoran otomatis `TANPA-SPK-xxxx` untuk pekerjaan tanpa nomor resmi SPK.
+  - Pencegahan duplikat nomor SPK dan duplikat identitas pekerjaan tanpa nomor resmi.
+  - Sinkronisasi otomatis status tagihan menjadi *Dibayar* untuk SPK dengan catatan pembayaran lunas ke rekening BKS.
+- **Hasil Verifikasi QA Suite Test Pasca-Implementasi**:
+  - Pengujian suite test Laravel: **469 tests lolos 100% hijau (1.721 assertions)**.
+  - Uji spesifik fitur impor (`ImporSpkTest`, `ImporTransaksiTest`, `SystemPanelTest`): **30 tests, 113 assertions** lolos.
+  - Uji keamanan file upload & batasan akses: **16 tests, 53 assertions** lolos.
+  - Pengujian berkas riil `LIST SPK 2026.xlsx`: terverifikasi membaca 91 baris data valid tanpa error, filter baris rumus/subtotal bekerja presisi, serta penanganan duplikat bekerja sesuai spesifikasi.
 
-| Kode | Item | Status |
-|:-----|:-----|:-------|
-| **B1** | Saldo berjalan Kas & Bank | ✅ **Selesai** (`BukuKasBank::susun` + mutasi saldo berjalan di Laporan) |
-| **B4** | Ekspor Excel format perusahaan | ✅ **Selesai** (Kop PT BKS, freeze pane, total, dan tanda tangan Direktur & Admin) |
-| **C1** | Navigasi/UI lebih tegas | ✅ **Selesai** (Tombol kembali tunggal di atas komponen breadcrumb, tanpa duplikasi di bawah) |
-| **C3** | Menu baru: Kalender Tenggat | ✅ **Selesai** (Tampilan kalender bulanan tenggat SPK di `/panel/spk/calendar`) |
-| **B3** | Impor data perusahaan | ✅ **Selesai** (`PembacaImpor` toleran kop dan membaca 94 baris kas riil) |
+---
+
+### 4h. Pembaruan Backup Nota Penuh, Integritas Restore, & Cetak Kuitansi A4 (November 2026)
+Peningkatan keandalan manajemen cadangan bencana, migrasi server, serta kesiapan cetak dokumen fisik transaksi:
+- **Backup Paket Penuh (`--dengan-nota`)**:
+  - Perintah `php artisan bks:backup --dengan-nota` kini menyatukan dump skema/data database MySQL (`.sql`) beserta seluruh berkas fisik bukti nota di `storage/app/nota/` ke dalam satu arsip terkompresi `.zip`.
+  - Terverifikasi pada pengujian QA menghasilkan paket cadangan utuh berisi berkas SQL dan 311 berkas nota fisik.
+- **Uji Integritas Restore (`bks:restore --test`)**:
+  - Perintah `php artisan bks:restore {berkas} --test` melakukan uji coba kering (*dry-run*) tanpa menimpa database aktif.
+  - Memverifikasi keabsahan arsip ZIP, ekstraksi file SQL, dan memastikan kelengkapan 5 tabel domain inti BKS (`spk`, `uang_masuk`, `uang_keluar`, `mitra`, `pengguna`).
+  - Aman digunakan untuk validasi sebelum migrasi server internal kantor atau pengujian berkas cadangan rutin.
+- **Kesiapan Cetak Fisik Kuitansi A4 & Nota**:
+  - Template PDF kuitansi uang masuk (`/panel/cash-in/{uangMasuk}/kuitansi`) menggunakan layout standar A4 portrait (`DejaVu Sans`), memuat kop perusahaan, penomoran resmi otomatis (`KW-YYYYMMDD-xxxx`), teks terbilang rupiah baku, rincian SPK/pelanggan, serta penempatan tanda tangan dan stempel digital Direktur.
+  - Bukti nota pengeluaran dan kuitansi siap dicetak fisik maupun diunduh via web panel untuk arsip pembukuan kantor.
+- **Hasil Verifikasi QA Suite Test**:
+  - Seluruh rangkaian pengujian otomatis `php artisan test` **100% HIJAU: 472 tests lulus (1.734 assertions)**.
+  - Cakupan tes mencakup `BackupDatabaseTest` (termasuk `--dengan-nota` dan retensi), `RestoreDatabaseTest` (termasuk opsi `--test` dry-run dan penolakan skema tidak lengkap), serta pengujian render PDF kuitansi (`SystemPanelTest` dan `TandaTanganDigitalDokumenTest`).
+
+---
+
+### 4i. Perintah CLI Impor Arsip Kantor `bks:impor-arsip` & Onboarding Data Riil (November 2026)
+Penyediaan perintah konsol Artisan `php artisan bks:impor-arsip` untuk onboarding data riil dari arsip lembar kerja kantor ke sistem BKS secara cepat dan aman:
+- **Perintah Otomasi Konsol**:
+  - `php artisan bks:impor-arsip [berkas]`: Mengimpor berkas Excel arsip SPK secara langsung dari CLI.
+  - Mendukung penentuan berkas kustom via argumen, interaktif (*prompt dialog* bila argumen kosong), serta otomatis memetakan ke berkas arsip default kantor bila tersedia (`/home/pradipta/Project/BKS-Data-Perusahaan/dokumen/LIST SPK 2026.xlsx`).
+- **Simulasi Aman (`--dry-run`)**:
+  - Opsi `--dry-run` mensimulasikan pembacaan berkas arsip, memvalidasi integritas baris, dan menghitung estimasi baris yang akan ditambahkan vs dilewati (duplikat nomor SPK) tanpa mengubah atau menulis data ke database sama sekali.
+- **Toleransi Format & Deduplikasi**:
+  - Mengintegrasikan `PembacaImpor` dan `ImporTransaksi::spk` dengan perlindungan duplikasi penuh (`cegahDuplikat: true`), penomoran otomatis `TANPA-SPK-xxxx`, dan toleransi baris kalkulasi/kop surat.
+  - Menyediakan opsi `--force` untuk melewati konfirmasi interaktif pada otomasi skrip CLI.
+- **Hasil Verifikasi QA Suite Test Pasca-Implementasi**:
+  - Uji fitur spesifik `ImporArsipKantorCommandTest`: **5 tests lolos 100% (26 assertions)** (mencakup penanganan berkas tidak ditemukan, mode interaktif prompt, default fallback, konfirmasi batal, eksekusi impor nyata, dan mode `--dry-run`).
+  - Uji integritas database membuktikan *row count* 5 tabel domain inti tidak mengalami perubahan selama pengujian `--dry-run`.
+  - Terverifikasi pada data riil arsip kantor `LIST SPK 2026.xlsx` membaca 91 baris data valid.
+  - Seluruh rangkaian tes Laravel: **477 tests lolos 100% HIJAU (1.760 assertions)** tanpa kegagalan.
+
+  ---
+
+  ### 4j. Fitur Reset Password Langsung Staf oleh Direktur & Proteksi Sesi Instan (November 2026)
+  Penyediaan fitur pemulihan akses akun staf di jaringan kantor lokal (intranet offline) tanpa ketergantungan server email SMTP eksternal:
+  - **Konteks & Kebutuhan Bisnis**:
+    - Sistem BKS berjalan pada intranet kantor tertutup tanpa akses internet/gateway email luar, sehingga alur *Lupa Password* berbasis tautan email tidak dapat digunakan.
+    - Jika staf operasional (Admin) lupa password, Direktur (Super Admin) dapat mereset kata sandi staf secara instan langsung dari menu **Master Data → Manajemen Akun** (`/panel/users`).
+  - **Antarmuka & Alur Kerja**:
+    - Ditambahkan tombol aksi **Reset Password** (ikon kunci) pada setiap baris staf di tabel pengguna (Livewire `UserTable`).
+    - Modal interaktif Alpine.js memudahkan Direktur memasukkan kata sandi baru (minimal 8 karakter sesuai aturan keamanan sistem).
+    - Proteksi otorisasi ganda: Rute dilindungi middleware `peran:direktur` dan validasi controller `pastikanDirektur()`.
+    - Direktur dicegah mereset akun miliknya sendiri lewat rute ini dan diarahkan untuk menggunakan menu ubah sandi di profil akun.
+  - **Pemutusan Sesi Aktif Instan (Session Invalidation)**:
+    - Demi keamanan pasca-reset, saat password baru disimpan, sistem langsung membersihkan seluruh baris sesi aktif staf terkait di tabel `sessions` (`DB::table('sessions')->where('user_id', $pengguna->id)->delete()`).
+    - Staf yang sedang aktif di komputer lain otomatis terputus dan wajib login ulang menggunakan password baru.
+  - **Hasil Verifikasi QA Suite Test**:
+    - Uji fitur spesifik `ResetPasswordDirekturTest`: **7 tests lolos 100% (22 assertions)** (mencakup penolakan tamu redirect login, penolakan admin 403 forbidden, eksekusi sukses oleh direktur, validasi login password baru, invalidasi instan tabel sessions, pencegahan reset akun sendiri, dan validasi panjang sandi).
+    - Seluruh rangkaian tes Laravel: **484 tests lolos 100% HIJAU (1.782 assertions)** tanpa regresi.
+
+  ---
+
+  ### 4k. Skrip Otomasi Deployment Dedicated Server LAN `scripts/pasang-server-kantor.sh` (November 2026)
+  Penyediaan skrip shell otomasi deployment 1-klik untuk dedicated server intranet kantor (`bks-server` / Ubuntu Server):
+  - **Otomasi Pemasangan & Idempotency**:
+    - Skrip `scripts/pasang-server-kantor.sh` dirancang idempotent: aman dieksekusi berulang kali tanpa merusak berkas konfigurasi `.env` yang sudah ada, mencegah duplikasi jadwal crontab, dan memperbarui konfigurasi service secara terstruktur.
+    - Menangani otomatis: deteksi IP antarmuka LAN lokal, verifikasi dependensi sistem (PHP, Composer, MySQL/MariaDB), penyalinan `.env.example` & pembuatan application key (jika belum ada), pembuatan folder cache/storage beserta hak izin writable `chmod 775`, pembuatan symlink `storage:link`, dan migrasi skema database (`php artisan migrate --force`).
+  - **Layanan Background Systemd User & Scheduler**:
+    - Mengonfigurasi dan mengaktifkan unit systemd pengguna tanpa ketergantungan akses root/sudo:
+      - `bks-web.service`: Menjalankan server aplikasi pada port `8232` (host `0.0.0.0`) dengan auto-restart.
+      - `bks-queue.service`: Menjalankan worker antrean pemrosesan OCR nota dan tugas background lainnya.
+    - Mengonfigurasi penjadwalan `cron` pengguna untuk perintah `php artisan schedule:run` tiap menit guna menjamin eksekusi pencadangan otomatis harian.
+    - Menjalankan perintah audit mandiri `php artisan bks:cek-server` pada akhir proses instalasi dan menampilkan banner ringkasan akses IP LAN kantor.
+  - **Hasil Verifikasi QA Suite Test**:
+    - Audit keamanan dan idempotensi skrip selesai diverifikasi dengan status **VERIFIED** (terbukti bebas dari hardcoded credentials, aman terhadap duplikasi crontab, dan memiliki mekanisme fallback IP LAN).
+    - Seluruh rangkaian test suite Laravel: **490 tests lolos 100% HIJAU (1.828 assertions)**.
+
+  ---
+
+  ## 5. Status Item Fitur & Keputusan Sesi Ini
+
+  | Kode | Item | Status |
+  |:-----|:-----|:-------|
+  | **B1** | Saldo berjalan Kas & Bank | ✅ **Selesai** (`BukuKasBank::susun` + mutasi saldo berjalan di Laporan) |
+  | **B4** | Ekspor Excel format perusahaan | ✅ **Selesai** (Kop PT BKS, freeze pane, total, dan tanda tangan Direktur & Admin) |
+  | **C1** | Navigasi/UI lebih tegas | ✅ **Selesai** (Tombol kembali tunggal di atas komponen breadcrumb, tanpa duplikasi di bawah) |
+  | **C3** | Menu baru: Kalender Tenggat | ✅ **Selesai** (Tampilan kalender bulanan tenggat SPK di `/panel/spk/calendar`) |
+  | **B3** | Impor data perusahaan | ✅ **Selesai** (`PembacaImpor` & CLI `bks:impor-arsip` membaca 91 baris SPK riil) |
+  | **B5** | Backup nota penuh & uji restore | ✅ **Selesai** (`bks:backup --dengan-nota` dan `bks:restore --test` dry-run) |
+  | **D1** | Cetak fisik kuitansi A4 & BAST | ✅ **Selesai** (Format A4 Dompdf dengan terbilang rupiah dan tanda tangan/stempel) |
+  | **U1** | Reset Password Staf & Proteksi Sesi | ✅ **Selesai** (Reset instan oleh Direktur di Manajemen Akun + pembersihan sesi aktif) |
+  | **S1** | Otomasi Deployment Server Kantor | ✅ **Selesai** (`scripts/pasang-server-kantor.sh` 1-klik, systemd user & crontab) |
 
 ---
 

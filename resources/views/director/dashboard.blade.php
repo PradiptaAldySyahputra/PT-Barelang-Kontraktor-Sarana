@@ -5,9 +5,9 @@
 @php
     $nadaKpi = [
         'netral' => 'text-gray-900 dark:text-white',
-        'aman' => 'text-success-600 dark:text-success-500',
-        'perhatian' => 'text-warning-600 dark:text-warning-500',
-        'bahaya' => 'text-error-600 dark:text-error-500',
+        'aman' => 'text-success-700 dark:text-success-500',
+        'perhatian' => 'text-warning-700 dark:text-warning-500',
+        'bahaya' => 'text-error-600 dark:text-error-400 dark:text-error-500',
     ];
 
     $trenLabels = array_map(fn($t) => $t['label'], $data['tren'] ?? []);
@@ -19,55 +19,129 @@
 @endphp
 
 <x-layouts.app :judul="$judul" :keterangan="$keterangan">
+    <x-common.antrean-ocr />
 
-    {{-- Baris 1: 4 KPI Cards (TailAdmin Grid Seragam) --}}
+
+    {{-- Baris 1: 4 KPI Cards (TailAdmin Grid Seragam dengan Ikon Aksen) --}}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 xl:grid-cols-4">
-        @foreach ($data['kpi'] as $kpi)
-            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs">
-                <span class="text-theme-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    {{ $kpi['label'] }}
-                </span>
-                <div class="mt-4 flex items-end justify-between">
-                    <div>
-                        <h4 class="text-2xl font-bold angka {{ $nadaKpi[$kpi['nada']] ?? $nadaKpi['netral'] }}">
-                            {{ $kpi['nilai'] }}
-                        </h4>
-                        <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">
-                            {{ $kpi['ket'] }}
-                        </span>
-                    </div>
+        @foreach ($data['kpi'] as $idx => $kpi)
+            @php
+                $aksenIkon = match ($idx) {
+                    0 => ['bg' => 'bg-brand-50 dark:bg-brand-500/10', 'text' => 'text-brand-600 dark:text-brand-400', 'svg' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+                    1 => ['bg' => 'bg-warning-50 dark:bg-warning-500/10', 'text' => 'text-warning-700 dark:text-warning-400', 'svg' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                    2 => ['bg' => 'bg-success-50 dark:bg-success-500/10', 'text' => 'text-success-600 dark:text-success-400', 'svg' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                    default => ['bg' => 'bg-purple-50 dark:bg-purple-500/10', 'text' => 'text-purple-600 dark:text-purple-400', 'svg' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+                };
+            @endphp
+            <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                    <span class="text-theme-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {{ $kpi['label'] }}
+                    </span>
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl {{ $aksenIkon['bg'] }} {{ $aksenIkon['text'] }} shadow-theme-xs">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $aksenIkon['svg'] }}" />
+                        </svg>
+                    </span>
+                </div>
+                <div class="mt-4">
+                    <h4 class="break-words text-xl font-bold angka sm:text-2xl {{ $nadaKpi[$kpi['nada']] ?? $nadaKpi['netral'] }}">
+                        {{ $kpi['nilai'] }}
+                    </h4>
+                    <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">
+                        {{ $kpi['ket'] }}
+                    </span>
                 </div>
             </div>
         @endforeach
     </div>
 
-    {{-- Baris 2: Ringkasan Arus Kas Bulan Ini --}}
-    <div class="mt-6">
-        {{-- Ringkasan Bulan Ini --}}
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Arus Kas Bulan Ini</h3>
-                <span class="text-theme-xs text-gray-400">{{ now()->translatedFormat('F Y') }}</span>
+    {{-- Baris 2: Ringkasan Arus Kas Bulan Ini & Realisasi Penagihan Kontrak --}}
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
+        {{-- Ringkasan Bulan Ini (7 grid) --}}
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs xl:col-span-7 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Arus Kas Bulan Ini</h3>
+                        <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">Mutasi penerimaan & pengeluaran bulan berjalan</p>
+                    </div>
+                    <span class="text-theme-xs text-gray-500 dark:text-gray-400">{{ now()->translatedFormat('F Y') }}</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-gray-800">
+                        <span class="text-theme-xs text-gray-500 dark:text-gray-400">Uang Masuk Bulan Ini</span>
+                        <h4 class="mt-1 break-words text-xl font-bold text-gray-900 dark:text-white angka">
+                            {{ Format::rupiah($data['bulanIni']['masuk']) }}
+                        </h4>
+                        <p class="mt-0.5 text-theme-xs {{ $data['bulanIni']['bandingMasuk']['arah'] === 'turun' ? 'text-error-600 dark:text-error-400' : 'text-success-700 dark:text-success-400' }}">
+                            {{ $data['bulanIni']['bandingMasuk']['teks'] }}
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-gray-800">
+                        <span class="text-theme-xs text-gray-500 dark:text-gray-400">Uang Keluar Bulan Ini</span>
+                        <h4 class="mt-1 break-words text-xl font-bold text-gray-900 dark:text-white angka">
+                            {{ Format::rupiah($data['bulanIni']['keluar']) }}
+                        </h4>
+                        <p class="mt-0.5 text-theme-xs {{ $data['bulanIni']['bandingKeluar']['arah'] === 'naik' ? 'text-warning-700 dark:text-warning-400' : 'text-gray-500 dark:text-gray-400' }}">
+                            {{ $data['bulanIni']['bandingKeluar']['teks'] }}
+                        </p>
+                    </div>
+                </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="p-4 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-gray-800">
-                    <span class="text-theme-xs text-gray-500 dark:text-gray-400">Uang Masuk Bulan Ini</span>
-                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white angka">
-                        {{ Format::rupiah($data['bulanIni']['masuk']) }}
-                    </h4>
-                    <p class="mt-0.5 text-theme-xs {{ $data['bulanIni']['bandingMasuk']['arah'] === 'turun' ? 'text-error-600 dark:text-error-400' : 'text-success-600 dark:text-success-400' }}">
-                        {{ $data['bulanIni']['bandingMasuk']['teks'] }}
-                    </p>
+            <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <span>Mutasi Hari Ini ({{ now()->format('d/m/Y') }}):</span>
+                <div class="flex items-center gap-3 angka">
+                    <span class="font-semibold text-success-700 dark:text-success-400">+ {{ Format::rupiah($data['hariIni']['masuk'] ?? 0) }}</span>
+                    <span>&middot;</span>
+                    <span class="font-semibold text-error-600 dark:text-error-400">&minus; {{ Format::rupiah($data['hariIni']['keluar'] ?? 0) }}</span>
                 </div>
-                <div class="p-4 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-gray-800">
-                    <span class="text-theme-xs text-gray-500 dark:text-gray-400">Uang Keluar Bulan Ini</span>
-                    <h4 class="mt-1 text-xl font-bold text-gray-900 dark:text-white angka">
-                        {{ Format::rupiah($data['bulanIni']['keluar']) }}
-                    </h4>
-                    <p class="mt-0.5 text-theme-xs {{ $data['bulanIni']['bandingKeluar']['arah'] === 'naik' ? 'text-warning-600 dark:text-warning-400' : 'text-gray-500 dark:text-gray-400' }}">
-                        {{ $data['bulanIni']['bandingKeluar']['teks'] }}
-                    </p>
+            </div>
+        </div>
+
+        {{-- Progres Realisasi Penagihan Kontrak & Pintasan Eksekutif (5 grid) --}}
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs xl:col-span-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Realisasi Penerimaan SPK</h3>
+                        <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">Pencairan termin terhadap nilai kontrak</p>
+                    </div>
+                    <span class="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400 angka">
+                        {{ $data['tertagih']['persen'] ?? 0 }}%
+                    </span>
                 </div>
+
+                <div class="h-2.5 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden mb-3">
+                    <div class="h-full rounded-full bg-brand-500 transition-all duration-500"
+                        style="width: {{ min(100, (float) ($data['tertagih']['persen'] ?? 0)) }}%"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 rounded-xl bg-gray-50/80 p-3 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-800 text-xs">
+                    <div>
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Sudah Diterima</span>
+                        <span class="font-bold text-success-700 dark:text-success-400 angka">
+                            {{ Format::rupiah($data['tertagih']['diterima'] ?? 0) }}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Total Nilai SPK</span>
+                        <span class="font-bold text-gray-900 dark:text-white angka">
+                            {{ Format::rupiah($data['tertagih']['nilai'] ?? 0) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-2.5">
+                <a href="{{ route('panel.reports') }}"
+                    class="inline-flex items-center justify-center font-medium gap-1.5 rounded-xl transition px-3.5 py-2 text-xs bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600">
+                    Laporan Keuangan
+                </a>
+                <a href="{{ route('panel.users.index') }}"
+                    class="inline-flex items-center justify-center font-medium gap-1.5 rounded-xl transition px-3.5 py-2 text-xs bg-white text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700">
+                    Manajemen Akun
+                </a>
             </div>
         </div>
     </div>
@@ -105,7 +179,7 @@
             </div>
 
             <div class="space-y-2 pt-3 border-t border-gray-100 dark:border-gray-800 text-theme-xs">
-                @foreach ($data['sebaranTagihan'] as $tagihan)
+                @foreach (array_filter($data['sebaranTagihan'], fn($t) => $t['jumlah'] > 0) as $tagihan)
                     <div class="flex items-center justify-between">
                         <span class="text-gray-600 dark:text-gray-400">{{ $tagihan['label'] }}</span>
                         <span class="font-bold text-gray-900 dark:text-white angka">{{ $tagihan['jumlah'] }} SPK ({{ $tagihan['persen'] }}%)</span>
@@ -191,6 +265,9 @@
     @push('scripts')
     <script>
         (function() {
+            const isDark = () => document.documentElement.classList.contains('dark');
+            let chartArusKas = null, chartTagihan = null;
+
             function initDirekturCharts() {
                 if (typeof window.ApexCharts === 'undefined') return;
 
@@ -204,8 +281,10 @@
                             { name: 'Uang Keluar', data: @json($trenKeluar) }
                         ],
                         colors: ['#465fff', '#f04438'],
+                        theme: { mode: isDark() ? 'dark' : 'light' },
                         chart: {
-                            fontFamily: 'Outfit, sans-serif',
+                            background: 'transparent',
+                            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
                             type: 'area',
                             height: 290,
                             toolbar: { show: false }
@@ -236,8 +315,9 @@
                             }
                         },
                         legend: { show: false },
-                        grid: { yaxis: { lines: { show: true } } },
+                        grid: { borderColor: isDark() ? '#1F2A37' : '#E5E7EB', yaxis: { lines: { show: true } } },
                         tooltip: {
+                            theme: isDark() ? 'dark' : 'light',
                             y: {
                                 formatter: function(val) {
                                     return 'Rp ' + val.toLocaleString('id-ID');
@@ -245,7 +325,8 @@
                             }
                         }
                     };
-                    new window.ApexCharts(elArusKas, optionsArusKas).render();
+                    chartArusKas = new window.ApexCharts(elArusKas, optionsArusKas);
+                    chartArusKas.render();
                 }
 
                 // Chart Sebaran Tagihan Direktur
@@ -256,22 +337,33 @@
                         series: @json($tagihanJumlah),
                         labels: @json($tagihanLabels),
                         colors: ['#465fff', '#7a5af8', '#f79009', '#0ba5ec', '#12b76a'],
+                        theme: { mode: isDark() ? 'dark' : 'light' },
+                        stroke: { colors: [isDark() ? '#111827' : '#ffffff'], width: 2 },
                         chart: {
-                            fontFamily: 'Outfit, sans-serif',
+                            background: 'transparent',
+                            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
                             type: 'donut',
-                            height: 220
+                            height: 230
                         },
                         dataLabels: { enabled: false },
                         legend: { show: false },
                         plotOptions: {
                             pie: {
                                 donut: {
-                                    size: '65%',
+                                    size: '72%',
                                     labels: {
                                         show: true,
+                                        value: {
+                                            color: isDark() ? '#F8FAFC' : '#1D2939',
+                                            fontSize: '22px',
+                                            fontWeight: 700
+                                        },
                                         total: {
                                             show: true,
                                             label: 'Tagihan',
+                                            color: isDark() ? '#98A2B3' : '#64748B',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
                                             formatter: function(w) {
                                                 return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
                                             }
@@ -281,9 +373,30 @@
                             }
                         }
                     };
-                    new window.ApexCharts(elTagihan, optionsTagihan).render();
+                    chartTagihan = new window.ApexCharts(elTagihan, optionsTagihan);
+                    chartTagihan.render();
                 }
             }
+
+            function syncTema() {
+                const d = isDark();
+                chartTagihan?.updateOptions({
+                    theme: { mode: d ? 'dark' : 'light' },
+                    stroke: { colors: [d ? '#111827' : '#ffffff'], width: 2 },
+                    plotOptions: { pie: { donut: { labels: {
+                        value: { color: d ? '#F8FAFC' : '#1D2939' },
+                        total: { color: d ? '#98A2B3' : '#64748B' }
+                    } } } }
+                });
+                chartArusKas?.updateOptions({
+                    theme: { mode: d ? 'dark' : 'light' },
+                    grid: { borderColor: d ? '#1F2A37' : '#E5E7EB' },
+                    tooltip: { theme: d ? 'dark' : 'light' }
+                });
+            }
+            new MutationObserver(syncTema).observe(document.documentElement, {
+                attributes: true, attributeFilter: ['class', 'data-color-scheme']
+            });
 
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', initDirekturCharts);

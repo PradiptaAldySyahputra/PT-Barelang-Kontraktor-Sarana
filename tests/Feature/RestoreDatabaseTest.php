@@ -57,4 +57,50 @@ class RestoreDatabaseTest extends TestCase
             return str_contains($cmd, 'mysql');
         });
     }
+
+    public function test_restore_dengan_opsi_test_memverifikasi_tanpa_menjalankan_mysql(): void
+    {
+        $namaZip = 'test-restore-check.zip';
+        $pathZip = $this->dir.'/'.$namaZip;
+
+        $sqlValid = <<<'SQL'
+CREATE TABLE `spk` (id INT);
+CREATE TABLE `uang_masuk` (id INT);
+CREATE TABLE `uang_keluar` (id INT);
+CREATE TABLE `mitra` (id INT);
+CREATE TABLE `pengguna` (id INT);
+SQL;
+
+        $zip = new \ZipArchive;
+        $zip->open($pathZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('backup.sql', $sqlValid);
+        $zip->addFromString('nota/kw-01.jpg', 'gambar');
+        $zip->close();
+
+        Process::fake();
+
+        $this->artisan('bks:restore', ['berkas' => $namaZip, '--test' => true])
+            ->expectsOutputToContain('Verifikasi SUKSES: Berkas backup valid dan siap direstore.')
+            ->assertSuccessful();
+
+        // mysql TIDAK boleh dijalankan saat mode test/dry-run
+        Process::assertNothingRan();
+    }
+
+    public function test_restore_dengan_opsi_test_gagal_jika_tabel_utama_kurang(): void
+    {
+        $namaZip = 'test-restore-invalid.zip';
+        $pathZip = $this->dir.'/'.$namaZip;
+
+        $sqlKurang = "CREATE TABLE `spk` (id INT);\n";
+
+        $zip = new \ZipArchive;
+        $zip->open($pathZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('backup.sql', $sqlKurang);
+        $zip->close();
+
+        $this->artisan('bks:restore', ['berkas' => $namaZip, '--test' => true])
+            ->expectsOutputToContain('Verifikasi GAGAL')
+            ->assertFailed();
+    }
 }

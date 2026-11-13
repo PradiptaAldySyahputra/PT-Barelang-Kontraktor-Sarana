@@ -47,6 +47,9 @@ final class MonitoringTable extends Component
     #[Url(except: '')]
     public string $tagihan = '';
 
+    #[Url(as: 'tanggal', except: '')]
+    public string $tanggal = '';
+
     #[Url(except: 'tanggal_akhir')]
     public string $urut = 'tanggal_akhir';
 
@@ -83,7 +86,7 @@ final class MonitoringTable extends Component
 
     public function bersihkan(): void
     {
-        $this->reset('cari', 'status', 'tagihan');
+        $this->reset('cari', 'status', 'tagihan', 'tanggal');
         $this->resetPage();
     }
 
@@ -98,11 +101,11 @@ final class MonitoringTable extends Component
                 ->paginate(self::PER_HALAMAN),
             'ringkas' => [
                 'jumlah' => (clone $kueri)->count(),
-                'nilai' => (float) (clone $kueri)->sum('nilai_spk'),
             ],
-            'opsiStatus' => StatusSpk::opsi(),
-            'opsiTagihan' => StatusTagihan::opsi(),
-            'adaPenyaring' => trim($this->cari) !== '' || $this->status !== '' || $this->tagihan !== '',
+            'opsiStatus' => StatusSpk::opsiProgres(),
+            'opsiTagihan' => StatusTagihan::opsiPenagihan(),
+            'adaPenyaring' => trim($this->cari) !== '' || $this->status !== '' || $this->tagihan !== ''
+                || $this->tanggal !== '',
             'bolehUbah' => (bool) auth()->user()?->bolehInput(),
             'asal' => match ($this->mode) {
                 'billing' => 'tagihan-spk',
@@ -124,7 +127,11 @@ final class MonitoringTable extends Component
                         ->orWhereNull('status_tagihan');
                 });
             })
-            ->when($this->mode === 'completed', fn (Builder $q) => $q->where('status_tagihan', StatusTagihan::Dibayar->value))
+            ->when($this->mode === 'completed', function (Builder $q): void {
+                // Arsip lunas: pekerjaan sudah selesai DAN tagihannya sudah dibayar.
+                $q->where('status_spk', StatusSpk::Selesai->value)
+                    ->where('status_tagihan', StatusTagihan::Dibayar->value);
+            })
             ->when(trim($this->cari) !== '', function (Builder $q): void {
                 $kata = '%'.trim($this->cari).'%';
 
@@ -135,7 +142,8 @@ final class MonitoringTable extends Component
                         ->orWhereHas('mitra', fn (Builder $m) => $m->where('nama', 'like', $kata));
                 });
             })
-            ->when($this->status !== '', fn (Builder $q) => $q->where('status_spk', $this->status))
-            ->when($this->tagihan !== '', fn (Builder $q) => $q->where('status_tagihan', $this->tagihan));
+            ->when($this->tanggal !== '', fn (Builder $q) => $q->whereDate('tanggal_spk', $this->tanggal))
+            ->when($this->status !== '' && $this->mode === 'status', fn (Builder $q) => $q->where('status_spk', $this->status))
+            ->when($this->tagihan !== '' && $this->mode !== 'status', fn (Builder $q) => $q->where('status_tagihan', $this->tagihan));
     }
 }

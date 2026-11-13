@@ -24,36 +24,36 @@
             <div class="space-y-5">
                 <div>
                     <label for="nama" class="block text-theme-sm font-medium text-gray-700 dark:text-gray-200">
-                        Nama Lengkap <span class="text-error-600">*</span>
+                        Nama Lengkap <span class="text-error-600 dark:text-error-400">*</span>
                     </label>
                     <input id="nama" name="nama" type="text" required maxlength="200"
                         value="{{ old('nama', $pengguna?->nama) }}"
-                        class="mt-1.5 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white">
+                        class="mt-1.5 h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-500">
                     @error('nama')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div>
                     <label for="email" class="block text-theme-sm font-medium text-gray-700 dark:text-gray-200">
-                        Email <span class="text-error-600">*</span>
+                        Email <span class="text-error-600 dark:text-error-400">*</span>
                     </label>
                     <input id="email" name="email" type="email" required maxlength="200"
                         value="{{ old('email', $pengguna?->email) }}"
-                        class="mt-1.5 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white">
+                        class="mt-1.5 h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-500">
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Dipakai untuk login.</p>
                     @error('email')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label for="peran" class="block text-theme-sm font-medium text-gray-700 dark:text-gray-200">
-                            Peran <span class="text-error-600">*</span>
+                            Peran <span class="text-error-600 dark:text-error-400">*</span>
                         </label>
                         <select id="peran" name="peran" required @disabled($diriSendiri)
-                            class="mt-1.5 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-900 focus:border-brand-400 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:disabled:bg-white/5">
+                            class="mt-1.5 h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-500 dark:disabled:bg-white/5">
                             @foreach ($opsiPeran as $nilai => $label)
                                 <option value="{{ $nilai }}"
                                     @selected(old('peran', $pengguna?->peran?->value ?? 'admin') === $nilai)>
@@ -68,7 +68,7 @@
                             Admin = input &amp; kelola data operasional. Direktur = Super Admin (akses penuh seluruh fitur + manajemen akun).
                         </p>
                         @error('peran')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -77,7 +77,7 @@
                         <label class="inline-flex cursor-pointer items-center gap-2.5">
                             <input type="checkbox" name="is_aktif" value="1"
                                 @checked((bool) old('is_aktif', $pengguna?->is_aktif ?? true)) @disabled($diriSendiri)
-                                class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 disabled:cursor-not-allowed dark:border-gray-700">
+                                class="h-4 w-4 rounded border-gray-300 bg-white text-brand-600 focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900">
                             <span class="text-theme-sm font-medium text-gray-700 dark:text-gray-200">Akun Aktif</span>
                         </label>
                         @if ($diriSendiri)
@@ -91,11 +91,11 @@
 
                 <div class="border-t border-gray-100 pt-5 dark:border-gray-800">
                     <label for="password" class="block text-theme-sm font-medium text-gray-700 dark:text-gray-200">
-                        Password @if (! $modeUbah) <span class="text-error-600">*</span> @endif
+                        Password @if (! $modeUbah) <span class="text-error-600 dark:text-error-400">*</span> @endif
                     </label>
                     <input id="password" name="password" type="password" @required(! $modeUbah)
                         autocomplete="new-password"
-                        class="mt-1.5 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-900 focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white">
+                        class="mt-1.5 h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-500">
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
                         @if ($modeUbah)
                             Kosongkan kalau password tidak diganti.
@@ -104,14 +104,14 @@
                         @endif
                     </p>
                     @error('password')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
 
             <div class="mt-6 flex items-center justify-end border-t border-gray-100 pt-4 dark:border-gray-800">
                 <button type="submit"
-                    class="inline-flex h-9 items-center rounded-lg bg-brand-600 px-4 text-theme-sm font-semibold text-white hover:bg-brand-700">
+                    class="inline-flex h-10 items-center rounded-lg bg-brand-600 px-4 text-theme-sm font-semibold text-white transition-colors hover:bg-brand-700 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20">
                     {{ $modeUbah ? 'Simpan Perubahan' : 'Simpan Akun' }}
                 </button>
             </div>

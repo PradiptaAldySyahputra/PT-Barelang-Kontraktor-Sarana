@@ -18,7 +18,7 @@ use Livewire\WithPagination;
  *
  * Pengganti `UangMasuksTable` Filament. Yang dipertahankan:
  *   - SATU baris total terfilter di atas tabel (bukan total ganda)
- *   - filter PERIODE (dari/sampai) + akun + sumber + data terhapus
+ *   - filter satu tanggal + akun + sumber
  *   - kolom "Sumber" disimpulkan dari spk_id, bukan kolom tersimpan
  *   - soft delete: data terhapus bisa dilihat & dipulihkan
  */
@@ -36,11 +36,8 @@ final class CashInTable extends Component
     #[Url(as: 'q', except: '')]
     public string $cari = '';
 
-    #[Url(as: 'dari', except: '')]
-    public string $dari = '';
-
-    #[Url(as: 'sampai', except: '')]
-    public string $sampai = '';
+    #[Url(as: 'tanggal', except: '')]
+    public string $tanggal = '';
 
     #[Url(except: '')]
     public string $akun = '';
@@ -59,7 +56,7 @@ final class CashInTable extends Component
 
     public function updating(string $properti): void
     {
-        if (in_array($properti, ['cari', 'dari', 'sampai', 'akun', 'sumber', 'terhapus'], true)) {
+        if (in_array($properti, ['cari', 'tanggal', 'akun', 'sumber', 'terhapus'], true)) {
             $this->resetPage();
         }
     }
@@ -82,7 +79,7 @@ final class CashInTable extends Component
 
     public function bersihkan(): void
     {
-        $this->reset('cari', 'dari', 'sampai', 'akun', 'sumber', 'terhapus');
+        $this->reset('cari', 'tanggal', 'akun', 'sumber', 'terhapus');
         $this->resetPage();
     }
 
@@ -109,8 +106,7 @@ final class CashInTable extends Component
     private function adaPenyaring(): bool
     {
         return trim($this->cari) !== ''
-            || $this->dari !== ''
-            || $this->sampai !== ''
+            || $this->tanggal !== ''
             || $this->akun !== ''
             || $this->sumber !== ''
             || $this->terhapus !== 'aktif';
@@ -124,8 +120,7 @@ final class CashInTable extends Component
         return UangMasuk::query()
             ->when($this->terhapus === 'aktif', fn (Builder $q) => $q->whereNull('deleted_at'))
             ->when($this->terhapus === 'saja', fn (Builder $q) => $q->onlyTrashed())
-            ->when($this->dari !== '', fn (Builder $q) => $q->whereDate('tanggal', '>=', $this->dari))
-            ->when($this->sampai !== '', fn (Builder $q) => $q->whereDate('tanggal', '<=', $this->sampai))
+            ->when($this->tanggal !== '', fn (Builder $q) => $q->whereDate('tanggal', $this->tanggal))
             ->when($this->akun !== '', fn (Builder $q) => $q->where('akun', $this->akun))
             ->when($this->sumber === 'spk', fn (Builder $q) => $q->whereNotNull('spk_id'))
             ->when($this->sumber === 'luar', fn (Builder $q) => $q->whereNull('spk_id'))

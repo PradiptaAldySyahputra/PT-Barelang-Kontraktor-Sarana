@@ -20,4 +20,12 @@ final class FormatTest extends TestCase
         $this->assertSame(0.0, Format::bersihkanUang(''));
         $this->assertSame(0.0, Format::bersihkanUang(null));
     }
+
+    public function test_format_rupiah_dan_terbilang_akurasi_tinggi(): void
+    {
+        $this->assertSame('Rp 2.500.000', Format::rupiah(2500000));
+        $this->assertSame('Rp 0', Format::rupiah(0));
+        $this->assertSame('dua juta lima ratus ribu rupiah', Format::terbilang(2500000));
+        $this->assertSame('nol rupiah', Format::terbilang(0));
+    }
 }

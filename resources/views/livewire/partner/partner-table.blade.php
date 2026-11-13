@@ -52,7 +52,7 @@
         <div class="flex flex-wrap items-center gap-3 px-5 py-3.5 bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800">
             <div class="relative min-w-0 flex-1 sm:max-w-xs">
                 <label for="cari-mitra" class="sr-only">Cari di tabel ini</label>
-                <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none"
+                <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" fill="none"
                     viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" />
@@ -76,7 +76,7 @@
                 <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Ubah filter kategori atau kata kunci pencarian.</p>
                 @if ($adaPenyaring)
                     <button type="button" wire:click="bersihkan"
-                        class="mt-3 inline-flex items-center rounded-lg border border-gray-300 px-3 py-1.5 text-theme-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/5 transition">
+                        class="mt-4 inline-flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-theme-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition">
                         Reset Filter
                     </button>
                 @endif
@@ -91,7 +91,7 @@
                                 <button type="button" wire:click="urutkan('nama')" class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white">
                                     Nama & Alamat Mitra
                                     @if ($urut === 'nama')
-                                        <span class="text-brand-600" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
+                                        <span class="text-brand-600 dark:text-brand-400" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
                                     @else
                                         <span class="text-gray-300 dark:text-gray-700" aria-hidden="true">⇅</span>
                                     @endif
@@ -101,7 +101,7 @@
                                 <button type="button" wire:click="urutkan('kategori')" class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white">
                                     Kategori
                                     @if ($urut === 'kategori')
-                                        <span class="text-brand-600" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
+                                        <span class="text-brand-600 dark:text-brand-400" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
                                     @else
                                         <span class="text-gray-300 dark:text-gray-700" aria-hidden="true">⇅</span>
                                     @endif
@@ -157,7 +157,7 @@
                                             <a href="{{ route('panel.partners.edit', $mitra) }}"
                                                 class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition"
                                                 title="Ubah Data Mitra">
-                                                <svg class="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <svg class="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                                                 </svg>
                                                 Ubah
@@ -186,9 +186,9 @@
             <ul class="divide-y divide-gray-100 md:hidden dark:divide-gray-800">
                 @foreach ($daftar as $mitra)
                     @php
-                        $kat = $mitra->kategori ?? KategoriMitra::Mitra;
+                        $kat = $mitra->kategori;
                     @endphp
-                    <li class="px-4 py-3.5 space-y-2">
+                    <li wire:key="mitra-m-{{ $mitra->id }}" class="px-4 py-3.5 space-y-2">
                         <div class="flex items-start justify-between gap-2">
                             <div>
                                 <h4 class="font-bold text-theme-sm text-gray-900 dark:text-white">
@@ -200,14 +200,24 @@
                                     </p>
                                 @endif
                             </div>
-                            <span class="inline-flex rounded px-2 py-0.5 text-[11px] font-semibold {{ $badge($kat->warnaBadge()) }}">
+                            <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($kat->warnaBadge()) }}">
                                 {{ $kat->label() }}
                             </span>
                         </div>
 
                         <div class="flex flex-wrap items-center justify-between text-xs text-gray-600 dark:text-gray-300 pt-1">
-                            <span>📞 {{ $mitra->kontak ?: '—' }}</span>
-                            <span class="font-bold">{{ Format::angka($mitra->spk_count ?? 0) }} SPK</span>
+                            <span class="inline-flex items-center gap-1.5">
+                                <svg class="h-3 w-3 text-gray-500 dark:text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                                </svg>
+                                {{ $mitra->kontak ?: '—' }}
+                            </span>
+                            <span class="flex items-center gap-2 font-bold">
+                                <span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold {{ $mitra->is_aktif ? $badge('success') : $badge('gray') }}">
+                                    {{ $mitra->is_aktif ? 'Aktif' : 'Nonaktif' }}
+                                </span>
+                                {{ Format::angka($mitra->spk_count ?? 0) }} SPK
+                            </span>
                         </div>
 
                         @if ($bolehUbah)
@@ -221,7 +231,7 @@
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"
-                                        class="inline-flex items-center rounded-lg px-2 py-1 text-xs font-medium text-error-600">
+                                        class="inline-flex items-center rounded-lg px-2 py-1 text-xs font-medium text-error-600 dark:text-error-400">
                                         Hapus
                                     </button>
                                 </form>

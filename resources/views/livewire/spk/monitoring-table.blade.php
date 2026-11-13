@@ -12,6 +12,7 @@
     ];
     $badge = static fn (?string $warna): string => $kelasBadge[$warna ?? 'gray'] ?? $kelasBadge['gray'];
 
+    $tampilStatus = $mode !== 'billing';
     $tampilTagihan = $mode !== 'status';
 @endphp
 
@@ -35,21 +36,19 @@
 }">
     <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-theme-xs">
 
-        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
             <p class="text-base font-bold text-gray-900 dark:text-white">
                 <span class="angka">{{ Format::angka($ringkas['jumlah']) }}</span> SPK
                 @if ($adaPenyaring)
-                    <span class="text-theme-xs font-normal text-gray-400">(disaring)</span>
+                    <span class="text-theme-xs font-normal text-gray-500 dark:text-gray-400">(disaring)</span>
                 @endif
-                <span class="mx-2 text-gray-300 dark:text-gray-700">·</span>
-                Total <span class="angka text-brand-600 dark:text-brand-400">{{ Format::rupiah($ringkas['nilai']) }}</span>
             </p>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 px-5 py-3.5 bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800">
             <div class="relative min-w-0 flex-1 sm:max-w-xs">
                 <label for="cari-monitoring" class="sr-only">Cari di tabel ini</label>
-                <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none"
+                <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" fill="none"
                     viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" />
@@ -59,7 +58,9 @@
                     class="h-10 w-full rounded-lg border border-gray-300 bg-white pr-4 pl-10 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
             </div>
 
-            @if ($mode !== 'billing')
+            <x-common.filter-tanggal id="tanggal-monitoring" mode="livewire" :tanggal="$tanggal" :lebar="'sm:w-40'" />
+
+            @if ($mode === 'status')
                 <label class="sr-only" for="saring-status">Status pekerjaan</label>
                 <select id="saring-status" wire:model.live="status"
                     class="h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800">
@@ -70,14 +71,16 @@
                 </select>
             @endif
 
-            <label class="sr-only" for="saring-tagihan">Status tagihan</label>
-            <select id="saring-tagihan" wire:model.live="tagihan"
-                class="h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800">
-                <option value="">Semua tagihan</option>
-                @foreach ($opsiTagihan as $nilai => $label)
-                    <option value="{{ $nilai }}">{{ $label }}</option>
-                @endforeach
-            </select>
+            @if ($mode !== 'status')
+                <label class="sr-only" for="saring-tagihan">Status tagihan</label>
+                <select id="saring-tagihan" wire:model.live="tagihan"
+                    class="h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800">
+                    <option value="">Semua tagihan</option>
+                    @foreach ($opsiTagihan as $nilai => $label)
+                        <option value="{{ $nilai }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            @endif
 
             @if ($adaPenyaring)
                 <button type="button" wire:click="bersihkan"
@@ -92,8 +95,8 @@
                 <p class="text-theme-sm font-medium text-gray-900 dark:text-white">Tidak ada SPK di menu ini.</p>
                 @if ($adaPenyaring)
                     <button type="button" wire:click="bersihkan"
-                        class="mt-3 inline-flex h-8 items-center rounded-lg border border-gray-300 px-3 text-theme-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200">
-                        Bersihkan penyaring
+                        class="mt-4 inline-flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-theme-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition">
+                        Reset Filter
                     </button>
                 @endif
             </div>
@@ -107,19 +110,23 @@
                                 <button type="button" wire:click="urutkan('nomor_spk')" class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white">
                                     SPK & Mitra
                                     @if ($urut === 'nomor_spk')
-                                        <span class="text-brand-600" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
+                                        <span class="text-brand-600 dark:text-brand-400" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
                                     @else
                                         <span class="text-gray-300 dark:text-gray-700" aria-hidden="true">⇅</span>
                                     @endif
                                 </button>
                             </th>
                             <th class="px-3 py-3">Pekerjaan & Tenggat</th>
-                            <th class="px-3 py-3">Status & Tagihan</th>
+                            <th class="px-3 py-3">{{ match ($mode) {
+                                'status' => 'Status',
+                                'billing' => 'Tagihan',
+                                default => 'Status & Tagihan',
+                            } }}</th>
                             <th class="px-3 py-3 text-right">
                                 <button type="button" wire:click="urutkan('nilai_spk')" class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white">
                                     Nilai / Sisa Piutang
                                     @if ($urut === 'nilai_spk')
-                                        <span class="text-brand-600" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
+                                        <span class="text-brand-600 dark:text-brand-400" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
                                     @else
                                         <span class="text-gray-300 dark:text-gray-700" aria-hidden="true">⇅</span>
                                     @endif
@@ -151,10 +158,10 @@
 
                                 {{-- Pekerjaan & Tenggat --}}
                                 <td class="px-3 py-3 align-top">
-                                    <p class="line-clamp-2 text-gray-900 dark:text-gray-100 font-medium">{{ $spk->nama_pekerjaan }}</p>
+                                    <p class="text-gray-900 dark:text-gray-100 font-medium">{{ $spk->nama_pekerjaan }}</p>
                                     <div class="mt-1 flex flex-wrap items-center gap-1.5 text-theme-xs">
-                                        <span class="text-gray-400">Tenggat:</span>
-                                        <span class="font-semibold {{ $sisa !== null && $sisa < 0 ? 'text-error-600 dark:text-error-500' : ($sisa !== null && $sisa <= 14 ? 'text-warning-600 dark:text-warning-500' : 'text-gray-700 dark:text-gray-300') }}"
+                                        <span class="text-gray-500 dark:text-gray-400">Tenggat:</span>
+                                        <span class="font-semibold {{ $sisa !== null && $sisa < 0 ? 'text-error-600 dark:text-error-400 dark:text-error-500' : ($sisa !== null && $sisa <= 14 ? 'text-warning-700 dark:text-warning-500' : 'text-gray-700 dark:text-gray-300') }}"
                                             title="{{ $sisa === null ? '' : ($sisa < 0 ? 'Lewat '.abs($sisa).' hari' : 'Sisa '.$sisa.' hari') }}">
                                             {{ $spk->tenggatEfektif()?->format('d/m/Y') ?? '—' }}
                                         </span>
@@ -166,39 +173,43 @@
                                     </div>
                                 </td>
 
-                                {{-- Status & Tagihan --}}
+                                {{-- Status / Tagihan: tiap menu hanya menampilkan bagiannya --}}
                                 <td class="px-3 py-3 align-top whitespace-nowrap">
                                     <div class="space-y-1">
-                                        <div>
-                                            <span class="inline-flex rounded px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
-                                                {{ $spk->status_spk?->label() ?? 'Draft' }}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <span class="inline-flex rounded px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_tagihan?->warnaBadge()) }}">
-                                                {{ $spk->status_tagihan?->labelPendek() ?? 'Belum ditagih' }}
-                                            </span>
-                                            @if ($mode === 'billing' && $spk->status_tagihan?->value !== StatusTagihan::Dibayar->value)
-                                                @php
-                                                    $agingHari = (int) ($spk->updated_at ? $spk->updated_at->diffInDays(now()) : 0);
-                                                @endphp
-                                                <p class="mt-0.5 text-[10px] {{ $agingHari > 30 ? 'font-semibold text-error-600 dark:text-error-400' : 'text-gray-400' }}">
-                                                    Tertahan {{ $agingHari }} hari
-                                                </p>
-                                            @endif
-                                        </div>
+                                        @if ($mode !== 'billing')
+                                            <div>
+                                                <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
+                                                    {{ $spk->status_spk?->label() ?? 'Draft' }}
+                                                </span>
+                                            </div>
+                                        @endif
+                                        @if ($mode !== 'status')
+                                            <div>
+                                                <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_tagihan?->warnaBadge()) }}">
+                                                    {{ $spk->status_tagihan?->labelPendek() ?? 'Belum ditagih' }}
+                                                </span>
+                                                @if ($mode === 'billing' && $spk->status_tagihan?->value !== StatusTagihan::Dibayar->value)
+                                                    @php
+                                                        $agingHari = (int) ($spk->updated_at ? $spk->updated_at->diffInDays(now()) : 0);
+                                                    @endphp
+                                                    <p class="mt-0.5 text-[10px] {{ $agingHari > 30 ? 'font-semibold text-error-600 dark:text-error-400' : 'text-gray-500 dark:text-gray-400' }}">
+                                                        Tertahan {{ $agingHari }} hari
+                                                    </p>
+                                                @endif
+                                            </div>
+                                        @endif
                                     </div>
                                 </td>
 
                                 {{-- Nilai & Sisa Piutang --}}
-                                <td class="px-3 py-3 text-right align-top whitespace-nowrap">
+                                <td class="px-3 py-3 text-right align-top whitespace-nowrap tabular-nums">
                                     <span class="angka block font-bold text-gray-900 dark:text-white">
                                         {{ Format::rupiah((float) $spk->nilai_spk) }}
                                     </span>
                                     <button type="button" @click="bukaTermin({{ $spk->id }})"
-                                        class="angka block text-theme-xs mt-0.5 hover:underline {{ $belum > 0.01 ? 'font-semibold text-warning-600 dark:text-warning-400' : 'text-success-600 dark:text-success-400' }}"
+                                        class="angka block text-theme-xs mt-0.5 hover:underline {{ $belum > 0.01 ? 'font-semibold text-warning-700 dark:text-warning-400' : 'text-success-700 dark:text-success-400' }}"
                                         title="Klik untuk melihat riwayat termin pembayaran">
-                                        Sisa: {{ Format::rupiah($belum) }} 🔍
+                                        Sisa: {{ Format::rupiah($belum) }} · lihat termin
                                     </button>
                                 </td>
 
@@ -211,7 +222,7 @@
                                                     <a href="{{ route('panel.spk.monitoring', 'completed') }}"
                                                         class="inline-flex items-center gap-1 rounded-lg border border-success-200 bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-700 hover:bg-success-100 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400 transition"
                                                         title="SPK sudah selesai & lunas (Buka Arsip)">
-                                                        ✓ Lunas
+                                                        Lunas
                                                     </a>
                                                 @endif
                                                 <a href="{{ route('panel.spk.status', ['spk' => $spk, 'asal' => $asal]) }}"
@@ -227,7 +238,7 @@
                                                 </a>
                                             @else
                                                 <span class="inline-flex items-center gap-1 rounded-lg border border-success-200 bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400">
-                                                    ✓ Lunas
+                                                    Lunas
                                                 </span>
                                             @endif
                                         </div>
@@ -246,15 +257,21 @@
                         $sisa = $spk->sisaTenggatHari();
                         $belum = $spk->sisaTagih();
                     @endphp
-                    <li class="px-4 py-3.5 space-y-2">
+                    <li wire:key="mon-m-{{ $spk->id }}" class="px-4 py-3.5 space-y-2">
                         <div class="flex items-start justify-between gap-2">
                             <a href="{{ route('panel.spk.show', ['spk' => $spk, 'asal' => $asal]) }}"
                                 class="angka font-bold text-theme-sm text-brand-600 dark:text-brand-400">
                                 {{ $spk->nomor_spk }}
                             </a>
-                            <span class="inline-flex rounded px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_tagihan?->warnaBadge()) }}">
-                                {{ $spk->status_tagihan?->labelPendek() ?? 'Belum ditagih' }}
-                            </span>
+                            @if ($mode === 'status')
+                                <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
+                                    {{ $spk->status_spk?->label() ?? 'Draft' }}
+                                </span>
+                            @else
+                                <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_tagihan?->warnaBadge()) }}">
+                                    {{ $spk->status_tagihan?->labelPendek() ?? 'Belum ditagih' }}
+                                </span>
+                            @endif
                         </div>
 
                         <p class="text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2">
@@ -263,7 +280,7 @@
 
                         <div class="flex flex-wrap items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                             <span>{{ $spk->mitra?->nama ?? 'Tanpa mitra' }}</span>
-                            <span class="font-semibold {{ $sisa < 0 ? 'text-error-600' : '' }}">
+                            <span class="font-semibold {{ $sisa < 0 ? 'text-error-600 dark:text-error-400' : '' }}">
                                 {{ $spk->tenggatEfektif()?->format('d/m/Y') }}
                             </span>
                         </div>
@@ -271,7 +288,7 @@
                         <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
                             <div>
                                 <span class="angka font-bold text-xs text-gray-900 dark:text-white">{{ Format::rupiah((float) $spk->nilai_spk) }}</span>
-                                <span class="block text-[10px] text-gray-400">Sisa: {{ Format::rupiah($belum) }}</span>
+                                <span class="block text-[10px] text-gray-500 dark:text-gray-400">Sisa: {{ Format::rupiah($belum) }}</span>
                             </div>
                             @if ($bolehUbah)
                                 <div class="inline-flex items-center gap-1.5">
@@ -287,7 +304,7 @@
                                         </a>
                                     @else
                                         <span class="inline-flex rounded-lg border border-success-200 bg-success-50 px-2 py-0.5 text-xs font-semibold text-success-700">
-                                            ✓ Lunas
+                                            Lunas
                                         </span>
                                     @endif
                                 </div>
@@ -320,7 +337,7 @@
                     <h3 class="text-base font-bold text-gray-900 dark:text-white">Riwayat Termin Pembayaran</h3>
                     <p class="text-theme-xs text-gray-500 dark:text-gray-400" x-text="terminData?.nomor_spk || 'Memuat...'"></p>
                 </div>
-                <button type="button" @click="drawerOpen = false" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <button type="button" @click="drawerOpen = false" class="p-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -345,12 +362,12 @@
                             <h4 class="text-sm font-semibold text-gray-900 dark:text-white mt-0.5 line-clamp-2" x-text="terminData.pekerjaan"></h4>
                             <div class="mt-3 grid grid-cols-2 gap-2 pt-3 border-t border-gray-200/60 dark:border-gray-700/60 text-xs">
                                 <div>
-                                    <span class="text-gray-400">Nilai Kontrak:</span>
+                                    <span class="text-gray-500 dark:text-gray-400">Nilai Kontrak:</span>
                                     <p class="font-bold text-gray-900 dark:text-white" x-text="terminData.nilai_spk"></p>
                                 </div>
                                 <div>
-                                    <span class="text-gray-400">Sisa Piutang:</span>
-                                    <p class="font-bold text-warning-600 dark:text-warning-400" x-text="terminData.sisa_piutang"></p>
+                                    <span class="text-gray-500 dark:text-gray-400">Sisa Piutang:</span>
+                                    <p class="font-bold text-warning-700 dark:text-warning-400" x-text="terminData.sisa_piutang"></p>
                                 </div>
                             </div>
                         </div>
@@ -361,7 +378,7 @@
                                 Pembayaran Diterima (<span x-text="terminData.transaksi.length"></span>)
                             </h4>
                             <template x-if="terminData.transaksi.length === 0">
-                                <p class="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-6 text-center text-xs text-gray-400">
+                                <p class="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-6 text-center text-xs text-gray-500 dark:text-gray-400">
                                     Belum ada termin uang masuk untuk SPK ini.
                                 </p>
                             </template>
@@ -372,15 +389,18 @@
                                         <div class="min-w-0">
                                             <div class="flex items-center gap-2">
                                                 <span class="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-brand-500/10 dark:text-brand-300" x-text="'Termin ' + (idx + 1)"></span>
-                                                <span class="text-xs text-gray-400" x-text="trx.tanggal"></span>
+                                                <span class="text-xs text-gray-500 dark:text-gray-400" x-text="trx.tanggal"></span>
                                             </div>
                                             <p class="text-xs font-medium text-gray-800 dark:text-gray-200 mt-1 truncate" x-text="trx.keterangan"></p>
-                                            <span class="text-[11px] text-gray-400" x-text="'Akun: ' + trx.akun"></span>
+                                            <span class="text-[11px] text-gray-500 dark:text-gray-400" x-text="'Akun: ' + trx.akun"></span>
                                         </div>
                                         <div class="text-right shrink-0">
-                                            <p class="text-xs font-bold text-success-600 dark:text-success-400" x-text="'+ ' + trx.jumlah"></p>
+                                            <p class="text-xs font-bold text-success-700 dark:text-success-400" x-text="'+ ' + trx.jumlah"></p>
                                             <a :href="trx.kuitansi_url" class="inline-flex items-center gap-1 mt-1 text-[11px] font-semibold text-brand-600 hover:underline dark:text-brand-400">
-                                                📄 Kuitansi
+                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                                </svg>
+                                                Kuitansi
                                             </a>
                                         </div>
                                     </div>
@@ -394,7 +414,7 @@
             {{-- Footer Drawer --}}
             <div class="border-t border-gray-100 p-4 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20">
                 <button type="button" @click="drawerOpen = false"
-                    class="w-full rounded-xl border border-gray-300 bg-white py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    class="w-full rounded-xl border border-gray-300 bg-white py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                     Tutup
                 </button>
             </div>

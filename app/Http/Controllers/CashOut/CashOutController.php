@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\CashOut;
 
+use App\Models\Spk;
 use App\Models\UangKeluar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -71,7 +72,25 @@ final class CashOutController
     {
         $this->pastikanBolehInput();
 
-        UangKeluar::withTrashed()->findOrFail($id)->restore();
+        $uangKeluar = UangKeluar::withTrashed()->findOrFail($id);
+
+        if ($uangKeluar->spk_id !== null) {
+            $spk = Spk::withTrashed()->find($uangKeluar->spk_id);
+
+            if ($spk === null || $spk->trashed()) {
+                return redirect()
+                    ->route('panel.cash-out.index', ['terhapus' => 'saja'])
+                    ->with('gagal', 'Tidak dapat memulihkan uang keluar karena SPK terkait sudah dihapus.');
+            }
+
+            if ($spk->status_spk !== null && ! $spk->status_spk->bolehTransaksiBaru()) {
+                return redirect()
+                    ->route('panel.cash-out.index', ['terhapus' => 'saja'])
+                    ->with('gagal', 'Tidak dapat memulihkan uang keluar karena SPK '.$spk->nomor_spk.' berstatus Dibatalkan.');
+            }
+        }
+
+        $uangKeluar->restore();
 
         return redirect()
             ->route('panel.cash-out.index', ['terhapus' => 'saja'])

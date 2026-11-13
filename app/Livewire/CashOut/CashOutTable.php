@@ -17,7 +17,7 @@ use Livewire\WithPagination;
  * Tabel daftar Uang Keluar (`/panel/cash-out`).
  *
  * Sama seperti Uang Masuk: total terfilter di atas tabel, filter PERIODE
- * (dari/sampai) + akun + kategori + sumber, dan soft delete yang bisa
+ * (satu tanggal) + akun + kategori + sumber, dan soft delete yang bisa
  * dipulihkan. Form input dengan OCR nota masih memakai /admin sampai
  * migrasinya selesai (lihat docs/RENCANA-MIGRASI-BLADE.md).
  */
@@ -35,11 +35,8 @@ final class CashOutTable extends Component
     #[Url(as: 'q', except: '')]
     public string $cari = '';
 
-    #[Url(as: 'dari', except: '')]
-    public string $dari = '';
-
-    #[Url(as: 'sampai', except: '')]
-    public string $sampai = '';
+    #[Url(as: 'tanggal', except: '')]
+    public string $tanggal = '';
 
     #[Url(except: '')]
     public string $akun = '';
@@ -61,7 +58,7 @@ final class CashOutTable extends Component
 
     public function updating(string $properti): void
     {
-        if (in_array($properti, ['cari', 'dari', 'sampai', 'akun', 'kategori', 'sumber', 'terhapus'], true)) {
+        if (in_array($properti, ['cari', 'tanggal', 'akun', 'kategori', 'sumber', 'terhapus'], true)) {
             $this->resetPage();
         }
     }
@@ -84,7 +81,7 @@ final class CashOutTable extends Component
 
     public function bersihkan(): void
     {
-        $this->reset('cari', 'dari', 'sampai', 'akun', 'kategori', 'sumber', 'terhapus');
+        $this->reset('cari', 'tanggal', 'akun', 'kategori', 'sumber', 'terhapus');
         $this->resetPage();
     }
 
@@ -104,8 +101,7 @@ final class CashOutTable extends Component
             'opsiAkun' => AkunKas::opsi(),
             'opsiKategori' => KategoriPengeluaran::opsi(),
             'adaPenyaring' => trim($this->cari) !== ''
-                || $this->dari !== ''
-                || $this->sampai !== ''
+                || $this->tanggal !== ''
                 || $this->akun !== ''
                 || $this->kategori !== ''
                 || $this->sumber !== ''
@@ -122,8 +118,7 @@ final class CashOutTable extends Component
         return UangKeluar::query()
             ->when($this->terhapus === 'aktif', fn (Builder $q) => $q->whereNull('deleted_at'))
             ->when($this->terhapus === 'saja', fn (Builder $q) => $q->onlyTrashed())
-            ->when($this->dari !== '', fn (Builder $q) => $q->whereDate('tanggal', '>=', $this->dari))
-            ->when($this->sampai !== '', fn (Builder $q) => $q->whereDate('tanggal', '<=', $this->sampai))
+            ->when($this->tanggal !== '', fn (Builder $q) => $q->whereDate('tanggal', $this->tanggal))
             ->when($this->akun !== '', fn (Builder $q) => $q->where('akun', $this->akun))
             ->when($this->kategori !== '', fn (Builder $q) => $q->where('kategori', $this->kategori))
             ->when($this->sumber === 'spk', fn (Builder $q) => $q->whereNotNull('spk_id'))

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Pengguna;
 use App\Models\UangKeluar;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -127,5 +128,23 @@ class BersihkanNotaYatimTest extends TestCase
         $this->artisan('ocr:bersihkan --semua')->assertSuccessful();
 
         Storage::disk('nota')->assertMissing($potongan);
+    }
+
+    public function test_avatar_pengguna_yang_dirujuk_tidak_ikut_dibuang(): void
+    {
+        Storage::fake('nota');
+        $disk = Storage::disk('nota');
+
+        $pathAvatar = 'uang_masuk/2026/01/01/avatar-admin.jpg';
+        $disk->put($pathAvatar, 'GAMBAR-AVATAR');
+        touch($disk->path($pathAvatar), now()->subDays(5)->getTimestamp());
+
+        Pengguna::factory()->create([
+            'avatar' => $pathAvatar,
+        ]);
+
+        $this->artisan('ocr:bersihkan', ['--umur' => 1])->assertSuccessful();
+
+        $this->assertTrue($disk->exists($pathAvatar), 'Avatar pengguna yang masih dipakai tidak boleh dihapus oleh ocr:bersihkan.');
     }
 }

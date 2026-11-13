@@ -25,6 +25,15 @@ Schedule::command('bks:backup --hari=30')
     ->description('Backup database harian');
 
 /*
+| Uji integritas backup bulanan: memastikan berkas terbaru benar-benar bisa
+| dibuka, bukan sekadar ada. Hasilnya terlihat di log scheduler.
+*/
+Schedule::command('bks:backup --verifikasi')
+    ->monthlyOn(1, '03:00')
+    ->withoutOverlapping()
+    ->description('Verifikasi integritas backup terbaru');
+
+/*
 | Bersihkan nota yang tidak pernah tersimpan + potongan OCR-nya.
 |
 | Setiap unggahan menyimpan berkas ke disk SEBELUM admin menekan Simpan

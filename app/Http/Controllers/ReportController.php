@@ -28,9 +28,17 @@ final class ReportController
             $periode = 12;
         }
 
-        // Rentang kustom: tanggal tidak valid diabaikan; mulai > selesai ditukar.
-        $tanggalMulai = $this->tanggal($request->query('mulai'));
-        $tanggalSelesai = $this->tanggal($request->query('selesai'));
+        // Rentang kustom: jika hanya satu tanggal diisi, tanggal mulai = selesai (satu hari tertentu).
+        // Satu tanggal: laporan disaring tepat pada tanggal yang dipilih.
+        $tanggalTunggal = $this->tanggal($request->query('tanggal'));
+        $tanggalMulai = $tanggalTunggal ?? $this->tanggal($request->query('mulai'));
+        $tanggalSelesai = $tanggalTunggal ?? $this->tanggal($request->query('selesai'));
+
+        if ($tanggalMulai && ! $tanggalSelesai) {
+            $tanggalSelesai = $tanggalMulai->copy();
+        } elseif (! $tanggalMulai && $tanggalSelesai) {
+            $tanggalMulai = $tanggalSelesai->copy();
+        }
 
         if ($tanggalMulai && $tanggalSelesai && $tanggalMulai->gt($tanggalSelesai)) {
             [$tanggalMulai, $tanggalSelesai] = [$tanggalSelesai, $tanggalMulai];

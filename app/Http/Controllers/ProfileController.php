@@ -72,13 +72,16 @@ final class ProfileController
                         $tmpBase = tempnam(sys_get_temp_dir(), 'bks_crop_');
                         if ($tmpBase !== false) {
                             $tmpPath = $tmpBase.'.'.$mimeSah[$mime];
-                            file_put_contents($tmpPath, $decoded);
-                            $path = app(PenyimpanBerkas::class)->simpanKe($tmpPath, 'profil', 'nota');
-                            if ($path !== null) {
-                                $perubahan['avatar'] = $path;
-                            }
-                            @unlink($tmpPath);
                             @unlink($tmpBase);
+                            file_put_contents($tmpPath, $decoded);
+                            try {
+                                $path = app(PenyimpanBerkas::class)->simpanKe($tmpPath, 'profil', 'nota');
+                                if ($path !== null) {
+                                    $perubahan['avatar'] = $path;
+                                }
+                            } finally {
+                                @unlink($tmpPath);
+                            }
                         }
                     }
                 }

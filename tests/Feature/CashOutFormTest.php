@@ -35,7 +35,8 @@ class CashOutFormTest extends TestCase
         $komponen
             ->set("baris.$kunci.tanggal", $ubah['tanggal'] ?? now()->format('Y-m-d'))
             ->set("baris.$kunci.jumlah", $ubah['jumlah'] ?? '1500000')
-            ->set("baris.$kunci.kategori", $ubah['kategori'] ?? KategoriPengeluaran::Material->value);
+            ->set("baris.$kunci.kategori", $ubah['kategori'] ?? KategoriPengeluaran::Material->value)
+            ->set("baris.$kunci.penerima", $ubah['penerima'] ?? 'Toko Default');
     }
 
     public function test_halaman_tambah_terbuka_untuk_admin(): void
@@ -155,6 +156,21 @@ class CashOutFormTest extends TestCase
             ->assertHasErrors('baris');
 
         $this->assertSame(0, UangKeluar::query()->count());
+    }
+
+    public function test_klik_ganda_simpan_tidak_membuat_duplikat(): void
+    {
+        $this->actingAs($this->pengguna(Peran::Admin));
+
+        $komponen = Livewire::test(CashOutForm::class);
+        $kunci = array_key_first($komponen->get('baris'));
+
+        $this->isiBaris($komponen, $kunci, ['jumlah' => '750.000', 'penerima' => 'Toko Cat Maju']);
+
+        $komponen->call('simpan');
+        $komponen->call('simpan');
+
+        $this->assertSame(1, UangKeluar::where('penerima', 'Toko Cat Maju')->count());
     }
 
     public function test_ubah_record_tidak_membuat_record_baru(): void

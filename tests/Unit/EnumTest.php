@@ -40,6 +40,7 @@ class EnumTest extends TestCase
             'berjalan',
             'selesai',
             'sudah_ditagihkan',
+            'revisi_dokumen',
             'dibatalkan',
         ], array_column(StatusSpk::cases(), 'value'));
     }

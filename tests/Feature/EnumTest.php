@@ -42,9 +42,11 @@ class EnumTest extends TestCase
 
     // StatusSpk
 
-    public function test_status_spk_punya_enam_nilai(): void
+    public function test_status_spk_punya_tujuh_nilai(): void
     {
-        $this->assertCount(6, StatusSpk::cases());
+        // Enam status lama + Revisi Dokumen yang pindah dari status tagihan.
+        $this->assertCount(7, StatusSpk::cases());
+        $this->assertSame('Revisi Dokumen', StatusSpk::RevisiDokumen->label());
     }
 
     public function test_status_spk_memiliki_label(): void
@@ -75,9 +77,14 @@ class EnumTest extends TestCase
         $opsi = StatusSpk::opsi();
 
         $this->assertIsArray($opsi);
-        $this->assertCount(6, $opsi);
+        $this->assertCount(7, $opsi);
         $this->assertArrayHasKey('berjalan', $opsi);
         $this->assertSame('Berjalan', $opsi['berjalan']);
+
+        // Penyaring progres tidak menawarkan keadaan penagihan.
+        $this->assertArrayNotHasKey('sudah_ditagihkan', StatusSpk::opsiProgres());
+        // Penyaring penagihan tidak lagi menawarkan Revisi Dokumen.
+        $this->assertArrayNotHasKey('revisi_dokumen', StatusTagihan::opsiPenagihan());
     }
 
     // StatusTagihan

@@ -53,7 +53,7 @@ Instruksi: Logout, lalu masuk sebagai **Direktur** (`direktur@bks.test`).
 | **2.5** | **Cetak Dokumen BAST Resmi**<br>Buka salah satu detail SPK yang selesai, klik *Cetak BAST*. | Unduhan berkas PDF resmi Berita Acara Serah Terima A4 ber-KOP BKS dengan klausul serah terima fisik. | [ ] | |
 | **2.6** | **Unduh Laporan Keuangan Format Perusahaan**<br>Buka menu *Laporan*, unduh spreadsheet *Buku Kas* atau *Buku Bank* (`.xlsx`). | Format kolom Excel persis arsip kantor (`TANGGAL, REF, KETERANGAN, PEMASUKAN, PENGELUARAN, SALDO`) ber-KOP formal. | [ ] | |
 | **2.7** | **Unduh Bundel Seluruh Laporan (ZIP)**<br>Klik tombol *Unduh Bundel Laporan (ZIP)*. | Berkas ZIP terunduh berisi 5 spreadsheet laporan terstruktur periode berjalan. | [ ] | |
-| **2.8** | **Manajemen Akun Pengguna**<br>Buka menu *Master Data → Manajemen Akun* (`/panel/users`). | Daftar akun staf tampil, Direktur dapat menambah pengguna baru atau menonaktifkan akun staf yang mutasi. | [ ] | |
+| **2.8** | **Manajemen Akun Pengguna & Reset Password Staf**<br>Buka menu *Master Data → Manajemen Akun* (`/panel/users`). | Daftar akun staf tampil, Direktur dapat menambah pengguna baru, menonaktifkan akun staf yang mutasi, serta mereset kata sandi staf yang lupa password dengan pemutusan sesi otomatis. | [ ] | |
 | **2.9** | **Cadangan Basis Data (Backup)**<br>Buka menu *Sistem → Backup Database*, klik *Buat Backup Sekarang*. | Berkas cadangan `.zip` (berisi `.sql`) terbuat dan dapat diunduh langsung untuk arsip keamanan luar PC. | [ ] | |
 
 ---

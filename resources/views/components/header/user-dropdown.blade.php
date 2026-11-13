@@ -4,13 +4,39 @@
 
 <div class="relative" x-data="{
     isOpen: false,
+    hoverTimeout: null,
+    init() {
+        // Panel lain yang dibuka (mis. notifikasi) menutup menu ini.
+        this.$watch(() => Alpine.store('panelMenu')?.aktif, (aktif) => {
+            if (aktif && aktif !== 'profil') { clearTimeout(this.hoverTimeout); this.isOpen = false; }
+        });
+    },
+    openMenu() {
+        clearTimeout(this.hoverTimeout);
+        this.isOpen = true;
+        const store = Alpine.store('panelMenu');
+        if (store) { store.aktif = 'profil'; }
+    },
+    closeMenuWithDelay() {
+        this.hoverTimeout = setTimeout(() => {
+            this.isOpen = false;
+            const store = Alpine.store('panelMenu');
+            if (store && store.aktif === 'profil') { store.aktif = null; }
+        }, 250);
+    },
     toggleDropdown() {
         this.isOpen = !this.isOpen;
+        const store = Alpine.store('panelMenu');
+        if (this.isOpen && store) { store.aktif = 'profil'; }
+        if (!this.isOpen && store && store.aktif === 'profil') { store.aktif = null; }
     },
     closeDropdown() {
+        clearTimeout(this.hoverTimeout);
         this.isOpen = false;
+        const store = Alpine.store('panelMenu');
+        if (store && store.aktif === 'profil') { store.aktif = null; }
     }
-}" @click.outside="closeDropdown()">
+}" @mouseenter="openMenu()" @mouseleave="closeMenuWithDelay()" @click.outside="closeDropdown()">
     <!-- User Trigger -->
     <button
         class="flex items-center text-gray-700 dark:text-gray-400 group"
@@ -89,7 +115,7 @@
         <div class="pt-2">
             <form method="POST" action="{{ route('panel.logout') }}">
                 @csrf
-                <button type="submit" class="flex items-center gap-3 px-3 py-2 font-medium text-error-600 rounded-lg group text-theme-sm hover:bg-error-50 dark:text-error-500 dark:hover:bg-error-500/10 w-full text-left transition-colors">
+                <button type="submit" class="flex items-center gap-3 px-3 py-2 font-medium text-error-600 dark:text-error-400 rounded-lg group text-theme-sm hover:bg-error-50 dark:text-error-500 dark:hover:bg-error-500/10 w-full text-left transition-colors">
                     <svg class="w-5 h-5 text-error-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>

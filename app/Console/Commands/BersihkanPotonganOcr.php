@@ -46,8 +46,8 @@ class BersihkanPotonganOcr extends Command
 
     protected $description = 'Buang nota yatim (tidak tersimpan di database) dan potongan OCR yang menumpuk';
 
-    /** Folder transaksi yang disapu. */
-    private const FOLDER = ['uang_keluar', 'uang_masuk'];
+    /** Folder transaksi, dokumen SPK, dan profil yang disapu. */
+    private const FOLDER = ['uang_keluar', 'uang_masuk', 'spk', 'profil'];
 
     private const FOLDER_POTONGAN = 'uang_keluar/potongan';
 
@@ -150,8 +150,9 @@ class BersihkanPotonganOcr extends Command
             $tambah($record->dokumen);
         }
 
-        foreach (Pengguna::query()->get(['tanda_tangan']) as $record) {
+        foreach (Pengguna::query()->get(['tanda_tangan', 'avatar']) as $record) {
             $tambah($record->tanda_tangan);
+            $tambah($record->avatar);
         }
 
         return $dirujuk;

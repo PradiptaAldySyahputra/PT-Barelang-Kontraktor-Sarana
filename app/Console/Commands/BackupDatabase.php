@@ -30,12 +30,18 @@ class BackupDatabase extends Command
 {
     protected $signature = 'bks:backup
                             {--hari=30 : Hapus backup lebih tua dari N hari}
-                            {--simpan : Tetap simpan meski gagal (untuk uji)}';
+                            {--dengan-nota : Ikutkan folder bukti nota fisik (storage/app/nota) ke dalam ZIP}
+                            {--simpan : Tetap simpan meski gagal (untuk uji)}
+                            {--verifikasi : Hanya periksa integritas berkas backup TERBARU}';
 
     protected $description = 'Backup database MySQL/MariaDB ke file .zip';
 
     public function handle(): int
     {
+        if ($this->option('verifikasi')) {
+            return $this->verifikasi();
+        }
+
         $dir = StatusBackup::direktori();
 
         if (! File::isDirectory($dir)) {
@@ -100,7 +106,11 @@ class BackupDatabase extends Command
         // ⚠️ Simpan sebagai ZIP (berisi .sql) - lihat catatan di atas kelas.
         // .sql ditulis ke berkas sementara lebih dulu agar bisa di-`addFile`
         // (streaming), lalu sementara dihapus setelah ZIP jadi.
-        $sementara = tempnam(sys_get_temp_dir(), 'bks-backup').'.sql';
+        $dasar = tempnam(sys_get_temp_dir(), 'bks-backup');
+        $sementara = (string) $dasar.'.sql';
+        if ($dasar !== false) {
+            @unlink($dasar);
+        }
         File::put($sementara, $sql);
 
         $zip = new \ZipArchive;
@@ -113,6 +123,22 @@ class BackupDatabase extends Command
         }
 
         $zip->addFile($sementara, pathinfo($nama, PATHINFO_FILENAME).'.sql');
+
+        if ($this->option('dengan-nota')) {
+            $folderNota = config('filesystems.disks.nota.root', storage_path('app/nota'));
+            if (File::isDirectory($folderNota)) {
+                $jumlahNota = 0;
+                foreach (File::allFiles($folderNota) as $berkasNota) {
+                    $relatif = 'nota/'.str_replace('\\', '/', $berkasNota->getRelativePathname());
+                    $zip->addFile($berkasNota->getPathname(), $relatif);
+                    $jumlahNota++;
+                }
+                $this->line(sprintf('  Memaketkan %d berkas nota fisik ke dalam arsip.', $jumlahNota));
+            } else {
+                $this->warn('  Folder nota tidak ditemukan atau kosong: '.$folderNota);
+            }
+        }
+
         $zip->close();
         File::delete($sementara);
 
@@ -125,6 +151,69 @@ class BackupDatabase extends Command
         ));
 
         $this->bersihkanBackupLama($dir);
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Periksa integritas backup TERBARU (Fase 3 MASTER-PLAN, D-5).
+     *
+     * Backup yang ada belum berarti backup yang bisa dibuka. Perintah ini
+     * membuka ZIP, memeriksa entri, dan memastikan ada berkas .sql di dalamnya.
+     */
+    protected function verifikasi(): int
+    {
+        $daftar = StatusBackup::daftar();
+
+        if ($daftar === []) {
+            $this->error('Tidak ada berkas backup di '.StatusBackup::direktori());
+
+            return self::FAILURE;
+        }
+
+        $terbaru = $daftar[0];
+        $jalan = StatusBackup::direktori().DIRECTORY_SEPARATOR.$terbaru['nama'];
+
+        if (! class_exists(\ZipArchive::class)) {
+            $this->error('Ekstensi zip tidak tersedia - integritas tidak dapat diperiksa.');
+
+            return self::FAILURE;
+        }
+
+        $zip = new \ZipArchive;
+        $buka = $zip->open($jalan);
+
+        if ($buka !== true) {
+            $this->error("Berkas {$terbaru['nama']} TIDAK bisa dibuka (kode {$buka}).");
+
+            return self::FAILURE;
+        }
+
+        $adaSql = false;
+        $jumlahEntri = $zip->numFiles;
+
+        for ($i = 0; $i < $jumlahEntri; $i++) {
+            $nama = (string) $zip->getNameIndex($i);
+            if (str_ends_with($nama, '.sql')) {
+                $adaSql = true;
+                break;
+            }
+        }
+
+        $zip->close();
+
+        $this->line("Berkas : {$terbaru['nama']}");
+        $this->line("Ukuran : {$terbaru['ukuran_teks']}");
+        $this->line("Umur   : {$terbaru['umur_hari']} hari");
+        $this->line("Entri  : {$jumlahEntri}");
+
+        if (! $adaSql) {
+            $this->error('ZIP bisa dibuka, tetapi tidak berisi berkas .sql - backup dianggap rusak.');
+
+            return self::FAILURE;
+        }
+
+        $this->info('Backup terbaru utuh dan berisi dump SQL.');
 
         return self::SUCCESS;
     }

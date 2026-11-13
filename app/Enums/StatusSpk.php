@@ -19,6 +19,7 @@ enum StatusSpk: string
     case Berjalan = 'berjalan';
     case Selesai = 'selesai';
     case SudahDitagihkan = 'sudah_ditagihkan';
+    case RevisiDokumen = 'revisi_dokumen';
     case Dibatalkan = 'dibatalkan';
 
     public function label(): string
@@ -29,6 +30,7 @@ enum StatusSpk: string
             self::Berjalan => 'Berjalan',
             self::Selesai => 'Selesai',
             self::SudahDitagihkan => 'Sudah Ditagihkan',
+            self::RevisiDokumen => 'Revisi Dokumen',
             self::Dibatalkan => 'Dibatalkan',
         };
     }
@@ -48,6 +50,7 @@ enum StatusSpk: string
             self::Berjalan => 'warning',
             self::Selesai => 'success',
             self::SudahDitagihkan => 'primary',
+            self::RevisiDokumen => 'danger',
             self::Dibatalkan => 'danger',
         };
     }
@@ -59,7 +62,7 @@ enum StatusSpk: string
     public function bolehTransaksiBaru(): bool
     {
         return match ($this) {
-            self::Draft, self::Terbit, self::Berjalan, self::Selesai, self::SudahDitagihkan => true,
+            self::Draft, self::Terbit, self::Berjalan, self::Selesai, self::SudahDitagihkan, self::RevisiDokumen => true,
             self::Dibatalkan => false,
         };
     }
@@ -80,5 +83,18 @@ enum StatusSpk: string
         return collect(self::cases())
             ->mapWithKeys(fn (self $s): array => [$s->value => $s->label()])
             ->all();
+    }
+
+    /**
+     * Pilihan untuk PENYARING progres pekerjaan.
+     *
+     * "Sudah Ditagihkan" adalah keadaan penagihan, bukan progres pekerjaan,
+     * jadi tidak ditawarkan di sini - tempatnya di penyaring status tagihan.
+     *
+     * @return array<string, string>
+     */
+    public static function opsiProgres(): array
+    {
+        return collect(self::opsi())->except(self::SudahDitagihkan->value)->all();
     }
 }

@@ -233,14 +233,29 @@ class SpkPanelTest extends TestCase
             ->assertDontSee('SPK-SUDAH-LUNAS');
     }
 
-    public function test_tagihan_selesai_hanya_menampilkan_yang_lunas(): void
+    public function test_tagihan_selesai_hanya_menampilkan_yang_lunas_dan_selesai(): void
     {
-        Spk::factory()->create(['nomor_spk' => 'SPK-BELUM-LUNAS', 'status_tagihan' => StatusTagihan::SudahDitagihkan]);
-        Spk::factory()->create(['nomor_spk' => 'SPK-SUDAH-LUNAS', 'status_tagihan' => StatusTagihan::Dibayar]);
+        Spk::factory()->create([
+            'nomor_spk' => 'SPK-BELUM-LUNAS',
+            'status_spk' => StatusSpk::Selesai,
+            'status_tagihan' => StatusTagihan::SudahDitagihkan,
+        ]);
+        Spk::factory()->create([
+            'nomor_spk' => 'SPK-SUDAH-LUNAS',
+            'status_spk' => StatusSpk::Selesai,
+            'status_tagihan' => StatusTagihan::Dibayar,
+        ]);
+        // Lunas tetapi pekerjaannya belum selesai: bukan arsip, jadi tidak tampil.
+        Spk::factory()->create([
+            'nomor_spk' => 'SPK-LUNAS-BELUM-SELESAI',
+            'status_spk' => StatusSpk::Berjalan,
+            'status_tagihan' => StatusTagihan::Dibayar,
+        ]);
 
         Livewire::test(MonitoringTable::class, ['mode' => 'completed'])
             ->assertSee('SPK-SUDAH-LUNAS')
-            ->assertDontSee('SPK-BELUM-LUNAS');
+            ->assertDontSee('SPK-BELUM-LUNAS')
+            ->assertDontSee('SPK-LUNAS-BELUM-SELESAI');
     }
 
     public function test_status_spk_menampilkan_semua(): void
@@ -251,6 +266,37 @@ class SpkPanelTest extends TestCase
         Livewire::test(MonitoringTable::class, ['mode' => 'status'])
             ->assertSee('SPK-STATUS-A')
             ->assertSee('SPK-STATUS-B');
+    }
+
+    public function test_penyaring_status_tidak_memuat_sudah_ditagihkan(): void
+    {
+        // "Sudah ditagihkan" milik siklus tagihan; menu Status SPK hanya progres pekerjaan.
+        Livewire::test(MonitoringTable::class, ['mode' => 'status'])
+            ->assertViewHas('opsiStatus', fn (array $opsi): bool => ! array_key_exists(StatusSpk::SudahDitagihkan->value, $opsi)
+                && array_key_exists(StatusSpk::Selesai->value, $opsi));
+    }
+
+    public function test_penyaring_dan_kolom_mengikuti_menu(): void
+    {
+        Spk::factory()->create([
+            'nomor_spk' => 'SPK-BERJALAN',
+            'status_spk' => StatusSpk::Berjalan,
+            'status_tagihan' => StatusTagihan::SudahDitagihkan,
+        ]);
+
+        // Menu Status SPK: kolom status saja, penyaring tagihan diabaikan.
+        Livewire::test(MonitoringTable::class, ['mode' => 'status'])
+            ->set('tagihan', StatusTagihan::Dibayar->value)
+            ->assertSee('SPK-BERJALAN')
+            ->assertSee('Berjalan')
+            ->assertDontSee('Sudah ditagih');
+
+        // Menu Tagihan SPK: kolom tagihan saja, penyaring status diabaikan.
+        Livewire::test(MonitoringTable::class, ['mode' => 'billing'])
+            ->set('status', StatusSpk::Selesai->value)
+            ->assertSee('SPK-BERJALAN')
+            ->assertSee('Sudah ditagih')
+            ->assertDontSee('Berjalan');
     }
 
     public function test_ubah_nilai_spk_di_bawah_pembayaran_yang_sudah_masuk_ditolak(): void

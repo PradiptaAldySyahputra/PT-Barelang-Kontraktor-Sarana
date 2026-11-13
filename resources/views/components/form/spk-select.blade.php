@@ -48,13 +48,13 @@
 
     {{-- Kotak Pemicu Dropdown --}}
     <button type="button" @click="open = !open"
-        class="flex h-9 w-full items-center justify-between rounded-xl border border-gray-300 bg-white px-3 text-xs text-gray-800 shadow-theme-xs hover:border-gray-400 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:border-gray-600 transition">
+        class="flex h-9 w-full items-center justify-between rounded-xl border border-gray-300 bg-white px-3 text-xs text-gray-800 shadow-theme-xs hover:border-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:hover:border-gray-600 dark:focus:border-brand-800 transition">
         <span class="truncate pr-2 text-left"
-            :class="selectedText ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-400'"
+            :class="selectedText ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'"
             x-text="selectedText || @js($placeholder)">
         </span>
 
-        <div class="flex items-center gap-1 shrink-0 text-gray-400">
+        <div class="flex items-center gap-1 shrink-0 text-gray-500 dark:text-gray-400">
             <template x-if="selectedId">
                 <span @click.stop="bersihkan()" class="p-0.5 hover:text-error-500 rounded-md transition" title="Kosongkan pilihan">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,7 +77,7 @@
             <input type="search" x-model="cari" x-ref="cariInput"
                 placeholder="Ketik nomor SPK atau nama pekerjaan..."
                 @keydown.escape="open = false"
-                class="h-8 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-xs text-gray-900 placeholder:text-gray-400 focus:border-brand-400 focus:bg-white focus:outline-none dark:border-gray-800 dark:bg-gray-950 dark:text-white">
+                class="h-8 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-xs text-gray-900 placeholder:text-gray-400 focus:border-brand-300 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:focus:border-brand-800">
         </div>
 
         <ul class="flex-1 overflow-y-auto space-y-1 custom-scrollbar max-h-48 text-xs">
@@ -99,7 +99,7 @@
                 </li>
             </template>
 
-            <li x-show="filteredList().length === 0" class="py-3 text-center text-xs text-gray-400 italic">
+            <li x-show="filteredList().length === 0" class="py-3 text-center text-xs text-gray-500 dark:text-gray-400 italic">
                 Tidak ada SPK yang cocok dengan kata kunci
             </li>
         </ul>

@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CashIn\CashInController;
 use App\Http\Controllers\CashOut\CashOutController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\KonsistensiController;
 use App\Http\Controllers\Partner\PartnerController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
@@ -17,7 +18,6 @@ use App\Http\Controllers\Spk\SpkController;
 use App\Http\Controllers\System\SystemController;
 use App\Http\Controllers\User\UserController;
 use App\Models\Export;
-use App\Models\Pengguna;
 use App\Models\Spk;
 use App\Models\UangMasuk;
 use App\Services\LaporanEkspor;
@@ -27,6 +27,7 @@ use App\Support\Nota;
 use App\Support\StatusBackup;
 use App\Support\TandaTangan;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -111,6 +112,9 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
 
         // Modul Laporan & Nota
         Route::get('reports', ReportController::class)->name('reports');
+        Route::get('laporan/konsistensi', KonsistensiController::class)
+            ->middleware('peran:admin,direktur')
+            ->name('laporan.konsistensi');
         Route::get('receipts', [SystemController::class, 'receipts'])->name('receipts');
         Route::get('receipts/upload', [SystemController::class, 'receiptsUpload'])->middleware('peran:admin,direktur')->name('receipts.upload');
         Route::redirect('exports', '/panel/reports')->name('exports');
@@ -144,7 +148,10 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::get('users/{pengguna}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('users/{pengguna}', [UserController::class, 'update'])->name('users.update');
+        Route::post('users/{pengguna}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
         Route::delete('users/{pengguna}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('users/sesi', [UserController::class, 'sesi'])->name('users.sesi');
+        Route::delete('users/sesi/{sesi}', [UserController::class, 'putusSesi'])->name('users.sesi.putus');
     });
 });
 
@@ -165,47 +172,62 @@ Route::redirect('/admin/dashboard', '/panel');
 Route::redirect('/admin/login', '/panel/login');
 
 // --- Penyaji Berkas Privat ---
-Route::get('/admin/nota/{path}', function (string $path) {
+$handlerNotaLihat = function (string $path) {
     $bersih = str_replace('\\', '/', $path);
     abort_if(str_contains($bersih, '..') || str_starts_with($bersih, '/'), 404, 'Path tidak sah.');
     $disk = Storage::disk('nota');
     abort_unless($disk->exists($bersih), 404);
 
     return $disk->response($bersih);
-})->middleware(['auth', 'peran:admin,direktur'])->where('path', '.*')->name('nota.lihat');
+};
+Route::get('/panel/nota/{path}', $handlerNotaLihat)->middleware(['auth', 'peran:admin,direktur'])->where('path', '.*')->name('nota.lihat');
+Route::get('/admin/nota/{path}', $handlerNotaLihat)->middleware(['auth', 'peran:admin,direktur'])->where('path', '.*');
 
 // --- Ekspor & Cetak Dokumen Resmi ---
-$handlerEkspor = function (string $jenis, LaporanEkspor $ekspor) {
+$parseTanggalLaporan = static function (mixed $nilai): ?Carbon {
+    if (! is_string($nilai) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $nilai)) {
+        return null;
+    }
+
+    try {
+        return Carbon::createFromFormat('!Y-m-d', $nilai);
+    } catch (Throwable) {
+        return null;
+    }
+};
+
+$handlerEkspor = function (string $jenis, LaporanEkspor $ekspor) use ($parseTanggalLaporan) {
     abort_unless(in_array($jenis, ['spk', 'masuk', 'keluar', 'tenggat', 'piutang', 'buku-kas', 'buku-bank'], true), 404);
     $format = request()->string('format')->toString();
     $format = in_array($format, ['csv', 'xlsx', 'pdf'], true) ? $format : 'csv';
     $periode = request()->integer('periode', 12);
     $periode = in_array($periode, [1, 3, 12, 0], true) ? $periode : 12;
 
-    return $ekspor->ekspor($jenis, $format, $periode);
+    $mulai = $parseTanggalLaporan(request()->query('mulai'));
+    $selesai = $parseTanggalLaporan(request()->query('selesai'));
+    if ($mulai && $selesai && $mulai->gt($selesai)) {
+        [$mulai, $selesai] = [$selesai, $mulai];
+    }
+
+    return $ekspor->ekspor($jenis, $format, $periode, $mulai, $selesai);
 };
 Route::get('/panel/laporan/ekspor/{jenis}', $handlerEkspor)->middleware(['auth', 'peran:admin,direktur'])->name('laporan.ekspor');
 Route::get('/admin/laporan/ekspor/{jenis}', $handlerEkspor)->middleware(['auth', 'peran:admin,direktur']);
 
-$handlerBundel = function (LaporanEkspor $ekspor) {
+$handlerBundel = function (LaporanEkspor $ekspor) use ($parseTanggalLaporan) {
     $periode = request()->integer('periode', 12);
     $periode = in_array($periode, [1, 3, 12, 0], true) ? $periode : 12;
 
-    return $ekspor->bundelZip($periode);
+    $mulai = $parseTanggalLaporan(request()->query('mulai'));
+    $selesai = $parseTanggalLaporan(request()->query('selesai'));
+    if ($mulai && $selesai && $mulai->gt($selesai)) {
+        [$mulai, $selesai] = [$selesai, $mulai];
+    }
+
+    return $ekspor->bundelZip($periode, $mulai, $selesai);
 };
 Route::get('/panel/laporan/bundel-zip', $handlerBundel)->middleware(['auth', 'peran:admin,direktur'])->name('laporan.bundel');
 Route::get('/admin/laporan/bundel-zip', $handlerBundel)->middleware(['auth', 'peran:admin,direktur']);
-
-Route::get('/panel/spk/{spk}/bast-pdf', function (Spk $spk) {
-    $direktur = Pengguna::where('peran', Peran::Direktur)->first();
-    $pdf = Pdf::loadView('reports.bast-pdf', [
-        'spk' => $spk->load('mitra'),
-        'direkturUser' => $direktur,
-        'tandaTangan' => TandaTangan::untukPdf(),
-    ])->setPaper('a4', 'portrait');
-
-    return $pdf->stream('bast-'.str($spk->nomor_spk)->slug().'.pdf');
-})->middleware(['auth', 'peran:admin,direktur'])->name('panel.spk.bast');
 
 Route::get('/panel/cash-in/{uangMasuk}/kuitansi', function (UangMasuk $uangMasuk) {
     $uangMasuk->loadMissing(['spk.mitra', 'spk', 'mitra']);
@@ -222,7 +244,7 @@ Route::get('/panel/cash-in/{uangMasuk}/kuitansi', function (UangMasuk $uangMasuk
         'tandaTangan' => TandaTangan::untukPdf(),
     ]);
 
-    return $pdf->download('kuitansi-'.strtolower($nomorKuitansi).'.pdf');
+    return $pdf->stream('kuitansi-'.strtolower($nomorKuitansi).'.pdf');
 })->middleware(['auth', 'peran:admin,direktur'])->name('panel.cash-in.kuitansi');
 
 // --- Unduh Backup & Arsip Nota ---
@@ -249,10 +271,15 @@ Route::get('/panel/arsip-nota/unduh', $handlerArsipUnduh)->middleware(['auth', '
 Route::get('/admin/arsip-nota/unduh', $handlerArsipUnduh)->middleware(['auth', 'peran:admin,direktur']);
 
 $handlerArsipZip = function () {
-    $tgl = request()->string('tgl')->toString() ?: request()->string('dari')->toString() ?: null;
+    $dari = request()->string('dari')->toString() ?: request()->string('tgl')->toString() ?: null;
+    $sampai = request()->string('sampai')->toString() ?: request()->string('tgl')->toString() ?: null;
+    if ($dari && $sampai && $dari > $sampai) {
+        [$dari, $sampai] = [$sampai, $dari];
+    }
+
     $filter = [
-        'tanggal_awal' => $tgl,
-        'tanggal_akhir' => $tgl ?: (request()->string('sampai')->toString() ?: null),
+        'tanggal_awal' => $dari,
+        'tanggal_akhir' => $sampai,
         'akun' => request()->string('akun')->toString() ?: null,
         'kategori' => request()->string('kategori')->toString() ?: null,
         'q' => request()->string('q')->toString() ?: null,
@@ -276,6 +303,10 @@ $handlerArsipZip = function () {
 
     $zip = ArsipNota::buatZip($arsip);
     abort_if($zip === null, 404, 'Tidak ada berkas untuk diunduh.');
+
+    register_shutdown_function(static function () use ($zip): void {
+        @unlink($zip);
+    });
 
     return response()->download($zip, 'arsip-nota-'.now()->format('Y-m-d').'.zip', [
         'Content-Type' => 'application/zip',

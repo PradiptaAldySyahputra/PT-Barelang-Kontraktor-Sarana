@@ -7,6 +7,7 @@ namespace App\Observers;
 use App\Enums\StatusTagihan;
 use App\Models\Spk;
 use App\Models\UangMasuk;
+use App\Support\NotifikasiOperasional;
 
 /**
  * Sinkronisasi `status_tagihan` SPK dengan pembayaran yang sudah masuk.
@@ -83,6 +84,7 @@ class SinkronStatusTagihanObserver
 
         $spk->status_tagihan = $statusBaru;
         $spk->save();
+        NotifikasiOperasional::segarkan();
     }
 
     /**

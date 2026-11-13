@@ -1,6 +1,9 @@
 # Rules — Aturan Bisnis, Konvensi & Guidelines
 ## Sistem Informasi SPK & Kontrol Keuangan — PT Barelang Kontraktor Sarana
 
+> **Perubahan 12 Nov 2026:** fitur cetak **BAST (Berita Acara Serah Terima)** dihapus dari sistem karena di luar ruang lingkup proyek. Rujukan BAST di bawah ini bersifat historis.
+
+
 > **WAJIB DIPATUHI** oleh AI agent/developer.
 >
 > ⚠️ **Aturan terpenting:** karena schema hanya 5 tabel, kolom status/kategori berupa **teks**.

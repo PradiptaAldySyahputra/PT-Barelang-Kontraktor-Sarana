@@ -63,10 +63,16 @@ final class PartnerController
             ? url($asal)
             : route('panel.partners.index');
 
+        $spkAktif = $mitra->spk()
+            ->latest('tanggal_spk')
+            ->take(10)
+            ->get();
+
         return view('partners.form', [
             'judul' => 'Ubah Mitra',
             'keterangan' => $mitra->nama,
             'mitra' => $mitra,
+            'spkAktif' => $spkAktif,
             'kembali' => $kembali,
             'opsiKategori' => KategoriMitra::opsi(),
         ]);

@@ -12,7 +12,7 @@
     $modeAwal = old('mode', $modeUbah ? ($uangMasuk->spk_id ? 'spk' : 'manual') : ($spkTerpilih ? 'spk' : 'spk'));
     $buktiLama = $modeUbah ? ($uangMasuk->bukti ?? []) : [];
 
-    $kelasInput = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800';
+    $kelasInput = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-500';
     $kelasLabel = 'block text-theme-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2';
     $kelasKartu = 'rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] shadow-theme-xs md:p-6';
 @endphp
@@ -54,12 +54,12 @@
                         </label>
                     </div>
                     @error('mode')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </fieldset>
 
                 <div>
-                    <label for="akun" class="{{ $kelasLabel }}">Kas/Bank <span class="text-error-600">*</span></label>
+                    <label for="akun" class="{{ $kelasLabel }}">Kas/Bank <span class="text-error-600 dark:text-error-400">*</span></label>
                     <select id="akun" name="akun" required class="mt-1.5 {{ $kelasInput }}">
                         @foreach ($opsiAkun as $nilai => $label)
                             <option value="{{ $nilai }}" @selected(old('akun', $uangMasuk?->akun?->value ?? 'kas') === $nilai)>
@@ -68,7 +68,7 @@
                         @endforeach
                     </select>
                     @error('akun')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
@@ -79,7 +79,7 @@
             <h2 class="text-theme-sm font-semibold text-gray-900 dark:text-white">Data SPK</h2>
 
             <div class="mt-4">
-                <label for="spk_id" class="{{ $kelasLabel }}">Pilih SPK <span class="text-error-600">*</span></label>
+                <label for="spk_id" class="{{ $kelasLabel }}">Pilih SPK <span class="text-error-600 dark:text-error-400">*</span></label>
                 <div class="mt-1.5">
                     <x-form.spk-select
                         name="spk_id"
@@ -92,7 +92,7 @@
                     Nomor SPK &amp; nama pekerjaan terisi otomatis dari SPK yang dipilih.
                 </p>
                 @error('spk_id')
-                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                 @enderror
             </div>
         </section>
@@ -107,7 +107,7 @@
                     <input id="nomor_spk" name="nomor_spk" type="text" maxlength="150"
                         value="{{ old('nomor_spk', $uangMasuk?->nomor_spk) }}" class="mt-1.5 {{ $kelasInput }}">
                     @error('nomor_spk')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
@@ -115,7 +115,7 @@
                     <input id="nama_pekerjaan" name="nama_pekerjaan" type="text" maxlength="255"
                         value="{{ old('nama_pekerjaan', $uangMasuk?->nama_pekerjaan) }}" class="mt-1.5 {{ $kelasInput }}">
                     @error('nama_pekerjaan')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
@@ -127,31 +127,33 @@
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label for="tanggal" class="{{ $kelasLabel }}">Tanggal Masuk <span class="text-error-600">*</span></label>
+                    <label for="tanggal" class="{{ $kelasLabel }}">Tanggal Masuk <span class="text-error-600 dark:text-error-400">*</span></label>
                     <input id="tanggal" name="tanggal" type="date" required max="{{ now()->format('Y-m-d') }}"
                         value="{{ old('tanggal', $uangMasuk?->tanggal?->format('Y-m-d') ?? now()->format('Y-m-d')) }}"
                         class="mt-1.5 {{ $kelasInput }}">
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Tidak boleh melewati hari ini.</p>
                     @error('tanggal')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
-                    <label for="jumlah" class="{{ $kelasLabel }}">Jumlah (Rp) <span class="text-error-600">*</span></label>
-                    <input id="jumlah" name="jumlah" type="text" inputmode="numeric" required
+                    <label for="jumlah" class="{{ $kelasLabel }}">Jumlah (Rp) <span class="text-error-600 dark:text-error-400">*</span></label>
+                    <input id="jumlah" name="jumlah" type="text" inputmode="numeric" required autocomplete="off"
                         value="{{ old('jumlah', \App\Support\Format::untukInputUang($uangMasuk?->jumlah)) }}" placeholder="0"
+                        x-init="$el.value = ($el.value || '').replace(/\D+/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')"
+                        x-on:input="$el.value = $el.value.replace(/\D+/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')"
                         class="mt-1.5 {{ $kelasInput }} angka">
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
-                        Tidak boleh melebihi sisa piutang SPK.
+                        Pemisah ribuan otomatis. Tidak boleh melebihi sisa piutang SPK.
                     </p>
                     @error('jumlah')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
                     <label for="mitra_id" class="{{ $kelasLabel }}">Mitra / Pengirim</label>
                     <select id="mitra_id" name="mitra_id" class="mt-1.5 {{ $kelasInput }}">
-                        <option value="">— Tanpa mitra —</option>
+                        <option value="">(Tanpa mitra)</option>
                         @foreach ($daftarMitra as $id => $nama)
                             <option value="{{ $id }}" @selected((string) old('mitra_id', $uangMasuk?->mitra_id) === (string) $id)>
                                 {{ $nama }}
@@ -159,7 +161,7 @@
                         @endforeach
                     </select>
                     @error('mitra_id')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
@@ -168,7 +170,7 @@
                         value="{{ old('keterangan', $uangMasuk?->keterangan) }}"
                         placeholder="mis. termin 1" class="mt-1.5 {{ $kelasInput }}">
                     @error('keterangan')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
@@ -188,7 +190,7 @@
                             </a>
                             <label class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-theme-xs text-gray-600 dark:text-gray-400">
                                 <input type="checkbox" name="hapus_bukti[]" value="{{ $path }}"
-                                    class="h-3.5 w-3.5 rounded border-gray-300 text-error-600 focus:ring-error-500 dark:border-gray-700">
+                                    class="h-3.5 w-3.5 rounded border-gray-300 text-error-600 dark:text-error-400 focus:ring-error-500 dark:border-gray-700">
                                 Hapus
                             </label>
                         </li>
@@ -203,15 +205,24 @@
                     class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-theme-xs file:font-medium dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:file:bg-white/10">
                 <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">JPG, PNG, WEBP, atau PDF.</p>
                 @error('bukti.*')
-                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
                 @enderror
             </div>
         </section>
 
-        <div class="flex items-center justify-end">
+        <div class="flex items-center justify-end" x-data="{ submitDisabled: false }">
             <button type="submit"
-                class="inline-flex h-9 items-center rounded-lg bg-brand-600 px-4 text-theme-sm font-semibold text-white hover:bg-brand-700">
-                {{ $modeUbah ? 'Simpan Perubahan' : 'Simpan Uang Masuk' }}
+                @click="if (submitDisabled) { $event.preventDefault(); return; } submitDisabled = true; $el.closest('form').submit();"
+                :disabled="submitDisabled"
+                :class="{ 'opacity-60 cursor-not-allowed': submitDisabled }"
+                class="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-600 px-5 text-theme-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 transition">
+                <svg x-show="submitDisabled" class="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24" style="display: none;">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span x-text="submitDisabled ? 'Menyimpan...' : '{{ $modeUbah ? 'Simpan Perubahan' : 'Simpan Uang Masuk' }}'">
+                    {{ $modeUbah ? 'Simpan Perubahan' : 'Simpan Uang Masuk' }}
+                </span>
             </button>
         </div>
     </form>

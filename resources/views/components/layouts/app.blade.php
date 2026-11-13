@@ -155,14 +155,24 @@
 
 <body class="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100 font-outfit">
 
-    <div class="min-h-screen xl:flex sidebar-expanded" x-data :class="{ 'sidebar-expanded': $store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen }">
+    <div class="min-h-screen xl:flex" x-data
+        :class="{ 'sidebar-expanded': $store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen }">
+        {{-- Terapkan keadaan sidebar SEBELUM frame pertama: tanpa ini sidebar tampil 290px
+             lalu menyusut ke 90px setiap halaman dimuat/di-refresh (terlihat seperti kedip). --}}
+        <script>
+            (function() {
+                const sempit = (localStorage.getItem('bks-sidebar') || localStorage.getItem('sidebarExpanded'));
+                const lebar = sempit === null ? true : (sempit === 'lebar' || sempit === 'true');
+                document.currentScript.parentElement.classList.toggle('sidebar-expanded', lebar && window.innerWidth >= 1280);
+            })();
+        </script>
         @include('layouts.backdrop')
         @include('layouts.sidebar')
 
         <div class="flex-1 min-w-0 ml-0 ltr:xl:ml-[90px] rtl:xl:ml-0 rtl:xl:mr-[90px] [.sidebar-expanded_&]:ltr:xl:ml-[290px] [.sidebar-expanded_&]:rtl:xl:ml-0 [.sidebar-expanded_&]:rtl:xl:mr-[290px] transition-all duration-300 ease-in-out flex flex-col min-h-screen">
             @include('layouts.app-header')
 
-            <main class="p-4 mx-auto w-full max-w-(--breakpoint-2xl) md:p-6 grow min-w-0">
+            <main class="p-4 mx-auto w-full max-w-none md:p-6 grow min-w-0">
                 @if (isset($judul))
                     <x-common.page-breadcrumb :pageTitle="$judul" :kembali="$kembali ?? null" />
                 @endif
@@ -184,11 +194,22 @@
                     </div>
                 @endif
 
+                @if (session('berhasil'))
+                    <x-common.alert tipe="sukses">{{ session('berhasil') }}</x-common.alert>
+                @endif
+
                 @if (session('gagal'))
-                    <div class="mb-5 flex items-start gap-3 rounded-xl border border-error-500/20 bg-error-500/10 p-4 text-sm text-error-700 dark:text-error-400">
-                        <span class="mt-0.5 font-bold">!</span>
-                        <p>{{ session('gagal') }}</p>
-                    </div>
+                    <x-common.alert tipe="gagal">{{ session('gagal') }}</x-common.alert>
+                @endif
+
+                @if ($errors->any() && ! session('gagal'))
+                    <x-common.alert tipe="peringatan" judul="Periksa isian">
+                        <ul class="list-inside list-disc space-y-0.5">
+                            @foreach ($errors->all() as $pesan)
+                                <li>{{ $pesan }}</li>
+                            @endforeach
+                        </ul>
+                    </x-common.alert>
                 @endif
 
                 {{ $slot }}

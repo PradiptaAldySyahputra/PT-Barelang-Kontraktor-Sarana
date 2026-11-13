@@ -9,9 +9,36 @@
 <x-layouts.app :judul="$judul" :keterangan="$keterangan">
     <div class="space-y-4">
 
-        <section class="{{ $kelasKartu }} p-5">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <dl class="grid gap-x-8 gap-y-3 sm:grid-cols-3">
+        {{-- Banner Tombol Cepat Unduh ke Flashdisk Setelah Backup Berhasil --}}
+        @if (session('backup_baru'))
+            <div class="rounded-2xl border border-success-200 bg-success-50/80 p-4 dark:border-success-500/20 dark:bg-success-500/10 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-300">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
+                    </span>
+                    <div>
+                        <h4 class="text-xs font-bold text-success-900 dark:text-success-200">Snapshot Backup Berhasil Dibuat!</h4>
+                        <p class="text-[11px] text-success-700 dark:text-success-300">Amankan salinan offsite ke media penyimpanan fisik luar server kantor.</p>
+                    </div>
+                </div>
+                <a href="{{ route('backup.unduh', session('backup_baru')) }}"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-success-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-success-700 transition shrink-0">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span>Unduh ke Flashdisk Sekarang</span>
+                </a>
+            </div>
+        @endif
+
+        <section class="{{ $kelasKartu }} overflow-hidden">
+            <h2 class="border-b border-gray-100 px-5 py-4 text-theme-sm font-semibold text-gray-900 dark:border-gray-800 dark:text-white">
+                Status Cadangan
+            </h2>
+            <div class="flex flex-wrap items-start justify-between gap-4 p-5">
+                <dl class="grid min-w-0 gap-x-8 gap-y-3 sm:grid-cols-3">
                     <div>
                         <dt class="text-theme-xs text-gray-500 dark:text-gray-400">Jumlah backup</dt>
                         <dd class="angka mt-0.5 text-lg font-semibold text-gray-900 dark:text-white">{{ $ringkasan['jumlah'] }}</dd>
@@ -22,7 +49,7 @@
                     </div>
                     <div>
                         <dt class="text-theme-xs text-gray-500 dark:text-gray-400">Terakhir</dt>
-                        <dd class="mt-0.5 text-theme-sm font-semibold {{ $ringkasan['sehat'] ? 'text-success-600 dark:text-success-500' : 'text-warning-600 dark:text-warning-500' }}">
+                        <dd class="mt-0.5 text-theme-sm font-semibold {{ $ringkasan['sehat'] ? 'text-success-700 dark:text-success-500' : 'text-warning-700 dark:text-warning-500' }}">
                             {{ $ringkasan['terakhir']?->format('d/m/Y H:i') ?? 'Belum pernah' }}
                             @if ($ringkasan['umur_hari'] !== null)
                                 <span class="font-normal text-gray-500 dark:text-gray-400">({{ $ringkasan['umur_hari'] }} hari lalu)</span>
@@ -42,7 +69,24 @@
             </div>
         </section>
 
-        <section class="{{ $kelasKartu }}">
+        {{-- Petunjuk Otomatisasi Jadwal Cadangan (Cronjob Intranet) --}}
+        <section class="{{ $kelasKartu }} p-5">
+            <div class="flex items-start gap-3.5">
+                <div class="rounded-xl bg-brand-50 p-2.5 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 shrink-0">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-theme-sm font-semibold text-gray-900 dark:text-white">Jadwal Pencadangan Otomatis Intranet</h3>
+                    <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">
+                        Pencadangan basis data berjalan otomatis setiap hari pada pukul <strong>02:00 WIB</strong> via cron daemon internal server (<code class="font-mono text-gray-800 dark:text-gray-200">php artisan app:backup-database</code>). Berkas disimpan lokal di <code class="font-mono text-gray-800 dark:text-gray-200">storage/app/backup/</code> dan disinkronkan ke flashdisk eksternal harian.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="{{ $kelasKartu }} overflow-hidden">
             <h2 class="border-b border-gray-100 px-5 py-4 text-theme-sm font-semibold text-gray-900 dark:border-gray-800 dark:text-white">
                 Berkas Backup
             </h2>
@@ -53,7 +97,7 @@
                 </p>
             @else
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left">
+                    <table class="w-full min-w-[560px] text-left">
                         <thead>
                             <tr class="border-b border-gray-100 text-theme-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
                                 <th class="px-5 py-2 font-medium">Berkas</th>

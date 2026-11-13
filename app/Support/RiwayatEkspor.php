@@ -47,6 +47,7 @@ final class RiwayatEkspor
     public static function daftar(?int $userId = null, int $limit = 50): Collection
     {
         return Export::query()
+            ->with('user:id,nama')
             ->when($userId, fn ($q) => $q->where('user_id', $userId))
             ->orderByDesc('created_at')
             ->limit($limit)
@@ -81,6 +82,11 @@ final class RiwayatEkspor
             && $e->getFileDisk()->exists($e->getFileDirectory().DIRECTORY_SEPARATOR.$e->file_name);
 
         $jenisSlug = self::slugEksportir((string) $e->exporter);
+        $eksporBaruUrl = match (true) {
+            (string) $e->exporter === 'laporan:bundel-zip' => route('laporan.bundel', ['periode' => 12]),
+            $jenisSlug !== null => route('laporan.ekspor', ['jenis' => $jenisSlug, 'format' => 'xlsx']),
+            default => null,
+        };
 
         return [
             'id' => (int) $e->getKey(),
@@ -100,7 +106,7 @@ final class RiwayatEkspor
             'waktu' => $e->created_at,
             'pengguna' => $e->user?->nama ?? null,
             'bisa_unduh' => $berkasAda,
-            'ekspor_baru_url' => $jenisSlug ? route('laporan.ekspor', ['jenis' => $jenisSlug, 'format' => 'xlsx']) : null,
+            'ekspor_baru_url' => $eksporBaruUrl,
         ];
     }
 
@@ -109,6 +115,12 @@ final class RiwayatEkspor
      */
     public static function slugEksportir(string $exporter): ?string
     {
+        if (str_starts_with($exporter, 'laporan:')) {
+            $kode = substr($exporter, strlen('laporan:'));
+
+            return $kode === 'bundel-zip' ? null : $kode;
+        }
+
         $pendek = class_basename($exporter);
 
         return match (true) {
@@ -120,10 +132,26 @@ final class RiwayatEkspor
     }
 
     /**
-     * Nama ramah untuk kelas exporter Filament.
+     * Nama ramah untuk kelas exporter Filament atau kode laporan.
      */
     private static function labelEksportir(string $exporter): string
     {
+        if (str_starts_with($exporter, 'laporan:')) {
+            $kode = substr($exporter, strlen('laporan:'));
+
+            return match ($kode) {
+                'buku-kas' => 'Buku Kas Operasional',
+                'buku-bank' => 'Buku Bank (Rekening PLN)',
+                'piutang' => 'Laporan Piutang SPK',
+                'tenggat' => 'Laporan Tenggat SPK',
+                'spk' => 'Daftar Seluruh SPK',
+                'masuk' => 'Laporan Uang Masuk',
+                'keluar' => 'Laporan Uang Keluar',
+                'bundel-zip' => 'Bundel Laporan Lengkap (ZIP)',
+                default => 'Laporan '.strtoupper($kode),
+            };
+        }
+
         $pendek = class_basename($exporter);
 
         return match (true) {

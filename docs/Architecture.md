@@ -271,8 +271,8 @@ php artisan schedule:list
 
 Saran konkret:
 - Rotasi **7 backup harian + 4 mingguan + 12 bulanan** (otomatis: 30 hari).
-- **Uji restore** minimal sekali sebelum sistem dipakai penuh.
-- Backup juga `storage/app` (folder bukti) — bagian dari audit trail.
+- **Uji restore** minimal sekali sebelum sistem dipakai penuh (gunakan `php artisan bks:restore {berkas} --test` untuk uji integritas).
+- Backup paket penuh dengan nota: `php artisan bks:backup --dengan-nota` (mencakup database dan berkas fisik bukti nota di `storage/app/nota`).
 
 ### 7.8 Catatan Risiko Deployment Lokal
 
@@ -505,6 +505,45 @@ Backup otomatis tiap hari 23:00 ke `storage/app/backup/` (simpan 30 hari).
 Cek: `php artisan schedule:list` · uji: `php artisan bks:backup`.
 **Salin backup keluar dari PC server** minimal seminggu sekali (§7.7).
 
+### 12.5a Pemulihan Cadangan (Restore Database)
+
+Untuk memulihkan data pada server internal kantor (misalnya setelah migrasi server, instalasi ulang, atau bencana perangkat keras), gunakan perintah `php artisan bks:restore`.
+
+#### 1. Format Berkas Cadangan
+Sistem mendukung pemulihan langsung dari:
+- Berkas arsip `.zip` hasil `php artisan bks:backup` (baik backup standar maupun paket penuh `--dengan-nota`).
+- Berkas mentah `.sql`.
+
+Berkas cadangan dibaca dari direktori `storage/app/backup/`. Bila berkas ditaruh di folder lain, salin terlebih dahulu ke `storage/app/backup/`.
+
+#### 2. Uji Integritas Cadangan (Dry-Run / Uji Coba Aman)
+Sebelum menimpa database aktif server, selalu jalankan verifikasi integritas dengan opsi `--test`:
+```bash
+php artisan bks:restore bks-2026-11-10-230000.zip --test
+```
+Perintah ini akan:
+- Memeriksa keabsahan struktur ZIP dan dekompresi file `.sql`.
+- Memverifikasi keberadaan skema 5 tabel domain inti (`spk`, `uang_masuk`, `uang_keluar`, `mitra`, `pengguna`).
+- Menginformasikan jumlah berkas di dalam arsip dan keberadaan folder lampiran nota.
+- **TIDAK mengeksekusi instruksi ke MySQL/MariaDB**, sehingga database aktif 100% aman dan tidak tersentuh.
+
+#### 3. Eksekusi Pemulihan Penuh
+Bila uji integritas sukses, jalankan pemulihan data:
+```bash
+# Interaktif (meminta konfirmasi sebelum menimpa data):
+php artisan bks:restore bks-2026-11-10-230000.zip
+
+# Tanpa memilih argumen nama berkas (akan menampilkan daftar pilihan backup yang tersedia):
+php artisan bks:restore
+
+# Mode otomatis/skrip (melewati dialog konfirmasi):
+php artisan bks:restore bks-2026-11-10-230000.zip --force
+```
+
+> ⚠️ **PERINGATAN:** Pemulihan database akan menimpa data yang ada saat ini dengan data dari berkas cadangan. Pastikan seluruh pengguna keluar dari sistem selama proses pemulihan berlangsung.
+> 
+> Bila berkas ZIP mencakup folder `nota/` (hasil backup `--dengan-nota`), ekstrak isi folder `nota/` tersebut ke direktori `storage/app/nota/` pada server agar bukti fisik nota sinkron dengan data transaksi.
+
 ### 12.6 Auto-start saat PC menyala
 
 - **Nginx/MySQL:** `sudo systemctl enable nginx php-fpm mysqld`
@@ -548,6 +587,39 @@ lalu `systemctl --user enable --now bks-queue`. Supaya tetap hidup setelah logou
 
 Kalau ingin kembali sinkron (tanpa worker): `QUEUE_CONNECTION=sync` — OCR selesai di
 request yang sama, tapi unggahan PDF tumpuk akan menunggu lebih lama.
+
+### 12.6b Instalasi Otomatis Dedicated Server Kantor 1-Klik (`scripts/pasang-server-kantor.sh`)
+
+Untuk mempercepat instalasi dan deployment pada dedicated server intranet kantor (`bks-server` / Ubuntu Server), telah disediakan skrip otomasi shell serba lengkap dan idempotent: `scripts/pasang-server-kantor.sh`.
+
+#### 1. Cakupan Kerja Skrip Otomasi:
+1. **Deteksi IP LAN Otomatis**: Mendeteksi antarmuka jaringan aktif lokal untuk penentuan URL akses LAN.
+2. **Pemeriksaan Dependensi Sistem**: Memastikan ketersediaan PHP, Composer, serta layanan MySQL/MariaDB.
+3. **Inisialisasi Environment & Berkas**: Menyalin `.env.example` ke `.env` (bila belum ada), membuat app key baru, memastikan direktori `storage/` dan `bootstrap/cache` memiliki izin writable (`chmod 775`), serta membuat symlink `storage:link`.
+4. **Migrasi Database**: Menjalankan `php artisan migrate --force` secara otomatis (dapat dilewati dengan argumen `MIGRATE=0`).
+5. **Konfigurasi Unit Systemd User**: Memasang dan mengaktifkan service background tanpa hak root/sudo:
+   - `bks-web.service`: Web server artisan host `0.0.0.0` pada port `8232`.
+   - `bks-queue.service`: Queue worker untuk pemrosesan OCR nota dan tugas background lainnya.
+6. **Penjadwalan Crontab Scheduler**: Mendaftarkan eksekusi `php artisan schedule:run` tiap menit ke crontab pengguna secara idempotent (mencegah duplikasi entri).
+7. **Pemeriksaan Kesiapan Server**: Menjalankan perintah audit kesiapan lingkungan `php artisan bks:cek-server`.
+
+#### 2. Cara Eksekusi di PC Server:
+```bash
+# Pastikan berada di direktori proyek
+cd /path/ke/proyek
+
+# Berikan izin eksekusi skrip (bila belum)
+chmod +x scripts/pasang-server-kantor.sh
+
+# Jalankan skrip instalasi
+./scripts/pasang-server-kantor.sh
+```
+
+> 💡 **Tips Menjaga Layanan Tetap Aktif Pasca-Logout**:
+> Jalankan perintah berikut agar systemd user unit tetap berjalan saat sesi terminal ditutup:
+> ```bash
+> loginctl enable-linger $USER
+> ```
 
 ### 12.7 Dari PC client
 

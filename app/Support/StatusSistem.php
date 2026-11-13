@@ -26,6 +26,7 @@ final class StatusSistem
         return [
             self::database(),
             self::queue(),
+            self::ocrEngine(),
             self::backup(),
             self::penyimpanan(),
             self::email(),
@@ -89,6 +90,42 @@ final class StatusSistem
                 'sehat' => null,
             ];
         }
+    }
+
+    /**
+     * @return array{kunci: string, label: string, nilai: string, keterangan: string, sehat: bool|null}
+     */
+    private static function ocrEngine(): array
+    {
+        $aktif = (bool) config('ocr.aktif', false);
+        $python = (string) config('ocr.python', 'python3');
+        $skrip = (string) config('ocr.skrip', base_path('python/ocr_nota.py'));
+
+        $pythonTersedia = is_executable($python)
+            || (! str_contains($python, '/') && @shell_exec('which '.escapeshellarg($python).' 2>/dev/null') !== null);
+        $skripAda = is_file($skrip);
+
+        if (! $aktif) {
+            return [
+                'kunci' => 'ocr',
+                'label' => 'Mesin OCR (RapidOCR)',
+                'nilai' => $pythonTersedia && $skripAda ? 'Nonaktif (Siap)' : 'Nonaktif',
+                'keterangan' => 'OCR dinonaktifkan di konfigurasi (OCR_NOTA=false). Input nota berjalan dalam mode manual.',
+                'sehat' => true,
+            ];
+        }
+
+        $tersedia = $pythonTersedia && $skripAda;
+
+        return [
+            'kunci' => 'ocr',
+            'label' => 'Mesin OCR (RapidOCR)',
+            'nilai' => $tersedia ? 'Siap Operasional' : 'Tidak Ditemukan',
+            'keterangan' => $tersedia
+                ? 'Python RapidOCR & PyMuPDF aktif untuk pemotongan dan ekstraksi otomatis bukti nota.'
+                : 'Interpreter Python OCR atau skrip python/ocr_nota.py belum ditemukan di path server.',
+            'sehat' => $tersedia,
+        ];
     }
 
     /**

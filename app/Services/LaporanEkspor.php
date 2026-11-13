@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\AkunKas;
+use App\Models\Export;
 use App\Models\Spk;
 use App\Support\BukuKasBank;
 use App\Support\LaporanData;
 use App\Support\TandaTangan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
@@ -26,14 +29,29 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class LaporanEkspor
 {
-    public function ekspor(string $jenis, string $format = 'csv', int $periode = 12): StreamedResponse|HttpResponse
-    {
-        [$judul, $header, $baris] = $this->siapkanDataEkspor($jenis, $periode);
+    public function ekspor(
+        string $jenis,
+        string $format = 'csv',
+        int $periode = 12,
+        ?Carbon $mulai = null,
+        ?Carbon $selesai = null,
+    ): StreamedResponse|HttpResponse {
+        [$judul, $header, $baris] = $this->siapkanDataEkspor($jenis, $periode, $mulai, $selesai);
 
         $namaFile = str($judul)->slug().'-'.now()->format('Y-m-d');
+        $labelPeriode = ($mulai !== null || $selesai !== null)
+            ? (($mulai?->format('d/m/Y') ?? 'Awal').' s.d. '.($selesai?->format('d/m/Y') ?? 'Sekarang'))
+            : $this->labelPeriode($periode);
+
+        $ekstensi = match ($format) {
+            'pdf' => 'pdf',
+            'xlsx' => 'xlsx',
+            default => 'csv',
+        };
+        self::catatRiwayatEkspor($jenis, $namaFile.'.'.$ekstensi, count($baris));
 
         return match ($format) {
-            'pdf' => $this->unduhPdf($judul, $header, $baris, $namaFile, $periode),
+            'pdf' => $this->unduhPdf($judul, $header, $baris, $namaFile, $labelPeriode),
             'xlsx' => $this->unduhXlsx($judul, $header, $baris, $namaFile),
             default => $this->unduhCsv($judul, $header, $baris, $namaFile),
         };
@@ -42,16 +60,23 @@ class LaporanEkspor
     /**
      * @return array{0: string, 1: array<int, string>, 2: array<int, mixed>}
      */
-    public function siapkanDataEkspor(string $jenis, int $periode): array
-    {
-        $data = LaporanData::lengkap($periode);
-        $awal = LaporanData::tanggalAwal($periode);
-        $labelPeriode = $this->labelPeriode($periode);
+    public function siapkanDataEkspor(
+        string $jenis,
+        int $periode,
+        ?Carbon $mulai = null,
+        ?Carbon $selesai = null,
+    ): array {
+        $data = LaporanData::lengkap($periode, $mulai, $selesai);
+        $awal = $mulai ?? LaporanData::tanggalAwal($periode);
+        $akhir = $selesai ?? now();
+        $labelPeriode = ($mulai !== null || $selesai !== null)
+            ? (($mulai?->format('d/m/Y') ?? 'Awal').' s.d. '.($selesai?->format('d/m/Y') ?? 'Sekarang'))
+            : $this->labelPeriode($periode);
 
         return match ($jenis) {
-            'buku-kas', 'buku-bank' => (function () use ($jenis, $awal, $labelPeriode): array {
+            'buku-kas', 'buku-bank' => (function () use ($jenis, $awal, $akhir, $labelPeriode): array {
                 $akun = $jenis === 'buku-bank' ? AkunKas::Bank : AkunKas::Kas;
-                $buku = BukuKasBank::susun($akun, $awal, now());
+                $buku = BukuKasBank::susun($akun, $awal, $akhir);
                 [$header, $baris] = BukuKasBank::untukEkspor($buku);
 
                 return [
@@ -138,22 +163,30 @@ class LaporanEkspor
         };
     }
 
-    private function unduhPdf(string $judul, array $header, array $baris, string $namaFile, int $periode): HttpResponse
+    private function unduhPdf(string $judul, array $header, array $baris, string $namaFile, string $labelPeriode): HttpResponse
     {
         return Pdf::loadView('reports.pdf', [
             'judul' => $judul,
             'header' => $header,
             'baris' => $baris,
-            'periode' => $this->labelPeriode($periode),
+            'periode' => $labelPeriode,
             'tandaTangan' => TandaTangan::untukPdf(),
         ])->setPaper('a4', 'landscape')->download($namaFile.'.pdf');
     }
 
     private function unduhXlsx(string $judul, array $header, array $baris, string $namaFile): StreamedResponse
     {
-        $path = (string) tempnam(sys_get_temp_dir(), 'laporan').'.xlsx';
+        $dasar = tempnam(sys_get_temp_dir(), 'laporan');
+        $path = (string) $dasar.'.xlsx';
+        if ($dasar !== false) {
+            @unlink($dasar);
+        }
 
         $this->tulisXlsx($path, $judul, $header, $baris);
+
+        register_shutdown_function(static function () use ($path): void {
+            @unlink($path);
+        });
 
         return Response::streamDownload(function () use ($path): void {
             readfile($path);
@@ -189,7 +222,7 @@ class LaporanEkspor
         $writer->addRow(Row::fromValuesWithStyle($header, $tebalStyle));
 
         foreach ($baris as $r) {
-            $writer->addRow(Row::fromValues(array_values((array) $r)));
+            $writer->addRow(Row::fromValues(array_map(self::amanCsv(...), array_values((array) $r))));
         }
 
         $total = self::hitungBarisTotal($header, $baris);
@@ -244,7 +277,7 @@ class LaporanEkspor
             return '';
         }
 
-        if (in_array($teks[0], ['=', '+', '-', '@'], true)) {
+        if (in_array($teks[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
             return "'".$teks;
         }
 
@@ -304,15 +337,23 @@ class LaporanEkspor
         return $total;
     }
 
-    public function simpanBerkasXlsx(string $jenis, int $periode, string $tujuanPath): void
-    {
-        [$judul, $header, $baris] = $this->siapkanDataEkspor($jenis, $periode);
+    public function simpanBerkasXlsx(
+        string $jenis,
+        int $periode,
+        string $tujuanPath,
+        ?Carbon $mulai = null,
+        ?Carbon $selesai = null,
+    ): void {
+        [$judul, $header, $baris] = $this->siapkanDataEkspor($jenis, $periode, $mulai, $selesai);
 
         $this->tulisXlsx($tujuanPath, $judul, $header, $baris);
     }
 
-    public function bundelZip(int $periode = 12): BinaryFileResponse
-    {
+    public function bundelZip(
+        int $periode = 12,
+        ?Carbon $mulai = null,
+        ?Carbon $selesai = null,
+    ): BinaryFileResponse {
         $label = str($this->labelPeriode($periode))->slug();
         $zipNama = 'bundel-laporan-bks-'.$label.'-'.now()->format('Y-m-d').'.zip';
         $tempDir = storage_path('app/temp-bundel-'.uniqid());
@@ -335,7 +376,7 @@ class LaporanEkspor
 
         foreach ($berkas as $filename => $jenis) {
             $filePath = $tempDir.DIRECTORY_SEPARATOR.$filename;
-            $this->simpanBerkasXlsx($jenis, $periode, $filePath);
+            $this->simpanBerkasXlsx($jenis, $periode, $filePath, $mulai, $selesai);
             $zip->addFile($filePath, $filename);
             $filesToDelete[] = $filePath;
         }
@@ -345,6 +386,8 @@ class LaporanEkspor
         foreach ($filesToDelete as $f) {
             @unlink($f);
         }
+
+        self::catatRiwayatEkspor('bundel-zip', $zipNama, count($berkas));
 
         $response = response()->download($zipPath, $zipNama, [
             'Content-Type' => 'application/zip',
@@ -369,5 +412,31 @@ class LaporanEkspor
             12 => '1 Tahun Terakhir',
             default => 'Semua Data',
         };
+    }
+
+    /**
+     * Catat jejak ekspor ke tabel infrastruktur `exports` bila pengguna sedang login.
+     */
+    private static function catatRiwayatEkspor(string $jenis, string $namaBerkas, int $jumlahBaris): void
+    {
+        $userId = Auth::id();
+        if (! $userId) {
+            return;
+        }
+
+        try {
+            Export::create([
+                'user_id' => (int) $userId,
+                'exporter' => 'laporan:'.$jenis,
+                'file_disk' => 'local',
+                'file_name' => $namaBerkas,
+                'total_rows' => $jumlahBaris,
+                'processed_rows' => $jumlahBaris,
+                'successful_rows' => $jumlahBaris,
+                'completed_at' => now(),
+            ]);
+        } catch (\Throwable) {
+            // Jangan gagalkan unduhan berkas bila gagal mencatat riwayat.
+        }
     }
 }

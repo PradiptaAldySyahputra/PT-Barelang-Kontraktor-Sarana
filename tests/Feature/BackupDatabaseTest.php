@@ -71,6 +71,39 @@ class BackupDatabaseTest extends TestCase
         $zip->close();
     }
 
+    public function test_backup_dengan_nota_memaketkan_folder_nota(): void
+    {
+        $dump = "-- dump palsu\nCREATE TABLE spk (id INT);\n";
+
+        Process::fake([
+            '*' => Process::result(output: $dump, exitCode: 0),
+        ]);
+
+        $folderNota = $this->dir.'/nota-uji';
+        File::ensureDirectoryExists($folderNota);
+        File::put($folderNota.'/kw-001.jpg', 'gambar-nota-1');
+        File::put($folderNota.'/kw-002.pdf', 'pdf-nota-2');
+
+        config(['filesystems.disks.nota.root' => $folderNota]);
+
+        $this->artisan('bks:backup', ['--dengan-nota' => true])->assertSuccessful();
+
+        $berkas = File::files($this->dir);
+        // Folder nota-uji bukan berkas jadi File::files hanya mengambil berkas ZIP
+        $zipFiles = array_values(array_filter($berkas, fn ($f) => $f->getExtension() === 'zip'));
+        $this->assertCount(1, $zipFiles);
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($zipFiles[0]->getPathname()) === true);
+
+        // Harus ada file .sql dan file nota
+        $this->assertNotNull($zip->locateName('nota/kw-001.jpg'));
+        $this->assertNotNull($zip->locateName('nota/kw-002.pdf'));
+        $this->assertSame('gambar-nota-1', $zip->getFromName('nota/kw-001.jpg'));
+        $this->assertSame('pdf-nota-2', $zip->getFromName('nota/kw-002.pdf'));
+        $zip->close();
+    }
+
     public function test_retensi_menghapus_backup_lama(): void
     {
         Process::fake([

@@ -63,7 +63,14 @@ final class ArsipNota
             ->orderByDesc('tanggal')
             ->get()
             ->each(function (UangKeluar $r) use ($hasil): void {
-                foreach ($r->bukti ?? [] as $path) {
+                $daftarBukti = array_values(array_filter((array) ($r->bukti ?? [])));
+                // Jika memiliki potongan crop spesifik, prioritaskan potongan tersebut agar tidak duplikat dengan berkas master
+                $adaPotongan = collect($daftarBukti)->contains(fn ($p) => str_starts_with((string) $p, 'uang_keluar/potongan/'));
+                if ($adaPotongan) {
+                    $daftarBukti = array_values(array_filter($daftarBukti, fn ($p) => str_starts_with((string) $p, 'uang_keluar/potongan/')));
+                }
+
+                foreach ($daftarBukti as $path) {
                     $hasil->push(self::baris(
                         'Uang Keluar',
                         $r->tanggal,
@@ -79,36 +86,50 @@ final class ArsipNota
                 }
             });
 
-        // Uang masuk
-        UangMasuk::query()
-            ->with('spk:id,nomor_spk')
-            ->when($awal, fn ($query) => $query->where('tanggal', '>=', $awal->toDateString()))
-            ->when($akhir, fn ($query) => $query->where('tanggal', '<=', $akhir->toDateString()))
-            ->when($akun, fn ($query) => $query->where('akun', $akun))
-            ->when($q, function ($query) use ($q): void {
-                $query->where(function ($sub) use ($q): void {
-                    $sub->where('keterangan', 'like', "%{$q}%");
+        // Uang masuk (hanya disertakan jika filter kategori pengeluaran tidak sedang aktif,
+        // karena Uang Masuk tidak memiliki kategori pengeluaran)
+        if (! filled($kategori)) {
+            UangMasuk::query()
+                ->with(['spk:id,nomor_spk,mitra_id', 'spk.mitra:id,nama', 'mitra:id,nama'])
+                ->when($awal, fn ($query) => $query->where('tanggal', '>=', $awal->toDateString()))
+                ->when($akhir, fn ($query) => $query->where('tanggal', '<=', $akhir->toDateString()))
+                ->when($akun, fn ($query) => $query->where('akun', $akun))
+                ->when($q, function ($query) use ($q): void {
+                    $query->where(function ($sub) use ($q): void {
+                        $sub->where('keterangan', 'like', "%{$q}%")
+                            ->orWhere('nomor_spk', 'like', "%{$q}%")
+                            ->orWhereHas('mitra', fn ($m) => $m->where('nama', 'like', "%{$q}%"))
+                            ->orWhereHas('spk.mitra', fn ($m) => $m->where('nama', 'like', "%{$q}%"));
+                    });
+                })
+                ->whereNotNull('bukti')
+                ->orderByDesc('tanggal')
+                ->get()
+                ->each(function (UangMasuk $r) use ($hasil): void {
+                    $daftarBukti = array_values(array_filter((array) ($r->bukti ?? [])));
+                    $adaPotongan = collect($daftarBukti)->contains(fn ($p) => str_starts_with((string) $p, 'uang_masuk/potongan/'));
+                    if ($adaPotongan) {
+                        $daftarBukti = array_values(array_filter($daftarBukti, fn ($p) => str_starts_with((string) $p, 'uang_masuk/potongan/')));
+                    }
+
+                    $namaMitra = $r->spk?->mitra?->nama ?? $r->mitra?->nama;
+
+                    foreach ($daftarBukti as $path) {
+                        $hasil->push(self::baris(
+                            'Uang Masuk',
+                            $r->tanggal,
+                            $r->akun instanceof AkunKas ? $r->akun->value : $r->akun,
+                            null,
+                            $namaMitra,
+                            $r->keterangan,
+                            (string) $path,
+                            $r->id,
+                            route('panel.cash-in.edit', ['uangMasuk' => $r, 'asal' => 'receipts']),
+                            $r->spk?->nomor_spk ?? $r->nomor_spk,
+                        ));
+                    }
                 });
-            })
-            ->whereNotNull('bukti')
-            ->orderByDesc('tanggal')
-            ->get()
-            ->each(function (UangMasuk $r) use ($hasil): void {
-                foreach ($r->bukti ?? [] as $path) {
-                    $hasil->push(self::baris(
-                        'Uang Masuk',
-                        $r->tanggal,
-                        $r->akun instanceof AkunKas ? $r->akun->value : $r->akun,
-                        null,
-                        null,
-                        $r->keterangan,
-                        (string) $path,
-                        $r->id,
-                        route('panel.cash-in.edit', ['uangMasuk' => $r, 'asal' => 'receipts']),
-                        $r->spk?->nomor_spk,
-                    ));
-                }
-            });
+        }
 
         return $hasil
             ->sortByDesc(fn (array $b): int => $b['tanggal']->getTimestamp())

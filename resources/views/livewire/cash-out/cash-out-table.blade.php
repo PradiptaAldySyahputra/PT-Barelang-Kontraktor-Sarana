@@ -43,7 +43,7 @@
         <div class="flex flex-wrap items-center gap-3 px-5 py-3.5 bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800">
             <div class="relative min-w-0 flex-1 sm:max-w-xs">
                 <label for="cari-keluar" class="sr-only">Cari di tabel ini</label>
-                <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none"
+                <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" fill="none"
                     viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" />
@@ -53,13 +53,7 @@
                     class="h-10 w-full rounded-lg border border-gray-300 bg-white pr-4 pl-10 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800">
             </div>
 
-            <label class="sr-only" for="keluar-dari">Dari tanggal</label>
-            <input id="keluar-dari" type="date" wire:model.live="dari" title="Dari tanggal"
-                class="h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800">
-
-            <label class="sr-only" for="keluar-sampai">Sampai tanggal</label>
-            <input id="keluar-sampai" type="date" wire:model.live="sampai" title="Sampai tanggal"
-                class="h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800">
+                        <x-common.filter-tanggal id="tanggal-keluar" mode="livewire" :tanggal="$tanggal" />
 
             <label class="sr-only" for="keluar-akun">Kas/Bank</label>
             <select id="keluar-akun" wire:model.live="akun"
@@ -87,12 +81,6 @@
                 <option value="luar">Tanpa SPK</option>
             </select>
 
-            <label class="sr-only" for="keluar-terhapus">Data terhapus</label>
-            <select id="keluar-terhapus" wire:model.live="terhapus" title="Data terhapus"
-                class="h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800">
-                <option value="aktif">Aktif</option>
-                <option value="saja">Data terhapus</option>
-            </select>
 
             @if ($adaPenyaring)
                 <button type="button" wire:click="bersihkan"
@@ -108,7 +96,7 @@
                 <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Ubah filter tanggal, akun, kategori, atau kata kunci pencarian.</p>
                 @if ($adaPenyaring)
                     <button type="button" wire:click="bersihkan"
-                        class="mt-3 inline-flex items-center rounded-lg border border-gray-300 px-3 py-1.5 text-theme-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/5 transition">
+                        class="mt-4 inline-flex h-9 items-center rounded-lg border border-gray-300 bg-white px-3 text-theme-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition">
                         Reset Filter
                     </button>
                 @endif
@@ -122,7 +110,7 @@
                                 <button type="button" wire:click="urutkan('tanggal')" class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white">
                                     Tanggal & Akun
                                     @if ($urut === 'tanggal')
-                                        <span class="text-brand-600" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
+                                        <span class="text-brand-600 dark:text-brand-400" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
                                     @else
                                         <span class="text-gray-300 dark:text-gray-700" aria-hidden="true">⇅</span>
                                     @endif
@@ -135,7 +123,7 @@
                                 <button type="button" wire:click="urutkan('jumlah')" class="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white">
                                     Jumlah Keluar
                                     @if ($urut === 'jumlah')
-                                        <span class="text-brand-600" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
+                                        <span class="text-brand-600 dark:text-brand-400" aria-hidden="true">{{ $arah === 'asc' ? '↑' : '↓' }}</span>
                                     @else
                                         <span class="text-gray-300 dark:text-gray-700" aria-hidden="true">⇅</span>
                                     @endif
@@ -153,12 +141,12 @@
                                     <span class="block font-semibold text-gray-800 dark:text-gray-200">
                                         {{ $trx->tanggal?->format('d/m/Y') ?? '—' }}
                                     </span>
-                                    <span class="mt-0.5 inline-flex rounded px-1.5 py-0.2 text-[10px] font-medium {{ $badge($trx->akun?->warnaBadge()) }}">
+                                    <span class="mt-0.5 inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium {{ $badge($trx->akun?->warnaBadge()) }}">
                                         {{ $trx->akun?->label() ?? 'Kas' }}
                                     </span>
                                 </td>
                                 <td class="px-3 py-2.5">
-                                    <span class="inline-flex rounded px-1.5 py-0.2 text-[10px] font-semibold {{ $badge($trx->kategori?->warnaBadge()) }}">
+                                    <span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold {{ $badge($trx->kategori?->warnaBadge()) }}">
                                         {{ $trx->kategori?->label() ?? 'Lainnya' }}
                                     </span>
                                     @if (filled($trx->detail_kategori))
@@ -185,18 +173,21 @@
                                             {{ $trx->spk->nomor_spk }}
                                         </a>
                                     @else
-                                        <span class="text-theme-xs text-gray-400">Operasional</span>
+                                        <span class="text-theme-xs text-gray-500 dark:text-gray-400">Operasional</span>
                                     @endif
                                 </td>
                                 <td class="px-3 py-2.5 text-right whitespace-nowrap">
-                                    <span class="angka block font-bold text-error-600 dark:text-error-400">
+                                    <span class="angka block font-bold tabular-nums text-error-600 dark:text-error-400">
                                         − {{ Format::rupiah($trx->jumlah) }}
                                     </span>
                                     @if ($trx->jumlahFileBukti() > 0 && filled($trx->bukti))
                                         <a href="{{ Nota::url($trx->bukti[0]) }}" target="_blank" rel="noopener"
-                                            class="mt-0.5 inline-flex rounded px-1.5 py-0.2 text-[10px] font-medium hover:underline {{ $badge('info') }}"
+                                            class="mt-0.5 inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium hover:underline {{ $badge('info') }}"
                                             title="Klik untuk membuka berkas nota ({{ $trx->jumlahFileBukti() }} berkas)">
-                                            📎 {{ $trx->jumlahFileBukti() }} nota
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                                                </svg>
+                                            {{ $trx->jumlahFileBukti() }} nota
                                         </a>
                                     @endif
                                 </td>
@@ -215,7 +206,7 @@
                                                 <a href="{{ route('panel.cash-out.edit', $trx) }}"
                                                     class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition"
                                                     title="Ubah Uang Keluar">
-                                                    <svg class="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                    <svg class="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                                                     </svg>
                                                     Ubah
@@ -278,8 +269,11 @@
                             @endif
                             @if ($trx->jumlahFileBukti() > 0 && filled($trx->bukti))
                                 <a href="{{ Nota::url($trx->bukti[0]) }}" target="_blank" rel="noopener"
-                                    class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium hover:underline {{ $badge('info') }}">
-                                    📎 {{ $trx->jumlahFileBukti() }} nota
+                                    class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium hover:underline {{ $badge('info') }}">
+                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                                    </svg>
+                                    {{ $trx->jumlahFileBukti() }} nota
                                 </a>
                             @endif
                         </div>

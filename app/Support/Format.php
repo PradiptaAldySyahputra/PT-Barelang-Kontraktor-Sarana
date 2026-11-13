@@ -20,7 +20,12 @@ final class Format
      */
     public static function rupiah(float|int|string|null $nilai): string
     {
-        return 'Rp '.self::angka($nilai);
+        // Nilai negatif ditulis `-Rp 1.000` (gaya Indonesia), bukan `Rp -1.000`.
+        $angka = self::angka($nilai);
+
+        return str_starts_with($angka, '-')
+            ? '-Rp '.substr($angka, 1)
+            : 'Rp '.$angka;
     }
 
     /**

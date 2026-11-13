@@ -83,4 +83,18 @@ enum StatusTagihan: string
             ->mapWithKeys(fn (self $s): array => [$s->value => $s->label()])
             ->all();
     }
+
+    /**
+     * Pilihan untuk PENYARING penagihan.
+     *
+     * "Revisi Dokumen" kini dicatat sebagai status pekerjaan (StatusSpk),
+     * jadi tidak ditawarkan di penyaring tagihan. Nilai lama tetap dibaca
+     * agar data yang sudah tersimpan tidak rusak.
+     *
+     * @return array<string, string>
+     */
+    public static function opsiPenagihan(): array
+    {
+        return collect(self::opsi())->except(self::RevisiDokumen->value)->all();
+    }
 }

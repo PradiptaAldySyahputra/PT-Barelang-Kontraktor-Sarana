@@ -32,10 +32,14 @@ final class SystemController
 {
     public function receipts(Request $request): View
     {
-        $tanggalPilihan = $request->string('tgl')->toString() ?: $request->string('dari')->toString() ?: null;
+        // Satu tanggal: filter arsip memakai tanggal tunggal, bukan rentang.
+        $tanggal = $request->string('tanggal')->toString() ?: $request->string('tgl')->toString() ?: null;
+        $dari = $tanggal;
+        $sampai = $tanggal;
+
         $filter = [
-            'tanggal_awal' => $tanggalPilihan,
-            'tanggal_akhir' => $tanggalPilihan ?: ($request->string('sampai')->toString() ?: null),
+            'tanggal_awal' => $dari,
+            'tanggal_akhir' => $sampai,
             'akun' => $request->string('akun')->toString() ?: null,
             'kategori' => $request->string('kategori')->toString() ?: null,
             'q' => $request->string('q')->toString() ?: null,
@@ -85,7 +89,6 @@ final class SystemController
         return view('system.exports', [
             'judul' => 'Ekspor & Unduhan',
             'keterangan' => 'Pusat unduhan dokumen resmi PT BKS dan riwayat berkas ekspor',
-            'periode' => $periode,
             // Admin hanya melihat ekspornya sendiri; Direktur melihat semua.
             'daftar' => RiwayatEkspor::daftar(
                 $pengguna?->peran === Peran::Admin ? $pengguna->id : null,
@@ -156,7 +159,7 @@ final class SystemController
         $this->pastikanAdmin();
 
         $data = $request->validate([
-            'jenis' => ['required', 'in:masuk,keluar'],
+            'jenis' => ['required', 'in:spk,masuk,keluar'],
             'berkas' => ['required', 'file', 'mimes:csv,txt,xlsx', 'max:10240'],
         ]);
 
@@ -185,9 +188,11 @@ final class SystemController
             @unlink($path);
         }
 
-        $hasil = $data['jenis'] === 'keluar'
-            ? ImporTransaksi::uangKeluar($baris)
-            : ImporTransaksi::uangMasuk($baris);
+        $hasil = match ($data['jenis']) {
+            'spk' => ImporTransaksi::spk($baris),
+            'keluar' => ImporTransaksi::uangKeluar($baris),
+            default => ImporTransaksi::uangMasuk($baris),
+        };
 
         return redirect()
             ->route('panel.import')
@@ -195,13 +200,25 @@ final class SystemController
             ->with('impor_hasil', array_merge($hasil, ['jenis' => $data['jenis']]));
     }
 
-    public function template()
+    public function template(Request $request)
     {
         $this->pastikanAdmin();
 
-        $csv = "tanggal,jumlah,akun,kategori,penerima,keterangan\n"
+        $jenis = $request->query('jenis', 'transaksi');
+
+        if ($jenis === 'spk') {
+            $csv = "nomor_spk,tanggal_spk,nama_pekerjaan,lokasi,nilai_spk,mitra,keterangan\n"
+                ."0001.SPK/DAN.01.03/PLNBATAM020300/2026,2026-01-05,Pemasangan Jaringan Pelanggan,Batam Tersebar,20000000,PT PLN Batam,Pekerjaan selesai\n"
+                .",,Pemeliharaan Gedung,Batu Apar,35000000,PT PLN Batam,Tanpa SPK resmi\n";
+
+            return response()->streamDownload(function () use ($csv): void {
+                echo $csv;
+            }, 'template-impor-spk.csv', ['Content-Type' => 'text/csv']);
+        }
+
+        $csv = "tanggal,jumlah,akun,nomor_spk,kategori,penerima,keterangan\n"
             ."2026-01-05,1500000,Kas,,,Setoran awal\n"
-            ."2026-01-06,2500000,Bank,material,Toko A,Beli material\n";
+            ."2026-01-06,2500000,Bank,,material,Toko A,Beli material\n";
 
         return response()->streamDownload(function () use ($csv): void {
             echo $csv;

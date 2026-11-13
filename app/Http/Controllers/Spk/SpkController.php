@@ -13,9 +13,11 @@ use App\Models\Spk;
 use App\Observers\SinkronStatusTagihanObserver;
 use App\Services\PenyimpanBerkas;
 use App\Support\Format;
+use App\Support\NotifikasiOperasional;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -65,6 +67,7 @@ final class SpkController
         $data['dokumen'] = $this->simpanDokumen($request, []);
 
         $spk = Spk::query()->create($data);
+        NotifikasiOperasional::segarkan();
 
         return redirect()
             ->route('panel.spk.show', $spk)
@@ -119,7 +122,24 @@ final class SpkController
         $data['dokumen'] = $this->simpanDokumen($request, $spk->dokumen ?? [], $hapus);
 
         $nilaiLama = (float) $spk->nilai_spk;
+        $tenggatLama = $spk->tanggal_akhir?->toDateString();
+        $tenggatBaru = isset($data['tanggal_akhir']) && filled($data['tanggal_akhir'])
+            ? Carbon::parse((string) $data['tanggal_akhir'])->toDateString()
+            : null;
+
+        if ($tenggatLama !== null && $tenggatBaru !== null && $tenggatBaru !== $tenggatLama) {
+            $riwayat = $spk->perpanjangan ?? [];
+            $riwayat[] = [
+                'dari' => $tenggatLama,
+                'ke' => $tenggatBaru,
+                'alasan' => filled($data['keterangan'] ?? null) ? trim((string) $data['keterangan']) : 'Perubahan tenggat SPK',
+                'dicatat' => now()->toDateString(),
+            ];
+            $data['perpanjangan'] = $riwayat;
+        }
+
         $spk->update($data);
+        NotifikasiOperasional::segarkan();
 
         // Jika nilai kontrak berubah, sinkronkan ulang status tagihan otomatis
         // terhadap pembayaran yang sudah masuk (misal nilai naik dari 10jt ke 20jt
@@ -150,6 +170,7 @@ final class SpkController
         }
 
         $spk->delete();
+        NotifikasiOperasional::segarkan();
 
         return redirect()
             ->route('panel.spk.index')
@@ -191,6 +212,7 @@ final class SpkController
         }
 
         $spk->update($update);
+        NotifikasiOperasional::segarkan();
 
         $asalKode = $this->kodeAsal($request->string('asal')->toString());
 
@@ -208,7 +230,9 @@ final class SpkController
             'judul' => 'Ubah Status Tagihan',
             'keterangan' => $spk->nomor_spk.' - '.$spk->nama_pekerjaan,
             'spk' => $spk,
-            'opsiStatus' => StatusTagihan::opsi(),
+            // Revisi Dokumen sudah menjadi status pekerjaan, jadi tidak lagi
+            // ditawarkan di formulir tagihan. Nilai lama tetap lolos validasi.
+            'opsiStatus' => StatusTagihan::opsiPenagihan(),
             'asal' => $asalKode,
             'kembali' => $this->tujuanKembali($asalKode, $spk, route('panel.spk.monitoring', 'billing')),
         ]);
@@ -248,6 +272,7 @@ final class SpkController
         }
 
         $spk->update(['status_tagihan' => $baru]);
+        NotifikasiOperasional::segarkan();
 
         $pesan = 'Status tagihan SPK '.$spk->nomor_spk.' disimpan.';
 

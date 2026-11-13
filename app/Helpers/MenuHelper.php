@@ -18,8 +18,19 @@ class MenuHelper
                 'icon' => 'tables',
                 'name' => 'SPK',
                 'subItems' => [
-                    ['name' => 'List SPK', 'path' => '/panel/spk'],
+                    [
+                        'name' => 'List SPK',
+                        'path' => '/panel/spk',
+                        // anak path yang punya menu sendiri tidak boleh ikut menyorot List SPK
+                        'except' => ['/panel/spk/calendar', '/panel/spk/monitoring'],
+                    ],
                     ['name' => 'Kalender Tenggat', 'path' => '/panel/spk/calendar'],
+                ],
+            ],
+            [
+                'icon' => 'monitoring',
+                'name' => 'Monitoring SPK',
+                'subItems' => [
                     ['name' => 'Status SPK', 'path' => '/panel/spk/monitoring/status'],
                     ['name' => 'Tagihan SPK', 'path' => '/panel/spk/monitoring/billing'],
                     ['name' => 'Tagihan Selesai SPK', 'path' => '/panel/spk/monitoring/completed'],
@@ -38,7 +49,8 @@ class MenuHelper
                 'name' => 'Nota & Bukti',
                 'subItems' => [
                     ['name' => 'Unggah & Ekstraksi Nota', 'path' => '/panel/receipts/upload'],
-                    ['name' => 'Arsip Nota', 'path' => '/panel/receipts'],
+                    // Arsip Nota tidak boleh ikut menyorot saat berada di halaman unggah.
+                    ['name' => 'Arsip Nota', 'path' => '/panel/receipts', 'except' => ['/panel/receipts/upload']],
                 ],
             ],
             [
@@ -56,11 +68,17 @@ class MenuHelper
         $isAdmin = $pengguna && $pengguna->peran === Peran::Admin;
 
         $masterSubItems = [
-            ['name' => 'Mitra', 'path' => '/panel/partners'],
+            [
+                'name' => 'Mitra',
+                'path' => '/panel/partners',
+            ],
         ];
 
         if ($isDirektur) {
-            $masterSubItems[] = ['name' => 'Manajemen Akun', 'path' => '/panel/users'];
+            $masterSubItems[] = [
+                'name' => 'Manajemen Akun',
+                'path' => '/panel/users',
+            ];
         }
 
         $items = [
@@ -98,14 +116,55 @@ class MenuHelper
         ];
     }
 
-    public static function isActive($path)
+    /**
+     * Apakah menu dengan $path sedang aktif.
+     *
+     * $except dipakai untuk anak menu yang punya halaman sendiri: misalnya
+     * "List SPK" tidak boleh menyorot saat pengguna berada di kalender/monitoring.
+     *
+     * @param  array<int, string>  $except
+     */
+    public static function isActive($path, array $except = [])
     {
-        $cleanPath = ltrim($path, '/');
-        if ($cleanPath === 'panel') {
-            return request()->is('panel');
+        $jalur = trim(request()->path(), '/');
+        $target = trim((string) $path, '/');
+
+        foreach ($except as $kecuali) {
+            $kecuali = trim((string) $kecuali, '/');
+            if ($kecuali === '') {
+                continue;
+            }
+            if ($jalur === $kecuali || str_starts_with($jalur, $kecuali.'/')) {
+                return false;
+            }
         }
 
-        return request()->is($cleanPath) || request()->is($cleanPath.'/*');
+        if ($target === '') {
+            return false;
+        }
+
+        // Dashboard hanya aktif tepat di /panel — bukan di seluruh /panel/*.
+        if ($target === 'panel') {
+            return $jalur === 'panel';
+        }
+
+        return $jalur === $target || str_starts_with($jalur, $target.'/');
+    }
+
+    /**
+     * Apakah grup menu (induk) sedang aktif karena salah satu anaknya aktif.
+     *
+     * @param  array<string, mixed>  $item
+     */
+    public static function isGroupActive(array $item): bool
+    {
+        foreach ($item['subItems'] ?? [] as $subItem) {
+            if (self::isActive($subItem['path'], $subItem['except'] ?? [])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function getIconSvg($iconName)
@@ -117,8 +176,8 @@ class MenuHelper
             'pages' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.50391 4.25C8.50391 3.83579 8.83969 3.5 9.25391 3.5H15.2777C15.4766 3.5 15.6674 3.57902 15.8081 3.71967L18.2807 6.19234C18.4214 6.333 18.5004 6.52376 18.5004 6.72268V16.75C18.5004 17.1642 18.1646 17.5 17.7504 17.5H16.248V17.4993H14.748V17.5H9.25391C8.83969 17.5 8.50391 17.1642 8.50391 16.75V4.25ZM14.748 19H9.25391C8.01126 19 7.00391 17.9926 7.00391 16.75V6.49854H6.24805C5.83383 6.49854 5.49805 6.83432 5.49805 7.24854V19.75C5.49805 20.1642 5.83383 20.5 6.24805 20.5H13.998C14.4123 20.5 14.748 20.1642 14.748 19.75L14.748 19ZM7.00391 4.99854V4.25C7.00391 3.00736 8.01127 2 9.25391 2H15.2777C15.8745 2 16.4468 2.23705 16.8687 2.659L19.3414 5.13168C19.7634 5.55364 20.0004 6.12594 20.0004 6.72268V16.75C20.0004 17.9926 18.9931 19 17.7504 19H16.248L16.248 19.75C16.248 20.9926 15.2407 22 13.998 22H6.24805C5.00541 22 3.99805 20.9926 3.99805 19.75V7.24854C3.99805 6.00589 5.00541 4.99854 6.24805 4.99854H7.00391Z" fill="currentColor"></path></svg>',
             'charts' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.00002 12.0957C4.00002 7.67742 7.58174 4.0957 12 4.0957C16.4183 4.0957 20 7.67742 20 12.0957C20 16.514 16.4183 20.0957 12 20.0957H5.06068L6.34317 18.8132C6.48382 18.6726 6.56284 18.4818 6.56284 18.2829C6.56284 18.084 6.48382 17.8932 6.34317 17.7526C4.89463 16.304 4.00002 14.305 4.00002 12.0957ZM12 2.5957C6.75332 2.5957 2.50002 6.849 2.50002 12.0957C2.50002 14.4488 3.35633 16.603 4.77303 18.262L2.71969 20.3154C2.50519 20.5299 2.44103 20.8525 2.55711 21.1327C2.6732 21.413 2.94668 21.5957 3.25002 21.5957H12C17.2467 21.5957 21.5 17.3424 21.5 12.0957C21.5 6.849 17.2467 2.5957 12 2.5957ZM7.62502 10.8467C6.93467 10.8467 6.37502 11.4063 6.37502 12.0967C6.37502 12.787 6.93467 13.3467 7.62502 13.3467H7.62512C8.31548 13.3467 8.87512 12.787 8.87512 12.0967C8.87512 11.4063 8.31548 10.8467 7.62512 10.8467H7.62502ZM10.75 12.0967C10.75 11.4063 11.3097 10.8467 12 10.8467H12.0001C12.6905 10.8467 13.2501 11.4063 13.2501 12.0967C13.2501 12.787 12.6905 13.3467 12.0001 13.3467H12C11.3097 13.3467 10.75 12.787 10.75 12.0967ZM16.375 10.8467C15.6847 10.8467 15.125 11.4063 15.125 12.0967C15.125 12.787 15.6847 13.3467 16.375 13.3467H16.3751C17.0655 13.3467 17.6251 12.787 17.6251 12.0967C17.6251 11.4063 17.0655 10.8467 16.3751 10.8467H16.375Z" fill="currentColor"></path></svg>',
             'ui-elements' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.665 3.75618C11.8762 3.65061 12.1247 3.65061 12.3358 3.75618L18.7807 6.97853L12.3358 10.2009C12.1247 10.3064 11.8762 10.3064 11.665 10.2009L5.22014 6.97853L11.665 3.75618ZM4.29297 8.19199V16.0946C4.29297 16.3787 4.45347 16.6384 4.70757 16.7654L11.25 20.0365V11.6512C11.1631 11.6205 11.0777 11.5843 10.9942 11.5425L4.29297 8.19199ZM12.75 20.037L19.2933 16.7654C19.5474 16.6384 19.7079 16.3787 19.7079 16.0946V8.19199L13.0066 11.5425C12.9229 11.5844 12.8372 11.6207 12.75 11.6515V20.037ZM13.0066 2.41453C12.3732 2.09783 11.6277 2.09783 10.9942 2.41453L4.03676 5.89316C3.27449 6.27429 2.79297 7.05339 2.79297 7.90563V16.0946C2.79297 16.9468 3.27448 17.7259 4.03676 18.1071L10.9942 21.5857L11.3296 20.9149L10.9942 21.5857C11.6277 21.9024 12.3732 21.9024 13.0066 21.5857L19.9641 18.1071C20.7264 17.7259 21.2079 16.9468 21.2079 16.0946V7.90563C21.2079 7.05339 20.7264 6.27429 19.9641 5.89316L13.0066 2.41453Z" fill="currentColor"></path></svg>',
-            'docs' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
-            'user-profile' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 3.5C7.30558 3.5 3.5 7.30558 3.5 12C3.5 14.1526 4.3002 16.1184 5.61936 17.616C6.17279 15.3096 8.24852 13.5955 10.7246 13.5955H13.2746C15.7509 13.5955 17.8268 15.31 18.38 17.6167C19.6996 16.119 20.5 14.153 20.5 12C20.5 7.30558 16.6944 3.5 12 3.5ZM17.0246 18.8566V18.8455C17.0246 16.7744 15.3457 15.0955 13.2746 15.0955H10.7246C8.65354 15.0955 6.97461 16.7744 6.97461 18.8455V18.856C8.38223 19.8895 10.1198 20.5 12 20.5C13.8798 20.5 15.6171 19.8898 17.0246 18.8566ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM11.9991 7.25C10.8847 7.25 9.98126 8.15342 9.98126 9.26784C9.98126 10.3823 10.8847 11.2857 11.9991 11.2857C13.1135 11.2857 14.0169 10.3823 14.0169 9.26784C14.0169 8.15342 13.1135 7.25 11.9991 7.25ZM8.48126 9.26784C8.48126 7.32499 10.0563 5.75 11.9991 5.75C13.9419 5.75 15.5169 7.32499 15.5169 9.26784C15.5169 11.2107 13.9419 12.7857 11.9991 12.7857C10.0563 12.7857 8.48126 11.2107 8.48126 9.26784Z" fill="currentColor"></path></svg>',
+            'monitoring' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.25" y="12" width="4.5" height="7.75" rx="1.5" fill="currentColor"></rect><rect x="9.75" y="7" width="4.5" height="12.75" rx="1.5" fill="currentColor"></rect><rect x="16.25" y="3.25" width="4.5" height="16.5" rx="1.5" fill="currentColor"></rect></svg>',
+            'docs' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.5 2.25C6.25736 2.25 5.25 3.25736 5.25 4.5V19.5C5.25 20.7426 6.25736 21.75 7.5 21.75H16.5C17.7426 21.75 18.75 20.7426 18.75 19.5V9.31C18.75 8.71327 18.5129 8.14097 18.091 7.71901L13.281 2.90901C12.859 2.48705 12.2867 2.25 11.69 2.25H7.5ZM11.25 7.5C11.25 7.08579 11.5858 6.75 12 6.75H15C15.4142 6.75 15.75 7.08579 15.75 7.5C15.75 7.91421 15.4142 8.25 15 8.25H12C11.5858 8.25 11.25 7.91421 11.25 7.5ZM11.25 11.25C11.25 10.8358 11.5858 10.5 12 10.5H15C15.4142 10.5 15.75 10.8358 15.75 11.25C15.75 11.6642 15.4142 12 15 12H12C11.5858 12 11.25 11.6642 11.25 11.25ZM8.25 15C8.25 14.5858 8.58579 14.25 9 14.25H15C15.4142 14.25 15.75 14.5858 15.75 15C15.75 15.4142 15.4142 15.75 15 15.75H9C8.58579 15.75 8.25 15.4142 8.25 15Z" fill="currentColor"></path></svg>',
             'user-profile' => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 3.5C7.30558 3.5 3.5 7.30558 3.5 12C3.5 14.1526 4.3002 16.1184 5.61936 17.616C6.17279 15.3096 8.24852 13.5955 10.7246 13.5955H13.2746C15.7509 13.5955 17.8268 15.31 18.38 17.6167C19.6996 16.119 20.5 14.153 20.5 12C20.5 7.30558 16.6944 3.5 12 3.5ZM17.0246 18.8566V18.8455C17.0246 16.7744 15.3457 15.0955 13.2746 15.0955H10.7246C8.65354 15.0955 6.97461 16.7744 6.97461 18.8455V18.856C8.38223 19.8895 10.1198 20.5 12 20.5C13.8798 20.5 15.6171 19.8898 17.0246 18.8566ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM11.9991 7.25C10.8847 7.25 9.98126 8.15342 9.98126 9.26784C9.98126 10.3823 10.8847 11.2857 11.9991 11.2857C13.1135 11.2857 14.0169 10.3823 14.0169 9.26784C14.0169 8.15342 13.1135 7.25 11.9991 7.25ZM8.48126 9.26784C8.48126 7.32499 10.0563 5.75 11.9991 5.75C13.9419 5.75 15.5169 7.32499 15.5169 9.26784C15.5169 11.2107 13.9419 12.7857 11.9991 12.7857C10.0563 12.7857 8.48126 11.2107 8.48126 9.26784Z" fill="currentColor"></path></svg>',
         ];
 

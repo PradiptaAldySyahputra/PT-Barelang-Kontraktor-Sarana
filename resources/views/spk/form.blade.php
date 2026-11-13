@@ -17,13 +17,14 @@
     $nilaiAwal = old('nilai_spk', $modeUbah ? Format::untukInputUang($spk->nilai_spk) : '');
     $dokumenLama = $modeUbah ? ($spk->dokumen ?? []) : [];
 
-    $kelasInput = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800';
-    $kelasLabel = 'block text-theme-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2';
+    $kelasInput = 'h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-500';
+    $kelasLabel = 'mb-1.5 block text-theme-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300';
+    $kelasError = 'mt-1.5 block text-xs text-error-500 dark:text-error-400';
     $kelasKartu = 'rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] shadow-theme-xs md:p-6';
 @endphp
 
 <x-layouts.app :judul="$judul" :keterangan="$keterangan" :kembali="$kembali ?? route('panel.spk.index')">
-    <form method="POST" action="{{ $aksi }}" enctype="multipart/form-data" class="space-y-5">
+    <form method="POST" action="{{ $aksi }}" enctype="multipart/form-data" class="space-y-6">
         @csrf
         @if ($modeUbah)
             @method('PUT')
@@ -35,7 +36,7 @@
             </div>
         @endif
 
-        <div class="grid gap-5 xl:grid-cols-2">
+        <div class="grid gap-6 xl:grid-cols-2">
 
             {{-- Data SPK --}}
             <section class="{{ $kelasKartu }}">
@@ -46,12 +47,12 @@
 
                 <div class="mt-4 space-y-4">
                     <div>
-                        <label for="nomor_spk" class="{{ $kelasLabel }}">Nomor SPK <span class="text-error-600">*</span></label>
+                        <label for="nomor_spk" class="{{ $kelasLabel }}">Nomor SPK <span class="text-error-600 dark:text-error-400">*</span></label>
                         <input id="nomor_spk" name="nomor_spk" type="text" required maxlength="150"
                             value="{{ old('nomor_spk', $spk?->nomor_spk) }}" placeholder="mis. 0123/SPK/DAN.01.03/2026"
-                            class="mt-1.5 {{ $kelasInput }}">
+                            class="{{ $kelasInput }}">
                         @error('nomor_spk')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                            <p class="{{ $kelasError }}">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -60,20 +61,20 @@
                             <label for="tanggal_spk" class="{{ $kelasLabel }}">Tanggal SPK</label>
                             <input id="tanggal_spk" name="tanggal_spk" type="date"
                                 value="{{ old('tanggal_spk', $spk?->tanggal_spk?->format('Y-m-d')) }}"
-                                class="mt-1.5 {{ $kelasInput }}">
+                                class="{{ $kelasInput }}">
                             <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Kosongkan jika TANPA SPK.</p>
                             @error('tanggal_spk')
-                                <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                                <p class="{{ $kelasError }}">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
                             <label for="tanggal_akhir" class="{{ $kelasLabel }}">Tanggal Akhir SPK</label>
                             <input id="tanggal_akhir" name="tanggal_akhir" type="date"
                                 value="{{ old('tanggal_akhir', $spk?->tanggal_akhir?->format('Y-m-d')) }}"
-                                class="mt-1.5 {{ $kelasInput }}">
+                                class="{{ $kelasInput }}">
                             <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Batas akhir pekerjaan.</p>
                             @error('tanggal_akhir')
-                                <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                                <p class="{{ $kelasError }}">{{ $message }}</p>
                             @enderror
                         </div>
                     </div>
@@ -86,12 +87,12 @@
 
                 <div class="mt-4 space-y-4">
                     <div>
-                        <label for="nama_pekerjaan" class="{{ $kelasLabel }}">Nama Pekerjaan <span class="text-error-600">*</span></label>
+                        <label for="nama_pekerjaan" class="{{ $kelasLabel }}">Nama Pekerjaan <span class="text-error-600 dark:text-error-400">*</span></label>
                         <input id="nama_pekerjaan" name="nama_pekerjaan" type="text" required maxlength="255"
                             value="{{ old('nama_pekerjaan', $spk?->nama_pekerjaan) }}"
-                            class="mt-1.5 {{ $kelasInput }}">
+                            class="{{ $kelasInput }}">
                         @error('nama_pekerjaan')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                            <p class="{{ $kelasError }}">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -99,15 +100,15 @@
                         <div>
                             <label for="lokasi" class="{{ $kelasLabel }}">Lokasi</label>
                             <input id="lokasi" name="lokasi" type="text" maxlength="255"
-                                value="{{ old('lokasi', $spk?->lokasi) }}" class="mt-1.5 {{ $kelasInput }}">
+                                value="{{ old('lokasi', $spk?->lokasi) }}" class="{{ $kelasInput }}">
                             @error('lokasi')
-                                <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                                <p class="{{ $kelasError }}">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
                             <label for="mitra_id" class="{{ $kelasLabel }}">Pemberi Kerja / Mitra</label>
-                            <select id="mitra_id" name="mitra_id" class="mt-1.5 {{ $kelasInput }}">
-                                <option value="">— Tanpa mitra —</option>
+                            <select id="mitra_id" name="mitra_id" class="{{ $kelasInput }}">
+                                <option value="">(Tanpa mitra)</option>
                                 @foreach ($daftarMitra as $id => $nama)
                                     <option value="{{ $id }}" @selected((string) old('mitra_id', $spk?->mitra_id) === (string) $id)>
                                         {{ $nama }}
@@ -115,7 +116,7 @@
                                 @endforeach
                             </select>
                             @error('mitra_id')
-                                <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                                <p class="{{ $kelasError }}">{{ $message }}</p>
                             @enderror
                         </div>
                     </div>
@@ -130,14 +131,14 @@
                 </p>
 
                 <div class="mt-4">
-                    <label for="nilai_spk" class="{{ $kelasLabel }}">Nilai SPK (Rp) <span class="text-error-600">*</span></label>
+                    <label for="nilai_spk" class="{{ $kelasLabel }}">Nilai SPK (Rp) <span class="text-error-600 dark:text-error-400">*</span></label>
                     <div class="mt-1.5 flex items-center gap-2">
                         <span class="text-theme-sm font-medium text-gray-500 dark:text-gray-400">Rp</span>
                         <input id="nilai_spk" name="nilai_spk" type="text" inputmode="numeric" required
                             value="{{ $nilaiAwal }}" placeholder="0" class="{{ $kelasInput }} angka">
                     </div>
                     @error('nilai_spk')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                        <p class="{{ $kelasError }}">{{ $message }}</p>
                     @enderror
                 </div>
             </section>
@@ -149,8 +150,8 @@
                 <div class="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
                         <label for="jenis_sumber" class="{{ $kelasLabel }}">Jenis Sumber</label>
-                        <select id="jenis_sumber" name="jenis_sumber" class="mt-1.5 {{ $kelasInput }}">
-                            <option value="">—</option>
+                        <select id="jenis_sumber" name="jenis_sumber" class="{{ $kelasInput }}">
+                            <option value="">-</option>
                             @foreach (['pln' => 'PLN', 'luar' => 'Luar', 'internal' => 'Internal', 'lainnya' => 'Lainnya'] as $nilai => $label)
                                 <option value="{{ $nilai }}" @selected(old('jenis_sumber', $spk?->jenis_sumber) === $nilai)>
                                     {{ $label }}
@@ -158,15 +159,15 @@
                             @endforeach
                         </select>
                         @error('jenis_sumber')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                            <p class="{{ $kelasError }}">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
                         <label for="sheet_lama" class="{{ $kelasLabel }}">Sheet Lama (referensi Excel)</label>
                         <input id="sheet_lama" name="sheet_lama" type="text" maxlength="100"
-                            value="{{ old('sheet_lama', $spk?->sheet_lama) }}" class="mt-1.5 {{ $kelasInput }}">
+                            value="{{ old('sheet_lama', $spk?->sheet_lama) }}" class="{{ $kelasInput }}">
                         @error('sheet_lama')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                            <p class="{{ $kelasError }}">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
@@ -183,7 +184,7 @@
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
                             <label for="status_antar" class="{{ $kelasLabel }}">Status Pengantaran</label>
-                            <select id="status_antar" name="status_antar" required class="mt-1.5 {{ $kelasInput }}">
+                            <select id="status_antar" name="status_antar" required class="{{ $kelasInput }}">
                                 @foreach ($opsiStatusAntar as $nilai => $label)
                                     <option value="{{ $nilai }}"
                                         @selected(old('status_antar', $spk?->status_antar?->value ?? 'belum') === $nilai)>
@@ -192,7 +193,7 @@
                                 @endforeach
                             </select>
                             @error('status_antar')
-                                <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                                <p class="{{ $kelasError }}">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
@@ -200,9 +201,9 @@
                             <input id="tanggal_antar" name="tanggal_antar" type="date"
                                 max="{{ now()->format('Y-m-d') }}"
                                 value="{{ old('tanggal_antar', $spk?->tanggal_antar?->format('Y-m-d')) }}"
-                                class="mt-1.5 {{ $kelasInput }}">
+                                class="{{ $kelasInput }}">
                             @error('tanggal_antar')
-                                <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                                <p class="{{ $kelasError }}">{{ $message }}</p>
                             @enderror
                         </div>
                     </div>
@@ -212,9 +213,9 @@
                         <input id="keterangan" name="keterangan" type="text" maxlength="255"
                             value="{{ old('keterangan', $spk?->keterangan) }}"
                             placeholder="mis. diantar ke imperium / sudah masuk rek BKS"
-                            class="mt-1.5 {{ $kelasInput }}">
+                            class="{{ $kelasInput }}">
                         @error('keterangan')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                            <p class="{{ $kelasError }}">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
@@ -241,14 +242,14 @@
                             @endforeach
                         </div>
                         @error('dikerjakan_oleh')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                            <p class="{{ $kelasError }}">{{ $message }}</p>
                         @enderror
                     </fieldset>
 
                     <div>
                         <label for="subkon_id" class="{{ $kelasLabel }}">Mitra Subkon</label>
-                        <select id="subkon_id" name="subkon_id" class="mt-1.5 {{ $kelasInput }}">
-                            <option value="">— Pilih subkon —</option>
+                        <select id="subkon_id" name="subkon_id" class="{{ $kelasInput }}">
+                            <option value="">(Pilih subkon)</option>
                             @foreach ($daftarSubkon as $id => $nama)
                                 <option value="{{ $id }}" @selected((string) old('subkon_id', $spk?->subkon_id) === (string) $id)>
                                     {{ $nama }}
@@ -259,7 +260,7 @@
                             Belum ada subkon? Tambahkan dulu di menu Mitra dengan kategori "Subkon".
                         </p>
                         @error('subkon_id')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                            <p class="{{ $kelasError }}">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
@@ -271,7 +272,7 @@
             <section class="{{ $kelasKartu }}">
                 <h2 class="text-theme-sm font-semibold text-gray-900 dark:text-white">Status (hanya tampil)</h2>
                 <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">
-                    Status diubah lewat menu Status SPK & Tagihan SPK — bukan dari sini.
+                    Status diubah lewat menu Status SPK & Tagihan SPK (bukan dari sini).
                 </p>
                 <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
@@ -307,7 +308,7 @@
                             </a>
                             <label class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-theme-xs text-gray-600 dark:text-gray-400">
                                 <input type="checkbox" name="hapus_dokumen[]" value="{{ $path }}"
-                                    class="h-3.5 w-3.5 rounded border-gray-300 text-error-600 focus:ring-error-500 dark:border-gray-700">
+                                    class="h-3.5 w-3.5 rounded border-gray-300 text-error-600 dark:text-error-400 focus:ring-error-500 dark:border-gray-700">
                                 Hapus
                             </label>
                         </li>
@@ -319,17 +320,26 @@
                 <label for="dokumen" class="{{ $kelasLabel }}">Tambah Berkas</label>
                 <input id="dokumen" name="dokumen[]" type="file" multiple
                     accept="application/pdf,image/jpeg,image/png,image/webp"
-                    class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-theme-xs file:font-medium dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:file:bg-white/10">
+                    class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:file:bg-white/10">
                 @error('dokumen.*')
-                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-500">{{ $message }}</p>
+                    <p class="{{ $kelasError }}">{{ $message }}</p>
                 @enderror
             </div>
         </section>
 
-        <div class="flex items-center justify-end">
+        <div class="flex items-center justify-end" x-data="{ submitDisabled: false }">
             <button type="submit"
-                class="inline-flex h-9 items-center rounded-lg bg-brand-600 px-4 text-theme-sm font-semibold text-white hover:bg-brand-700">
-                {{ $modeUbah ? 'Simpan Perubahan' : 'Simpan SPK' }}
+                @click="if (submitDisabled) { $event.preventDefault(); return; } submitDisabled = true; $el.closest('form').submit();"
+                :disabled="submitDisabled"
+                :class="{ 'opacity-60 cursor-not-allowed': submitDisabled }"
+                class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 text-sm font-semibold text-white shadow-theme-xs transition-colors hover:bg-brand-700 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20">
+                <svg x-show="submitDisabled" class="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24" style="display: none;">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span x-text="submitDisabled ? 'Menyimpan...' : '{{ $modeUbah ? 'Simpan Perubahan' : 'Simpan SPK' }}'">
+                    {{ $modeUbah ? 'Simpan Perubahan' : 'Simpan SPK' }}
+                </span>
             </button>
         </div>
     </form>

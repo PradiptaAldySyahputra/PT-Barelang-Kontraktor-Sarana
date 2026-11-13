@@ -90,7 +90,23 @@
         .tanda-tangan td {
             text-align: center;
             vertical-align: top;
-            width: 50%;
+            width: 40%;
+        }
+        .box-stempel-kuitansi {
+            margin: 0 auto;
+            text-align: center;
+        }
+        .stempel-badge {
+            display: inline-block;
+            border: 2px solid #0F4C81;
+            border-radius: 4px;
+            padding: 2px 6px;
+            color: #0F4C81;
+            font-size: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
         }
         .garis-ttd {
             margin-top: 65px;
@@ -192,14 +208,19 @@
         <tr>
             <td>
                 <div>Mengetahui,</div>
-                <div style="font-size: 10px; color: #4b5563;">Direktur Utama</div>
-                @if ($tandaTangan['gambar'] ?? null)
-                    <img src="{{ $tandaTangan['gambar'] }}" alt="Tanda tangan" style="height: 55px; margin: 4px 0;">
-                    <div style="font-weight: bold; text-decoration: underline;">{{ $tandaTangan['nama'] }}</div>
-                @else
-                    <div class="garis-ttd">{{ $tandaTangan['nama'] ?? '( ........................................ )' }}</div>
-                @endif
-                <div style="font-size: 9px; color: #6b7280;">PT Barelang Kontraktor Sarana</div>
+                <div style="font-size: 10px; color: #4b5563; margin-bottom: 2px;">Direktur Utama</div>
+                <div class="box-stempel-kuitansi">
+                    <div class="stempel-badge">✓ LUNAS & DIVERIFIKASI</div>
+                    @if ($tandaTangan['gambar'] ?? null)
+                        <div style="margin: 3px 0;">
+                            <img src="{{ $tandaTangan['gambar'] }}" alt="Tanda tangan" style="height: 52px; object-fit: contain;">
+                        </div>
+                        <div style="font-weight: bold; text-decoration: underline;">{{ $tandaTangan['nama'] }}</div>
+                    @else
+                        <div class="garis-ttd" style="margin-top: 45px;">{{ $tandaTangan['nama'] ?? '( ........................................ )' }}</div>
+                    @endif
+                </div>
+                <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">PT Barelang Kontraktor Sarana</div>
             </td>
             <td>
                 <div>Batam, {{ $uangMasuk->tanggal?->translatedFormat('d F Y') ?? now()->translatedFormat('d F Y') }}</div>

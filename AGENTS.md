@@ -64,7 +64,8 @@
 
 ```
 Dashboard              /panel
-SPK         : List SPK → Kalender Tenggat → Status SPK → Tagihan SPK → Tagihan Selesai SPK
+SPK         : List SPK → Kalender Tenggat
+Monitoring  : Status SPK → Tagihan SPK → Tagihan Selesai SPK
 Keuangan    : Uang Masuk → Uang Keluar
 Nota & Bukti: Unggah & Ekstraksi Nota → Arsip Nota
 Laporan     : /panel/reports
@@ -110,3 +111,15 @@ Belum/menunggu keputusan:
 - Validasi di dalam `when($wajib)` di repeater uang keluar → taruh di luar
 - Tes lulus ≠ suite hijau → jalankan `php artisan test` penuh
 - Menulis kredensial/nilai keuangan ke dokumen → cek sebelum commit
+
+## 9. Disiplin Hemat Token (wajib)
+
+Anggaran token dibayar perusahaan. Aturan ini berlaku di setiap sesi.
+
+1. **Subagent hanya bila perlu.** Fan-out (`delegate_task`/DAG) hanya kalau ada ≥3 area kerja yang berkasnya tidak saling tumpang tindih. Satu-dua area → kerjakan langsung di sesi ini. Fan-out menggandakan biaya, bukan menghematnya.
+2. **Tes: sempit dulu, penuh sekali.** Selama bekerja pakai `php artisan test --filter='...'`; `php artisan test` penuh hanya sekali di akhir. Jangan ulang suite penuh hanya karena perubahan kelas CSS/teks.
+3. **Browser sekali.** Satu sweep rute (375px + desktop) setelah perubahan selesai. `vision_analyze` hanya bila ada keraguan visual nyata — ukur DOM (`scrollWidth`, tinggi kartu, jumlah elemen) lebih murah dan lebih tepat daripada melihat gambar.
+4. **Output besar lewat `rtk`.** Untuk `grep`, `log`, `tree`, `ls`, `find`, dan diff besar: `rtk grep POLA PATH`, `rtk log <berkas>`, `rtk tree <dir>`. Terukur di repo ini `rtk grep` memangkas ±50% output. Catatan: `rtk test` dan `rtk read` tidak memberi manfaat karena output phpunit sudah dipadatkan Hermes.
+5. **Baca hemat.** `search_files` + `read_file` dengan `offset`/`limit`; jangan membaca berkas penuh atau `cat` lebar.
+6. **Satu tugas satu sesi.** Setelah tugas selesai, mulai sesi baru (`/new`). Riwayat panjang menggandakan biaya setiap giliran.
+7. **Mode hemat.** Bila pengguna menulis "hemat" / "hemat token", berlaku semua di atas ditambah: tanpa subagent, tanpa vision, verifikasi minimum satu kali.

@@ -51,6 +51,9 @@ final class SpkTable extends Component
     #[Url(except: '')]
     public string $tagihan = '';
 
+    #[Url(as: 'tanggal', except: '')]
+    public string $tanggal = '';
+
     #[Url(except: 'tanggal_spk')]
     public string $urut = 'tanggal_spk';
 
@@ -92,7 +95,7 @@ final class SpkTable extends Component
      */
     public function bersihkan(): void
     {
-        $this->reset('cari', 'status', 'tagihan');
+        $this->reset('cari', 'status', 'tagihan', 'tanggal');
         $this->resetPage();
     }
 
@@ -104,15 +107,15 @@ final class SpkTable extends Component
             'daftar' => (clone $kueri)
                 ->orderBy($this->urut, $this->arah)
                 ->paginate(self::PER_HALAMAN),
-            // Ringkasan mengikuti penyaring yang sedang aktif - angka di
-            // atas tabel harus sama dengan isi tabel di bawahnya.
+            // Jumlah mengikuti penyaring yang sedang aktif - angka di atas
+            // tabel harus sama dengan isi tabel di bawahnya.
             'ringkas' => [
                 'jumlah' => (clone $kueri)->count(),
-                'nilai' => (float) (clone $kueri)->sum('nilai_spk'),
             ],
-            'opsiStatus' => StatusSpk::opsi(),
-            'opsiTagihan' => StatusTagihan::opsi(),
-            'adaPenyaring' => trim($this->cari) !== '' || $this->status !== '' || $this->tagihan !== '',
+            'opsiStatus' => StatusSpk::opsiProgres(),
+            'opsiTagihan' => StatusTagihan::opsiPenagihan(),
+            'adaPenyaring' => trim($this->cari) !== '' || $this->status !== '' || $this->tagihan !== ''
+                || $this->tanggal !== '',
             'bolehUbah' => (bool) auth()->user()?->bolehInput(),
         ]);
     }
@@ -124,6 +127,7 @@ final class SpkTable extends Component
     {
         return Spk::query()
             ->with(['mitra:id,nama', 'subkon:id,nama'])
+            ->withCount('uangMasuk')
             ->when(trim($this->cari) !== '', function (Builder $q): void {
                 $kata = '%'.trim($this->cari).'%';
 
@@ -134,6 +138,7 @@ final class SpkTable extends Component
                         ->orWhereHas('mitra', fn (Builder $m) => $m->where('nama', 'like', $kata));
                 });
             })
+            ->when($this->tanggal !== '', fn (Builder $q) => $q->whereDate('tanggal_spk', $this->tanggal))
             ->when($this->status !== '', fn (Builder $q) => $q->where('status_spk', $this->status))
             ->when($this->tagihan !== '', fn (Builder $q) => $q->where('status_tagihan', $this->tagihan));
     }

@@ -195,9 +195,15 @@ final class CashOutForm extends Component
         }
     }
 
+    public bool $sedangMenyimpan = false;
+
     public function simpan(): void
     {
         abort_unless((bool) auth()->user()?->bolehInput(), 403);
+
+        if ($this->sedangMenyimpan) {
+            return;
+        }
 
         // Baris yang sama sekali belum diisi dibuang, bukan divalidasi -
         // sama seperti Filament: admin boleh menambah baris lalu menyimpan
@@ -212,6 +218,8 @@ final class CashOutForm extends Component
 
             return;
         }
+
+        $this->sedangMenyimpan = true;
 
         $aturan = [
             'baris.*.tanggal' => ['required', 'date', 'before_or_equal:today'],
@@ -230,17 +238,28 @@ final class CashOutForm extends Component
             $this->baris[$kunci]['jumlah'] = Format::bersihkanUang($r['jumlah'] ?? '');
         }
 
-        $this->validate($aturan, [], [
-            'baris.*.tanggal' => 'tanggal',
-            'baris.*.jumlah' => 'jumlah',
-            'baris.*.kategori' => 'kategori',
-        ]);
+        try {
+            $this->validate($aturan, [], [
+                'baris.*.tanggal' => 'tanggal',
+                'baris.*.jumlah' => 'jumlah',
+                'baris.*.kategori' => 'kategori',
+            ]);
+        } catch (Throwable $e) {
+            $this->sedangMenyimpan = false;
+            throw $e;
+        }
 
-        $this->pastikanSpkBolehTransaksi('baris');
+        try {
+            $this->pastikanSpkBolehTransaksi('baris');
+        } catch (Throwable $e) {
+            $this->sedangMenyimpan = false;
+            throw $e;
+        }
 
         foreach ($this->baris as $kunci => $r) {
             if (($r['kategori'] ?? null) === KategoriPengeluaran::Lainnya->value && blank($r['detail_kategori'] ?? null)) {
                 $this->addError("baris.$kunci.detail_kategori", 'Rincian wajib diisi bila kategori "Lainnya".');
+                $this->sedangMenyimpan = false;
 
                 return;
             }
@@ -285,6 +304,7 @@ final class CashOutForm extends Component
         });
 
         $this->unggahan = [];
+        $this->baris = [];
 
         session()->flash(
             'berhasil',
@@ -308,9 +328,12 @@ final class CashOutForm extends Component
 
         if ($ditolak !== null) {
             $kunci = collect($this->baris)->search(fn (array $r): bool => (int) ($r['spk_id'] ?? 0) === $ditolak->id);
-            $this->addError("$prefix.$kunci.spk_id", 'SPK '.$ditolak->nomor_spk.' berstatus Dibatalkan dan tidak bisa menerima transaksi baru.');
+            $pesan = 'SPK '.$ditolak->nomor_spk.' berstatus Dibatalkan dan tidak bisa menerima transaksi baru.';
+            $this->addError("$prefix.$kunci.spk_id", $pesan);
 
-            throw new ValidationException($this->getErrorBag());
+            throw ValidationException::withMessages([
+                "$prefix.$kunci.spk_id" => $pesan,
+            ]);
         }
     }
 
@@ -339,14 +362,16 @@ final class CashOutForm extends Component
 
         $peringatanSaldoKas = $totalPengeluaranKas > $saldoKasSaatIni;
 
+        $spkList = Spk::query()
+            ->withSum('uangKeluar as total_pengeluaran', 'jumlah')
+            ->orderByDesc('tanggal_spk')
+            ->get(['id', 'nomor_spk', 'nama_pekerjaan', 'nilai_spk']);
+
         return view('livewire.cash-out.cash-out-form', [
             'opsiAkun' => AkunKas::opsi(),
             'opsiKategori' => KategoriPengeluaran::opsi(),
-            'daftarSpk' => Spk::query()
-                ->orderByDesc('tanggal_spk')
-                ->get(['id', 'nomor_spk', 'nama_pekerjaan'])
-                ->mapWithKeys(fn (Spk $s): array => [$s->id => $s->nomor_spk.' - '.$s->nama_pekerjaan])
-                ->all(),
+            'daftarSpk' => $spkList->mapWithKeys(fn (Spk $s): array => [$s->id => $s->nomor_spk.' - '.$s->nama_pekerjaan])->all(),
+            'daftarSpkModel' => $spkList->keyBy('id'),
             'maksBaris' => self::MAKS_BARIS,
             'saldoKasSaatIni' => $saldoKasSaatIni,
             'totalPengeluaranKas' => $totalPengeluaranKas,

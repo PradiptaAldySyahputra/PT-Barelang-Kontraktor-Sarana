@@ -79,10 +79,15 @@ final class CashInController
         $asal = $request->string('asal')->toString();
         $kembali = $this->tujuanKembali($asal);
 
+        // View memakai $spkTerpilih untuk mode awal; pada halaman Ubah nilainya
+        // berasal dari SPK yang sudah tersimpan di transaksi ini.
+        $spkTerpilih = $uangMasuk->spk_id !== null ? Spk::find($uangMasuk->spk_id) : null;
+
         return view('cash-in.form', [
             'judul' => 'Ubah Uang Masuk',
             'keterangan' => 'Perbarui data transaksi uang masuk',
             'uangMasuk' => $uangMasuk,
+            'spkTerpilih' => $spkTerpilih,
             'kembali' => $kembali,
             ...$this->dataForm($uangMasuk->spk_id),
         ]);
@@ -120,7 +125,37 @@ final class CashInController
     {
         $this->pastikanBolehInput();
 
-        UangMasuk::withTrashed()->findOrFail($id)->restore();
+        $uangMasuk = UangMasuk::withTrashed()->findOrFail($id);
+
+        if ($uangMasuk->spk_id !== null) {
+            $spk = Spk::withTrashed()->find($uangMasuk->spk_id);
+
+            if ($spk === null || $spk->trashed()) {
+                return redirect()
+                    ->route('panel.cash-in.index', ['terhapus' => 'saja'])
+                    ->with('gagal', 'Tidak dapat memulihkan uang masuk karena SPK terkait sudah dihapus.');
+            }
+
+            if ($spk->status_spk !== null && ! $spk->status_spk->bolehTransaksiBaru()) {
+                return redirect()
+                    ->route('panel.cash-in.index', ['terhapus' => 'saja'])
+                    ->with('gagal', 'Tidak dapat memulihkan uang masuk karena SPK '.$spk->nomor_spk.' berstatus Dibatalkan.');
+            }
+
+            $batas = $spk->piutang();
+            if ((float) $uangMasuk->jumlah > $batas + 0.01) {
+                return redirect()
+                    ->route('panel.cash-in.index', ['terhapus' => 'saja'])
+                    ->with('gagal', sprintf(
+                        'Tidak dapat memulihkan uang masuk: nominal (%s) melebihi sisa piutang SPK %s (%s).',
+                        Format::rupiah((float) $uangMasuk->jumlah),
+                        $spk->nomor_spk,
+                        Format::rupiah(max(0, $batas)),
+                    ));
+            }
+        }
+
+        $uangMasuk->restore();
 
         return redirect()
             ->route('panel.cash-in.index', ['terhapus' => 'saja'])

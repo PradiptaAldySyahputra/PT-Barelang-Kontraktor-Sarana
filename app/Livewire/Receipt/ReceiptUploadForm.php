@@ -9,12 +9,14 @@ use App\Enums\KategoriPengeluaran;
 use App\Jobs\EkstrakNotaOcr;
 use App\Models\Spk;
 use App\Models\UangKeluar;
+use App\Models\UangMasuk;
 use App\Services\PenyimpanBerkas;
 use App\Support\Format;
 use App\Support\Nota;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -44,6 +46,9 @@ final class ReceiptUploadForm extends Component
 
     /** Kunci cache tempat job OCR menitipkan hasilnya (lihat EkstrakNotaOcr). */
     public ?string $kunciOcr = null;
+
+    /** Jenis transaksi untuk nota yang diunggah: 'keluar' (Pengeluaran Kas) atau 'masuk' (Uang Masuk). */
+    public string $jenisTransaksi = 'keluar';
 
     /**
      * Daftar hasil pemotongan dan pembacaan nota.
@@ -100,7 +105,8 @@ final class ReceiptUploadForm extends Component
         // 1. Validasi & Kompres Berkas Langsung via PenyimpanBerkas
         // PenyimpanBerkas otomatis mengompres gambar/scan (kualitas 80, max 2400px)
         // sehingga proses OCR ringan, cepat, dan latensi upload minimal.
-        $pathRelatif = app(PenyimpanBerkas::class)->simpanKe($this->berkasNota, 'uang_keluar', 'nota');
+        $folderTujuan = $this->jenisTransaksi === 'masuk' ? 'uang_masuk' : 'uang_keluar';
+        $pathRelatif = app(PenyimpanBerkas::class)->simpanKe($this->berkasNota, $folderTujuan, 'nota');
         $this->berkasTersimpanPath = $pathRelatif;
 
         if ($sebelumnya && $sebelumnya !== $pathRelatif) {
@@ -233,9 +239,15 @@ final class ReceiptUploadForm extends Component
         $this->tambahBarisSatu($ke, null, null, null, null, 'Nota '.$ke);
     }
 
+    public bool $sedangMenyimpan = false;
+
     public function simpanSemua(): void
     {
         abort_unless((bool) auth()->user()?->bolehInput(), 403);
+
+        if ($this->sedangMenyimpan) {
+            return;
+        }
 
         if (empty($this->daftarNota)) {
             $this->addError('berkasNota', 'Unggah berkas nota terlebih dahulu.');
@@ -243,31 +255,41 @@ final class ReceiptUploadForm extends Component
             return;
         }
 
+        $this->sedangMenyimpan = true;
+
         // Angka bertitik ("1.500.000") dinormalisasi dulu supaya lolos `numeric`.
         foreach ($this->daftarNota as $i => $n) {
             $this->daftarNota[$i]['nominal'] = Format::bersihkanUang($n['nominal'] ?? '');
         }
 
-        $this->validate([
-            'daftarNota.*.tanggal' => ['required', 'date', 'before_or_equal:today'],
-            'daftarNota.*.nominal' => ['required', 'numeric', 'min:0.01', 'max:10000000000'],
-            'daftarNota.*.akun' => ['required', Rule::in(array_keys(AkunKas::opsi()))],
-            'daftarNota.*.kategori' => ['required', Rule::in(array_keys(KategoriPengeluaran::opsi()))],
-            'daftarNota.*.penerima' => ['nullable', 'string', 'max:200'],
-            'daftarNota.*.keterangan' => ['nullable', 'string', 'max:255'],
-            'daftarNota.*.spk_id' => ['nullable', 'integer', 'exists:spk,id'],
-        ], [
-            'daftarNota.*.tanggal.required' => 'Tanggal nota wajib diisi.',
-            'daftarNota.*.tanggal.before_or_equal' => 'Tanggal tidak boleh di masa depan.',
-            'daftarNota.*.nominal.required' => 'Nominal nota wajib diisi.',
-            'daftarNota.*.nominal.min' => 'Nominal minimal Rp 0,01.',
-        ]);
+        try {
+            $this->validate([
+                'daftarNota.*.tanggal' => ['required', 'date', 'before_or_equal:today'],
+                'daftarNota.*.nominal' => ['required', 'numeric', 'min:0.01', 'max:10000000000'],
+                'daftarNota.*.akun' => ['required', Rule::in(array_keys(AkunKas::opsi()))],
+                'daftarNota.*.kategori' => [Rule::requiredIf($this->jenisTransaksi === 'keluar'), Rule::in(array_keys(KategoriPengeluaran::opsi()))],
+                'daftarNota.*.penerima' => ['nullable', 'string', 'max:200'],
+                'daftarNota.*.keterangan' => ['nullable', 'string', 'max:255'],
+                'daftarNota.*.spk_id' => ['nullable', 'integer', 'exists:spk,id'],
+            ], [
+                'daftarNota.*.tanggal.required' => 'Tanggal nota wajib diisi.',
+                'daftarNota.*.tanggal.before_or_equal' => 'Tanggal tidak boleh di masa depan.',
+                'daftarNota.*.nominal.required' => 'Nominal nota wajib diisi.',
+                'daftarNota.*.nominal.min' => 'Nominal minimal Rp 0,01.',
+            ]);
+        } catch (\Throwable $e) {
+            $this->sedangMenyimpan = false;
+            throw $e;
+        }
 
-        foreach ($this->daftarNota as $idx => $n) {
-            if (($n['kategori'] ?? null) === KategoriPengeluaran::Lainnya->value && blank($n['keterangan'] ?? null)) {
-                $this->addError("daftarNota.$idx.keterangan", 'Keterangan / rincian wajib diisi bila kategori "Lainnya".');
+        if ($this->jenisTransaksi === 'keluar') {
+            foreach ($this->daftarNota as $idx => $n) {
+                if (($n['kategori'] ?? null) === KategoriPengeluaran::Lainnya->value && blank($n['keterangan'] ?? null)) {
+                    $this->addError("daftarNota.$idx.keterangan", 'Keterangan / rincian wajib diisi bila kategori "Lainnya".');
+                    $this->sedangMenyimpan = false;
 
-                return;
+                    return;
+                }
             }
         }
 
@@ -279,50 +301,106 @@ final class ReceiptUploadForm extends Component
 
         if ($dibatalkan !== null) {
             $this->addError('berkasNota', 'SPK '.$dibatalkan->nomor_spk.' berstatus Dibatalkan dan tidak bisa menerima transaksi baru.');
+            $this->sedangMenyimpan = false;
 
             return;
         }
 
-        $berkasLampiran = $this->berkasTersimpanPath ? [$this->berkasTersimpanPath] : [];
+        // Khusus Uang Masuk terkait SPK: jumlah (termasuk akumulasi beberapa nota untuk SPK yang sama)
+        // tidak boleh melebihi sisa piutang SPK
+        if ($this->jenisTransaksi === 'masuk') {
+            $terimaPerSpk = [];
+            foreach ($this->daftarNota as $idx => $item) {
+                if (! empty($item['spk_id'])) {
+                    $targetSpk = Spk::find($item['spk_id']);
+                    if ($targetSpk) {
+                        $sudah = $terimaPerSpk[$targetSpk->id] ?? $targetSpk->totalPenerimaan();
+                        $batas = (float) $targetSpk->nilai_spk - $sudah;
+                        if ((float) $item['nominal'] > $batas + 0.01) {
+                            $this->addError("daftarNota.$idx.nominal", sprintf(
+                                'Nominal melebihi sisa piutang SPK %s (%s). Maksimal: %s.',
+                                $targetSpk->nomor_spk,
+                                Format::rupiah((float) $targetSpk->nilai_spk),
+                                Format::rupiah(max(0, $batas))
+                            ));
+                            $this->sedangMenyimpan = false;
 
-        // Simpan setiap nota sebagai transaksi pengeluaran kas riil yang tercatat bukti fisiknya
-        foreach ($this->daftarNota as $item) {
-            $lampiran = $berkasLampiran;
-            if (! empty($item['potongan_path'])) {
-                // Sertakan juga berkas crop spesifiknya jika ada
-                $lampiran[] = $item['potongan_path'];
-            }
-
-            // 1. Catat ke tabel uang_keluar dengan tanggal persis dari form nota masing-masing
-            $trx = UangKeluar::create([
-                'tanggal' => $item['tanggal'],
-                'akun' => $item['akun'],
-                'jumlah' => $item['nominal'],
-                'kategori' => $item['kategori'],
-                'detail_kategori' => $item['kategori'] === KategoriPengeluaran::Lainnya->value
-                    ? ($item['keterangan'] ?: 'Lainnya')
-                    : null,
-                'penerima' => $item['penerima'] ?: null,
-                'spk_id' => $item['spk_id'] ?: null,
-                'keterangan' => $item['keterangan'] ?: 'Input dari Ekstraksi Nota OCR',
-                'bukti' => array_values(array_unique($lampiran)),
-            ]);
-
-            // Selaraskan timestamps created_at agar mengikuti tanggal nota yang diinput
-            if (! empty($item['tanggal'])) {
-                try {
-                    $waktuNota = Carbon::parse($item['tanggal'])->setTime(12, 0, 0);
-                    $trx->timestamps = false;
-                    $trx->created_at = $waktuNota;
-                    $trx->updated_at = $waktuNota;
-                    $trx->saveQuietly();
-                } catch (\Throwable) {
-                    // abaikan fallback ke now()
+                            return;
+                        }
+                        $terimaPerSpk[$targetSpk->id] = $sudah + (float) $item['nominal'];
+                    }
                 }
             }
         }
 
-        session()->flash('berhasil', 'Berhasil menyimpan '.count($this->daftarNota).' nota ke dalam arsip & sistem.');
+        $berkasLampiran = $this->berkasTersimpanPath ? [$this->berkasTersimpanPath] : [];
+
+        // Simpan setiap nota sebagai transaksi kas riil (Uang Keluar atau Uang Masuk)
+        // Dibungkus transaksi DB agar aman jika terjadi interupsi
+        DB::transaction(function (): void {
+            foreach ($this->daftarNota as $item) {
+                $lampiran = [];
+                // Hanya sertakan potongan spesifik jika ada; jika tidak ada, lampirkan berkas sumber utama
+                if (! empty($item['potongan_path'])) {
+                    $lampiran[] = $item['potongan_path'];
+                } elseif (! empty($this->berkasTersimpanPath)) {
+                    $lampiran[] = $this->berkasTersimpanPath;
+                }
+
+                $lampiran = array_values(array_unique($lampiran));
+
+                if ($this->jenisTransaksi === 'masuk') {
+                    $spkObj = ! empty($item['spk_id']) ? Spk::find($item['spk_id']) : null;
+                    $trx = UangMasuk::create([
+                        'tanggal' => $item['tanggal'],
+                        'akun' => $item['akun'],
+                        'jumlah' => $item['nominal'],
+                        'spk_id' => $item['spk_id'] ?: null,
+                        'nomor_spk' => $spkObj?->nomor_spk,
+                        'nama_pekerjaan' => $spkObj?->nama_pekerjaan,
+                        'mitra_id' => $spkObj?->mitra_id,
+                        'keterangan' => $item['keterangan'] ?: 'Penerimaan dari Ekstraksi Nota / Bukti',
+                        'bukti' => $lampiran,
+                    ]);
+                } else {
+                    $trx = UangKeluar::create([
+                        'tanggal' => $item['tanggal'],
+                        'akun' => $item['akun'],
+                        'jumlah' => $item['nominal'],
+                        'kategori' => $item['kategori'],
+                        'detail_kategori' => ($item['kategori'] ?? null) === KategoriPengeluaran::Lainnya->value
+                            ? ($item['keterangan'] ?: 'Lainnya')
+                            : null,
+                        'penerima' => $item['penerima'] ?: null,
+                        'spk_id' => $item['spk_id'] ?: null,
+                        'keterangan' => $item['keterangan'] ?: 'Input dari Ekstraksi Nota OCR',
+                        'bukti' => $lampiran,
+                    ]);
+                }
+
+                // Selaraskan timestamps created_at agar mengikuti tanggal nota yang diinput
+                if (! empty($item['tanggal'])) {
+                    try {
+                        $waktuNota = Carbon::parse($item['tanggal'])->setTime(12, 0, 0);
+                        $trx->timestamps = false;
+                        $trx->created_at = $waktuNota;
+                        $trx->updated_at = $waktuNota;
+                        $trx->saveQuietly();
+                    } catch (\Throwable) {
+                        // abaikan fallback ke now()
+                    }
+                }
+            }
+        });
+
+        // Kosongkan state formulir agar tidak tersimpan ulang
+        $countDisimpan = count($this->daftarNota);
+        $this->daftarNota = [];
+        $this->berkasNota = null;
+        $this->berkasTersimpanPath = null;
+
+        $labelJenis = $this->jenisTransaksi === 'masuk' ? 'uang masuk' : 'uang keluar';
+        session()->flash('berhasil', "Berhasil menyimpan {$countDisimpan} nota {$labelJenis} ke dalam arsip & sistem.");
 
         $this->redirectRoute('panel.receipts', navigate: false);
     }

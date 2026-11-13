@@ -47,8 +47,13 @@ final class TandaTangan
     {
         return Pengguna::query()
             ->where('peran', Peran::Direktur)
+            ->where('is_aktif', true)
             ->orderBy('id')
-            ->first();
+            ->first()
+            ?? Pengguna::query()
+                ->where('peran', Peran::Direktur)
+                ->orderBy('id')
+                ->first();
     }
 
     /**

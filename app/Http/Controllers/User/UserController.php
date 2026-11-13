@@ -8,6 +8,8 @@ use App\Enums\Peran;
 use App\Models\Pengguna;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
@@ -124,11 +126,45 @@ final class UserController
 
         $pengguna->update($perubahan);
 
+        // Jika akun dinonaktifkan atau sandinya diganti oleh Direktur, putus sesi aktifnya segera.
+        // Bila Direktur mengubah sandi miliknya sendiri, jangan hapus sesi saat ini agar tidak terlempar keluar.
+        if (! $perubahan['is_aktif'] || isset($perubahan['password'])) {
+            DB::table('sessions')
+                ->where('user_id', $pengguna->id)
+                ->when($diriSendiri, fn ($q) => $q->where('id', '!=', $request->session()->getId()))
+                ->delete();
+        }
+
         return redirect()
             ->route('panel.users.index')
             ->with('berhasil', $diriSendiri
                 ? 'Data akun Anda tersimpan. Peran & status aktif tidak diubah.'
                 : 'Perubahan akun tersimpan.');
+    }
+
+    public function resetPassword(Request $request, Pengguna $pengguna): RedirectResponse
+    {
+        $this->pastikanDirektur();
+
+        if ($pengguna->id === auth()->id()) {
+            return redirect()
+                ->route('panel.users.index')
+                ->with('gagal', 'Tidak bisa mereset password akun sendiri lewat rute ini. Silakan ubah password lewat menu Profil.');
+        }
+
+        $request->validate([
+            'password' => ['required', 'string', Password::default()],
+        ]);
+
+        $pengguna->update([
+            'password' => $request->string('password')->toString(),
+        ]);
+
+        DB::table('sessions')->where('user_id', $pengguna->id)->delete();
+
+        return redirect()
+            ->route('panel.users.index')
+            ->with('berhasil', "Kata sandi untuk pengguna {$pengguna->nama} berhasil direset.");
     }
 
     public function destroy(Request $request, Pengguna $pengguna): RedirectResponse
@@ -147,11 +183,94 @@ final class UserController
                 ->with('gagal', 'Akun ini tercatat sebagai pembuat SPK. Nonaktifkan saja agar riwayat tetap utuh.');
         }
 
+        DB::table('sessions')->where('user_id', $pengguna->id)->delete();
         $pengguna->delete();
 
         return redirect()
             ->route('panel.users.index')
             ->with('berhasil', 'Akun pengguna berhasil dihapus.');
+    }
+
+    /**
+     * Daftar sesi aktif (Fase 2 MASTER-PLAN, S-4).
+     *
+     * Tanpa halaman ini, kata sandi yang bocor hanya bisa ditangani dengan
+     * mengganti kata sandi - tidak ada cara memutus sesi yang sudah berjalan.
+     */
+    public function sesi(Request $request): View
+    {
+        $this->pastikanDirektur();
+
+        $sesiIni = $request->session()->getId();
+
+        $daftar = DB::table('sessions')
+            ->leftJoin('pengguna', 'pengguna.id', '=', 'sessions.user_id')
+            ->orderByDesc('sessions.last_activity')
+            ->get([
+                'sessions.id',
+                'sessions.user_id',
+                'sessions.ip_address',
+                'sessions.user_agent',
+                'sessions.last_activity',
+                'pengguna.nama',
+                'pengguna.email',
+            ])
+            ->map(fn ($row): array => [
+                'id' => (string) $row->id,
+                'nama' => $row->nama ?? 'Tidak dikenal',
+                'email' => $row->email ?? '-',
+                'ip' => $row->ip_address ?? '-',
+                'perangkat' => $this->ringkasPerangkat((string) ($row->user_agent ?? '')),
+                'terakhir' => Carbon::createFromTimestamp((int) $row->last_activity),
+                'sendiri' => (string) $row->id === $sesiIni,
+            ])
+            ->all();
+
+        return view('users.sesi', [
+            'judul' => 'Sesi Aktif',
+            'keterangan' => 'Perangkat yang sedang masuk ke sistem. Direktur dapat memutus sesi yang mencurigakan.',
+            'daftar' => $daftar,
+        ]);
+    }
+
+    public function putusSesi(Request $request, string $sesi): RedirectResponse
+    {
+        $this->pastikanDirektur();
+
+        if ($sesi === $request->session()->getId()) {
+            return back()->with('gagal', 'Sesi yang sedang dipakai tidak bisa diputus dari halaman ini.');
+        }
+
+        $terhapus = DB::table('sessions')->where('id', $sesi)->delete();
+
+        return back()->with(
+            $terhapus > 0 ? 'berhasil' : 'gagal',
+            $terhapus > 0 ? 'Sesi berhasil diputus.' : 'Sesi tidak ditemukan atau sudah berakhir.'
+        );
+    }
+
+    /** Ringkas user-agent menjadi nama perangkat yang mudah dibaca. */
+    private function ringkasPerangkat(string $agent): string
+    {
+        $browser = match (true) {
+            str_contains($agent, 'Edg/') => 'Edge',
+            str_contains($agent, 'OPR/'), str_contains($agent, 'Opera') => 'Opera',
+            str_contains($agent, 'Chrome/') => 'Chrome',
+            str_contains($agent, 'Firefox/') => 'Firefox',
+            str_contains($agent, 'Safari/') => 'Safari',
+            default => 'Perangkat lain',
+        };
+
+        $sistem = match (true) {
+            str_contains($agent, 'Windows') => 'Windows',
+            str_contains($agent, 'Android') => 'Android',
+            str_contains($agent, 'iPhone'), str_contains($agent, 'iPad') => 'iOS',
+            str_contains($agent, 'Mac OS') => 'macOS',
+            str_contains($agent, 'Linux') => 'Linux',
+            default => 'sistem tidak dikenal',
+        };
+
+        return $browser.' di '.$sistem;
     }
 
     private function pastikanDirektur(): void

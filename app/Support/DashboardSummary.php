@@ -105,7 +105,6 @@ final class DashboardSummary
             'sebaranTagihan' => self::sebaranStatusTagihan(),
             'sebaranSpk' => self::sebaranStatusSpk(),
             'spkPrioritas' => self::spkPrioritas(),
-            'notifikasiPenting' => self::notifikasiPenting(),
             'hariIni' => self::mutasiHariIni(),
         ];
     }
@@ -249,10 +248,18 @@ final class DashboardSummary
             'saldo' => $saldo,
 
             'bulanIni' => [
-                'masuk' => (float) UangMasuk::where('tanggal', '>=', now()->startOfMonth())->sum('jumlah'),
-                'keluar' => (float) UangKeluar::where('tanggal', '>=', now()->startOfMonth())->sum('jumlah'),
+                'masuk' => $masukBulanIni = (float) UangMasuk::where('tanggal', '>=', now()->startOfMonth())->sum('jumlah'),
+                'keluar' => $keluarBulanIni = (float) UangKeluar::where('tanggal', '>=', now()->startOfMonth())->sum('jumlah'),
                 'jumlahMasuk' => UangMasuk::where('tanggal', '>=', now()->startOfMonth())->count(),
                 'jumlahKeluar' => UangKeluar::where('tanggal', '>=', now()->startOfMonth())->count(),
+                'bandingMasuk' => Perbandingan::bulanLalu(
+                    $masukBulanIni,
+                    (float) UangMasuk::whereBetween('tanggal', [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()])->sum('jumlah'),
+                ),
+                'bandingKeluar' => Perbandingan::bulanLalu(
+                    $keluarBulanIni,
+                    (float) UangKeluar::whereBetween('tanggal', [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()])->sum('jumlah'),
+                ),
             ],
 
             // Yang harus dikerjakan hari ini - bukan angka hiasan.
@@ -280,10 +287,9 @@ final class DashboardSummary
             'terbaru' => self::aktivitasTerbaru(8),
             'spkBerjalan' => self::spkBerjalan(6),
             'jumlahMitra' => Mitra::count(),
-            'spkBerjalanCount' => Spk::where('status_spk', StatusSpk::Berjalan->value)->count(),
+            'spkBerjalanCount' => Spk::berjalan()->count(),
             'tren' => self::trenEnamBulan(),
             'sebaranSpk' => self::sebaranStatusSpk(),
-            'notifikasiPenting' => self::notifikasiPenting(),
             'hariIni' => self::mutasiHariIni(),
         ];
     }
@@ -335,63 +341,11 @@ final class DashboardSummary
     }
 
     /**
-     * @return list<array{tipe: string, judul: string, pesan: string, aksi_url: string, aksi_label: string}>
-     */
-    public static function notifikasiPenting(): array
-    {
-        $alerts = [];
-
-        try {
-            $lewat = Spk::lewatTenggat()->with('mitra')->get();
-            if ($lewat->isNotEmpty()) {
-                $alerts[] = [
-                    'tipe' => 'error',
-                    'judul' => 'Peringatan: '.$lewat->count().' SPK Melewati Batas Waktu!',
-                    'pesan' => 'Ada SPK yang telah melewati tenggat jadwal dan memerlukan tindak lanjut segera ('.$lewat->pluck('nomor_spk')->take(3)->implode(', ').($lewat->count() > 3 ? '...' : '').').',
-                    'aksi_url' => route('panel.spk.monitoring', 'status'),
-                    'aksi_label' => 'Periksa SPK',
-                ];
-            }
-
-            $mendekati = Spk::mendekatiTenggat()->count();
-            if ($mendekati > 0) {
-                $alerts[] = [
-                    'tipe' => 'warning',
-                    'judul' => 'Perhatian: '.$mendekati.' SPK Mendekati Tenggat (≤ 14 Hari)',
-                    'pesan' => 'Periksa kemajuan fisik dan siapkan dokumen berita acara sebelum masa kontrak berakhir.',
-                    'aksi_url' => route('panel.spk.monitoring', 'status'),
-                    'aksi_label' => 'Pantau Progres',
-                ];
-            }
-
-            $belumTagih = Spk::where('status_spk', StatusSpk::Selesai->value)
-                ->where(function ($q) {
-                    $q->whereNull('status_tagihan')
-                        ->orWhere('status_tagihan', StatusTagihan::BelumDitagihkan->value);
-                })
-                ->count();
-            if ($belumTagih > 0) {
-                $alerts[] = [
-                    'tipe' => 'info',
-                    'judul' => $belumTagih.' SPK Selesai Belum Diterbitkan Tagihan',
-                    'pesan' => 'Pekerjaan fisik telah selesai. Terbitkan dokumen penagihan ke mitra agar pencairan dana tidak tertunda.',
-                    'aksi_url' => route('panel.spk.monitoring', 'billing'),
-                    'aksi_label' => 'Buka Penagihan',
-                ];
-            }
-        } catch (\Throwable $e) {
-            // fallback bila database kosong/skema belum siap
-        }
-
-        return $alerts;
-    }
-
-    /**
      * Transaksi terakhir dari kedua arah, digabung & diurutkan per tanggal.
      *
      * @return list<array{tanggal: Carbon, jenis: string, label: string, jumlah: float, keterangan: string}>
      */
-    public static function aktivitasTerbaru(int $batas = 8): array
+    public static function aktivitasTerbaru(int $batas = 6): array
     {
         $masuk = UangMasuk::query()
             ->latest('tanggal')
@@ -435,7 +389,7 @@ final class DashboardSummary
     {
         return Spk::query()
             ->with('mitra:id,nama')
-            ->where('status_spk', StatusSpk::Berjalan->value)
+            ->berjalan()
             ->orderBy('tanggal_akhir')
             ->limit($batas)
             ->get()

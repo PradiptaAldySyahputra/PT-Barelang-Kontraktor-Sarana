@@ -55,12 +55,12 @@
             <div class="{{ $kelasKartu }} flex flex-col justify-between p-5">
                 <div>
                     <div class="flex items-center justify-between">
-                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                         </span>
-                        <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">Kas Tunai</span>
+                        <span class="rounded-full bg-success-100 px-2 py-0.5 text-[11px] font-semibold text-success-800 dark:bg-success-500/20 dark:text-success-300">Kas Tunai</span>
                     </div>
                     <h3 class="mt-3 text-theme-sm font-semibold text-gray-900 dark:text-white">Buku Kas Operasional</h3>
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
@@ -145,12 +145,12 @@
             <div class="{{ $kelasKartu }} flex flex-col justify-between p-5">
                 <div>
                     <div class="flex items-center justify-between">
-                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </span>
-                        <span class="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-800 dark:bg-rose-500/20 dark:text-rose-300">Timeline Proyek</span>
+                        <span class="rounded-full bg-error-100 px-2 py-0.5 text-[11px] font-semibold text-error-800 dark:bg-error-500/20 dark:text-error-300">Timeline Proyek</span>
                     </div>
                     <h3 class="mt-3 text-theme-sm font-semibold text-gray-900 dark:text-white">Laporan Tenggat & Jatuh Tempo</h3>
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
@@ -242,7 +242,7 @@
             @if ($daftar->isEmpty())
                 <div class="px-5 py-12 text-center text-theme-sm text-gray-500 dark:text-gray-400">
                     <p>Belum ada catatan riwayat ekspor.</p>
-                    <p class="mt-1 text-theme-xs text-gray-400">Gunakan tombol ekspor di atas untuk mengunduh dokumen secara langsung.</p>
+                    <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Gunakan tombol ekspor di atas untuk mengunduh dokumen secara langsung.</p>
                 </div>
             @else
                 <div class="overflow-x-auto">
@@ -277,7 +277,7 @@
                                     <td class="angka px-3 py-2.5 text-theme-xs text-gray-700 dark:text-gray-300">
                                         {{ $baris['baris_sukses'] }}/{{ $baris['total_baris'] }}
                                         @if ($baris['baris_gagal'] > 0)
-                                            <span class="text-[11px] text-error-600 dark:text-error-500 font-semibold">({{ $baris['baris_gagal'] }} gagal)</span>
+                                            <span class="text-[11px] text-error-600 dark:text-error-400 dark:text-error-500 font-semibold">({{ $baris['baris_gagal'] }} gagal)</span>
                                         @endif
                                     </td>
                                     <td class="px-3 py-2.5">
@@ -302,11 +302,11 @@
                                         @elseif (!empty($baris['ekspor_baru_url']))
                                             <a href="{{ $baris['ekspor_baru_url'] }}"
                                                 class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-theme-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700" title="Unduh ulang data terbaru">
-                                                <svg class="h-3 w-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                                <svg class="h-3 w-3 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                                 Baru
                                             </a>
                                         @else
-                                            <span class="text-theme-xs text-gray-400">—</span>
+                                            <span class="text-theme-xs text-gray-500 dark:text-gray-400">—</span>
                                         @endif
                                     </td>
                                 </tr>

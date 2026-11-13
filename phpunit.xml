@@ -10,6 +10,14 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <exclude>tests/Feature/AlurBisnisE2ETest.php</exclude>
+        </testsuite>
+        <testsuite name="E2E">
+            <file>tests/Feature/AlurBisnisE2ETest.php</file>
+            <directory>tests/E2E</directory>
+        </testsuite>
+        <testsuite name="Security">
+            <directory>tests/Security</directory>
         </testsuite>
     </testsuites>
     <source>
