@@ -62,7 +62,7 @@
                     <label for="akun" class="{{ $kelasLabel }}">Kas/Bank <span class="text-error-600 dark:text-error-400">*</span></label>
                     <select id="akun" name="akun" required class="mt-1.5 {{ $kelasInput }}">
                         @foreach ($opsiAkun as $nilai => $label)
-                            <option value="{{ $nilai }}" @selected(old('akun', $uangMasuk?->akun?->value ?? 'kas') === $nilai)>
+                            <option value="{{ $nilai }}" @selected(old('akun', $uangMasuk?->akun?->value ?? request('akun', 'kas')) === $nilai)>
                                 {{ $label }}
                             </option>
                         @endforeach
@@ -165,7 +165,16 @@
                     @enderror
                 </div>
                 <div>
-                    <label for="keterangan" class="{{ $kelasLabel }}">Keterangan</label>
+                    <div class="flex items-center justify-between gap-2">
+                        <label for="keterangan" class="{{ $kelasLabel }}">Keterangan</label>
+                        @if (! $modeUbah)
+                            <button type="button"
+                                onclick="const a = document.getElementById('akun')?.value === 'bank' ? 'Bank' : 'Kas'; document.getElementById('keterangan').value = 'Saldo Awal ' + a; const s = document.getElementById('spk_id'); if (s) s.value = '';"
+                                class="text-[11px] font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                                + Tandai sebagai Saldo Awal
+                            </button>
+                        @endif
+                    </div>
                     <input id="keterangan" name="keterangan" type="text" maxlength="255"
                         value="{{ old('keterangan', $uangMasuk?->keterangan) }}"
                         placeholder="mis. termin 1" class="mt-1.5 {{ $kelasInput }}">

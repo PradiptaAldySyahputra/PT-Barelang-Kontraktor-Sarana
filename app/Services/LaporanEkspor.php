@@ -215,7 +215,7 @@ class LaporanEkspor
         $tebalStyle = (new Style)->withFontBold(true);
 
         $writer->addRow(Row::fromValuesWithStyle(['PT. BARELANG KONTRAKTOR SARANA'], $kopStyle));
-        $writer->addRow(Row::fromValuesWithStyle(['Subkontraktor PT PLN Batam · Pulau Batam'], $subKopStyle));
+        $writer->addRow(Row::fromValuesWithStyle(['Jasa Konstruksi & Ketenagalistrikan · Pulau Batam'], $subKopStyle));
         $writer->addRow(Row::fromValuesWithStyle([$judul], $judulStyle));
         $writer->addRow(Row::fromValues(['Dicetak: '.now()->translatedFormat('d F Y H:i').' WIB · Sistem Kontrol Keuangan']));
         $writer->addRow(Row::fromValues([]));
@@ -363,7 +363,7 @@ class LaporanEkspor
 
         $berkas = [
             '01-Buku-Kas-Operasional.xlsx' => 'buku-kas',
-            '02-Buku-Bank-Rekening-PLN.xlsx' => 'buku-bank',
+            '02-Buku-Bank-Rekening-Perusahaan.xlsx' => 'buku-bank',
             '03-Laporan-Piutang-SPK.xlsx' => 'piutang',
             '04-Laporan-Tenggat-SPK.xlsx' => 'tenggat',
             '05-Daftar-Seluruh-SPK.xlsx' => 'spk',

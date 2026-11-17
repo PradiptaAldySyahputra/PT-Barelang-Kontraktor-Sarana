@@ -21,121 +21,233 @@
 <x-layouts.app :judul="$judul" :keterangan="$keterangan">
     <x-common.antrean-ocr />
 
+    {{-- Salam Operasional & Ringkasan Tanggal (TailAdmin Header Banner Style) --}}
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs">
+        <div class="flex items-center gap-4">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-800 dark:text-white/90">
+                    Halo, {{ auth()->user()->nama ?? 'Admin Operasional' }}
+                </h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Ringkasan kas, pekerjaan lapangan, dan agenda penagihan hari ini.
+                </p>
+            </div>
+        </div>
 
-    {{-- Baris 1: 4 Stat KPI Cards (Grid TailAdmin Seragam dengan Ikon Aksen) --}}
+        <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                </svg>
+                {{ now()->translatedFormat('l, d F Y') }}
+            </span>
+            <div x-data="{ openTransfer: false, dari: 'bank', ke: 'kas' }" class="inline-flex">
+                <button type="button" @click="openTransfer = true"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition">
+                    <svg class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                    <span>Pindah Dana</span>
+                </button>
+
+                {{-- Modal Pindah Dana Kas <-> Bank --}}
+                <div x-show="openTransfer" x-cloak class="fixed inset-0 z-99999 flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-xs">
+                    <div @click.outside="openTransfer = false" class="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xl dark:border-gray-800 dark:bg-gray-900">
+                        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+                            <h3 class="text-base font-bold text-gray-900 dark:text-white">Pindah Dana (Kas &harr; Bank)</h3>
+                            <button type="button" @click="openTransfer = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">&times;</button>
+                        </div>
+                        <form method="POST" action="{{ route('panel.cash-transfer.store') }}" class="mt-4 space-y-4">
+                            @csrf
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Dari Akun</label>
+                                    <select name="dari_akun" x-model="dari" @change="ke = (dari === 'kas' ? 'bank' : 'kas')"
+                                        class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                        <option value="bank">Bank (Rekening)</option>
+                                        <option value="kas">Kas (Tunai)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Ke Akun</label>
+                                    <select name="ke_akun" x-model="ke" @change="dari = (ke === 'kas' ? 'bank' : 'kas')"
+                                        class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                        <option value="kas">Kas (Tunai)</option>
+                                        <option value="bank">Bank (Rekening)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Nominal (Rp)</label>
+                                    <input type="number" name="jumlah" min="1" step="1" required placeholder="Contoh: 5000000"
+                                        class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Tanggal</label>
+                                    <input type="date" name="tanggal" value="{{ now()->toDateString() }}" required
+                                        class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Catatan (Opsional)</label>
+                                <input type="text" name="keterangan" maxlength="255" placeholder="Contoh: Tarik tunai operasional / Setor tunai"
+                                    class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            </div>
+                            <div class="flex justify-end gap-2 pt-2">
+                                <button type="button" @click="openTransfer = false"
+                                    class="rounded-lg border border-gray-200 px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                                    Batal
+                                </button>
+                                <button type="submit"
+                                    class="rounded-lg bg-brand-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-600 transition">
+                                    Simpan Pindah Dana
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <a href="{{ route('panel.receipts.upload') }}"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-theme-xs hover:bg-brand-600 transition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                <span>Unggah Nota OCR</span>
+            </a>
+        </div>
+    </div>
+
+
+    {{-- Baris 1: 4 Stat KPI Cards (TailAdmin Pro Metrics Standard) --}}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 xl:grid-cols-4">
         {{-- Card 1: Saldo Kas --}}
-        <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-theme-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Saldo Kas
-                </span>
-                <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400 shadow-theme-xs">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 flex flex-col justify-between shadow-theme-xs">
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-400 shadow-theme-xs">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                </span>
+                </div>
+                <a href="{{ route('panel.cash-in.create', ['akun' => 'kas']) }}"
+                    class="text-[11px] font-semibold text-gray-400 hover:text-success-600 dark:text-gray-500 dark:hover:text-success-400 transition">
+                    Sesuaikan &rarr;
+                </a>
             </div>
-            <div class="mt-4">
-                <h4 class="break-words text-xl font-bold angka text-gray-900 dark:text-white sm:text-2xl">
+            <div class="mt-5">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Saldo Kas</span>
+                    <span class="inline-flex shrink-0 items-center rounded-lg bg-success-50 px-2 py-0.5 text-xs font-semibold text-success-700 dark:bg-success-500/15 dark:text-success-400">
+                        Tunai Fisik
+                    </span>
+                </div>
+                <h4 class="mt-2 text-lg sm:text-xl font-bold angka break-words {{ $data['saldo']['kas'] < 0 ? 'text-error-600 dark:text-error-400' : ($data['saldo']['kas'] > 0 ? 'text-success-600 dark:text-success-400' : 'text-gray-900 dark:text-white') }}">
                     {{ Format::rupiah($data['saldo']['kas']) }}
                 </h4>
-                <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">
-                    Penerimaan tunai fisik
-                </span>
             </div>
         </div>
 
         {{-- Card 2: Saldo Bank --}}
-        <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-theme-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Saldo Bank
-                </span>
-                <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 shadow-theme-xs">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 flex flex-col justify-between shadow-theme-xs">
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400 shadow-theme-xs">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
-                </span>
+                </div>
+                <a href="{{ route('panel.cash-in.create', ['akun' => 'bank']) }}"
+                    class="text-[11px] font-semibold text-gray-400 hover:text-brand-600 dark:text-gray-500 dark:hover:text-brand-400 transition">
+                    Sesuaikan &rarr;
+                </a>
             </div>
-            <div class="mt-4">
-                <h4 class="break-words text-xl font-bold angka text-gray-900 dark:text-white sm:text-2xl">
+            <div class="mt-5">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Saldo Bank</span>
+                    <span class="inline-flex shrink-0 items-center rounded-lg bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                        Rekening
+                    </span>
+                </div>
+                <h4 class="mt-2 text-lg sm:text-xl font-bold angka break-words {{ $data['saldo']['bank'] < 0 ? 'text-error-600 dark:text-error-400' : ($data['saldo']['bank'] > 0 ? 'text-success-600 dark:text-success-400' : 'text-gray-900 dark:text-white') }}">
                     {{ Format::rupiah($data['saldo']['bank']) }}
                 </h4>
-                <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">
-                    Rekening operasional
-                </span>
             </div>
         </div>
 
         {{-- Card 3: Total Saldo Siap Pakai --}}
-        <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-theme-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Total Saldo Siap Pakai
-                </span>
-                <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400 shadow-theme-xs">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </span>
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 flex flex-col justify-between shadow-theme-xs">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-500/15 dark:text-purple-400 shadow-theme-xs">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
             </div>
-            <div class="mt-4">
-                <h4 class="break-words text-xl font-bold angka sm:text-2xl {{ $data['saldo']['total'] < 0 ? 'text-error-600 dark:text-error-400 dark:text-error-500' : 'text-brand-600 dark:text-brand-400' }}">
+            <div class="mt-5">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Total Saldo Siap Pakai</span>
+                    <span class="inline-flex shrink-0 items-center rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                        Kas + Bank
+                    </span>
+                </div>
+                <h4 class="mt-2 text-lg sm:text-xl font-bold angka break-words {{ $data['saldo']['total'] < 0 ? 'text-error-600 dark:text-error-400' : ($data['saldo']['total'] > 0 ? 'text-success-600 dark:text-success-400' : 'text-gray-900 dark:text-white') }}">
                     {{ Format::rupiah($data['saldo']['total']) }}
                 </h4>
-                <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">
-                    Kas + Bank terverifikasi
-                </span>
             </div>
         </div>
 
         {{-- Card 4: SPK Berjalan Aktif --}}
-        <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-theme-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    SPK Berjalan Aktif
-                </span>
-                <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 shadow-theme-xs">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                </span>
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 flex flex-col justify-between shadow-theme-xs">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 shadow-theme-xs">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
             </div>
-            <div class="mt-4">
-                <h4 class="break-words text-xl font-bold angka text-gray-900 dark:text-white sm:text-2xl">
-                    {{ $data['spkBerjalanCount'] }} SPK
-                </h4>
-                <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">
-                    Pekerjaan sedang berlangsung
+            <div class="mt-5 flex items-end justify-between">
+                <div>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">SPK Berjalan Aktif</span>
+                    <h4 class="mt-2 text-xl font-bold angka text-gray-900 dark:text-white sm:text-2xl">
+                        {{ $data['spkBerjalanCount'] }} SPK
+                    </h4>
+                </div>
+                <span class="inline-flex items-center rounded-lg bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                    Lapangan
                 </span>
             </div>
         </div>
     </div>
 
-    {{-- Baris Antrean Tindakan Operasional (Actionable Task Pulse) --}}
+    {{-- Baris Antrean Tindakan Operasional (Actionable Task Pulse - TailAdmin Badge Alert Style) --}}
     @if (($data['antrean'] ?? []) !== [])
-        <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ($data['antrean'] as $item)
                 @php
                     $warnaBg = match ($item['nada']) {
-                        'bahaya' => 'bg-error-50/70 border-error-200 dark:bg-error-500/10 dark:border-error-500/20 text-error-700 dark:text-error-400',
-                        'perhatian' => 'bg-warning-50/70 border-warning-200 dark:bg-warning-500/10 dark:border-warning-500/20 text-warning-700 dark:text-warning-400',
-                        default => 'bg-gray-50/80 border-gray-200 dark:bg-gray-800/60 dark:border-gray-800 text-gray-700 dark:text-gray-300',
+                        'bahaya' => 'bg-error-50/70 border-error-200 dark:bg-error-500/10 dark:border-error-500/20 text-error-700 dark:text-error-400 hover:border-error-300 dark:hover:border-error-500/40',
+                        'perhatian' => 'bg-warning-50/70 border-warning-200 dark:bg-warning-500/10 dark:border-warning-500/20 text-warning-700 dark:text-warning-400 hover:border-warning-300 dark:hover:border-warning-500/40',
+                        default => 'bg-gray-50/80 border-gray-200 dark:bg-gray-800/60 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700',
+                    };
+                    $badgePill = match ($item['nada']) {
+                        'bahaya' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-300',
+                        'perhatian' => 'bg-warning-100 text-warning-800 dark:bg-warning-500/20 dark:text-warning-300',
+                        default => 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
                     };
                     $ruteTarget = match ($item['label']) {
                         'SPK belum ditagihkan' => route('panel.spk.monitoring', 'billing'),
                         'Mendekati tenggat' => route('panel.spk.calendar'),
                         'Lewat tenggat' => route('panel.spk.monitoring', 'status'),
+                        'Revisi dokumen' => route('panel.spk.monitoring', 'status'),
                         default => route('panel.spk.index'),
                     };
                 @endphp
-                <a href="{{ $ruteTarget }}" class="flex items-center justify-between rounded-xl border p-4 transition-all hover:shadow-sm {{ $warnaBg }}">
-                    <div>
-                        <span class="text-theme-xs font-semibold block">{{ $item['label'] }}</span>
-                        <span class="text-[11px] opacity-80 block mt-0.5">{{ $item['ket'] }}</span>
+                <a href="{{ $ruteTarget }}" class="flex items-center justify-between rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-theme-xs {{ $warnaBg }}">
+                    <div class="min-w-0 pr-3">
+                        <span class="text-sm font-bold block truncate">{{ $item['label'] }}</span>
+                        <span class="text-xs opacity-80 block mt-0.5">{{ $item['ket'] }}</span>
                     </div>
-                    <span class="text-2xl font-bold angka">
+                    <span class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl px-2.5 text-base font-bold angka shrink-0 shadow-xs {{ $badgePill }}">
                         {{ $item['jumlah'] }}
                     </span>
                 </a>
@@ -146,39 +258,58 @@
     {{-- Baris 2: Ringkasan Bulan Ini & Aksi Cepat Operasional --}}
     <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
         {{-- Ringkasan Kas Bulan Ini --}}
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs xl:col-span-7 flex flex-col justify-between">
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-7 flex flex-col justify-between">
             <div>
-                <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div class="mb-5 flex flex-wrap items-center justify-between gap-2">
                     <div>
                         <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Arus Kas Bulan Ini</h3>
-                        <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">Pemasukan, pengeluaran & selisih bersih</p>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Pemasukan, pengeluaran & selisih bersih operasional</p>
                     </div>
-                    <span class="rounded-full bg-gray-100 px-2.5 py-1 text-theme-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                         {{ now()->translatedFormat('F Y') }}
                     </span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="p-4 rounded-xl bg-success-50/50 dark:bg-success-500/5 border border-success-200 dark:border-success-500/20 border-l-4 border-l-success-600 shadow-theme-xs">
-                        <span class="text-theme-xs text-gray-500 dark:text-gray-400">Masuk ({{ $data['bulanIni']['jumlahMasuk'] }} transaksi)</span>
-                        <p class="mt-1 break-words text-xl font-bold text-success-700 dark:text-success-400 angka">
+                    <div class="p-4 rounded-xl bg-success-50/40 dark:bg-success-500/5 border border-success-200/80 dark:border-success-500/20 shadow-theme-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Uang Masuk Bulan Ini ({{ $data['bulanIni']['jumlahMasuk'] }} transaksi)</span>
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-success-100 text-success-700 dark:bg-success-500/20 dark:text-success-300">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </span>
+                        </div>
+                        <p class="mt-2 break-words text-xl font-bold text-success-700 dark:text-success-400 angka">
                             {{ Format::rupiah($data['bulanIni']['masuk']) }}
                         </p>
                         @if (! empty($data['bulanIni']['bandingMasuk']))
-                            <p class="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $data['bulanIni']['bandingMasuk']['arah'] === 'turun' ? 'bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-400' : 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400' }}">
-                                {{ $data['bulanIni']['bandingMasuk']['teks'] }}
-                            </p>
+                            <div class="mt-2.5">
+                                <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $data['bulanIni']['bandingMasuk']['arah'] === 'turun' ? 'bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-400' : 'bg-success-100/70 text-success-800 dark:bg-success-500/20 dark:text-success-300' }}">
+                                    {{ $data['bulanIni']['bandingMasuk']['teks'] }}
+                                </span>
+                            </div>
                         @endif
                     </div>
-                    <div class="p-4 rounded-xl bg-error-50/50 dark:bg-error-500/5 border border-error-200 dark:border-error-500/20 border-l-4 border-l-error-600 shadow-theme-xs">
-                        <span class="text-theme-xs text-gray-500 dark:text-gray-400">Keluar ({{ $data['bulanIni']['jumlahKeluar'] }} transaksi)</span>
-                        <p class="mt-1 break-words text-xl font-bold text-error-600 dark:text-error-400 angka">
+
+                    <div class="p-4 rounded-xl bg-error-50/40 dark:bg-error-500/5 border border-error-200/80 dark:border-error-500/20 shadow-theme-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Uang Keluar Bulan Ini ({{ $data['bulanIni']['jumlahKeluar'] }} transaksi)</span>
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-300">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                                </svg>
+                            </span>
+                        </div>
+                        <p class="mt-2 break-words text-xl font-bold text-error-600 dark:text-error-400 angka">
                             {{ Format::rupiah($data['bulanIni']['keluar']) }}
                         </p>
                         @if (! empty($data['bulanIni']['bandingKeluar']))
-                            <p class="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $data['bulanIni']['bandingKeluar']['arah'] === 'naik' ? 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
-                                {{ $data['bulanIni']['bandingKeluar']['teks'] }}
-                            </p>
+                            <div class="mt-2.5">
+                                <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $data['bulanIni']['bandingKeluar']['arah'] === 'naik' ? 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
+                                    {{ $data['bulanIni']['bandingKeluar']['teks'] }}
+                                </span>
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -189,7 +320,7 @@
                 $selisihBulanIni = (float) $data['bulanIni']['masuk'] - (float) $data['bulanIni']['keluar'];
                 $isDefisit = $selisihBulanIni < 0;
             @endphp
-            <div class="mt-4 pt-3.5 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50/70 dark:bg-gray-800/40 p-3 rounded-xl border border-gray-200/60 dark:border-gray-800">
+            <div class="mt-4 pt-3.5 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50/70 dark:bg-white/[0.02] p-3.5 rounded-xl border border-gray-200/60 dark:border-gray-800">
                 <div class="flex items-center gap-2.5">
                     <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {{ $isDefisit ? 'bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400' : 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400' }}">
                         @if ($isDefisit)
@@ -218,29 +349,29 @@
         </div>
 
         {{-- Aksi Cepat Input & Mutasi Kas Hari Ini --}}
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs xl:col-span-5 flex flex-col justify-between">
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-5 flex flex-col justify-between">
             <div>
-                <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center justify-between mb-3">
                     <div>
                         <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Aksi Cepat Operasional</h3>
-                        <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">Pintasan pencatatan transaksi & berkas</p>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Pintasan pencatatan transaksi & berkas</p>
                     </div>
-                    <span class="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                    <span class="rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
                         Hari Ini
                     </span>
                 </div>
 
                 {{-- Baris Mini Mutasi Hari Ini --}}
-                <div class="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50/80 p-2.5 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-800 text-xs">
+                <div class="mb-4 grid grid-cols-2 gap-2.5 rounded-xl bg-gray-50/80 p-3 dark:bg-white/[0.02] border border-gray-100 dark:border-gray-800 text-xs">
                     <div>
-                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Masuk Hari Ini</span>
-                        <span class="font-bold text-success-700 dark:text-success-400 angka">
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block font-medium">Masuk Hari Ini</span>
+                        <span class="text-sm font-bold text-success-700 dark:text-success-400 angka">
                             {{ Format::rupiah($data['hariIni']['masuk'] ?? 0) }}
                         </span>
                     </div>
                     <div>
-                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Keluar Hari Ini</span>
-                        <span class="font-bold text-error-600 dark:text-error-400 angka">
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block font-medium">Keluar Hari Ini</span>
+                        <span class="text-sm font-bold text-error-600 dark:text-error-400 angka">
                             {{ Format::rupiah($data['hariIni']['keluar'] ?? 0) }}
                         </span>
                     </div>
@@ -249,9 +380,9 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <a href="{{ route('panel.spk.create') }}"
-                    class="group flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-3 shadow-theme-xs transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/80 dark:hover:border-brand-500/30">
+                    class="group flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-3.5 shadow-theme-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/80 dark:hover:border-brand-500/30">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-gray-800 group-hover:text-brand-600 dark:text-gray-200 dark:group-hover:text-brand-400">
+                        <span class="text-xs font-bold text-gray-800 group-hover:text-brand-600 dark:text-gray-200 dark:group-hover:text-brand-400">
                             SPK Baru
                         </span>
                         <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
@@ -264,9 +395,9 @@
                 </a>
 
                 <a href="{{ route('panel.cash-in.create') }}"
-                    class="group flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-3 shadow-theme-xs transition-all hover:-translate-y-0.5 hover:border-success-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/80 dark:hover:border-success-500/30">
+                    class="group flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-3.5 shadow-theme-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-success-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/80 dark:hover:border-success-500/30">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-gray-800 group-hover:text-success-700 dark:text-gray-200 dark:group-hover:text-success-400">
+                        <span class="text-xs font-bold text-gray-800 group-hover:text-success-700 dark:text-gray-200 dark:group-hover:text-success-400">
                             Uang Masuk
                         </span>
                         <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-400">
@@ -275,13 +406,13 @@
                             </svg>
                         </span>
                     </div>
-                    <span class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Termin/dana cair</span>
+                    <span class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Termin / pencairan</span>
                 </a>
 
                 <a href="{{ route('panel.cash-out.create') }}"
-                    class="group flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-3 shadow-theme-xs transition-all hover:-translate-y-0.5 hover:border-error-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/80 dark:hover:border-error-500/30">
+                    class="group flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-3.5 shadow-theme-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-error-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/80 dark:hover:border-error-500/30">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-gray-800 group-hover:text-error-600 dark:text-gray-200 dark:group-hover:text-error-400">
+                        <span class="text-xs font-bold text-gray-800 group-hover:text-error-600 dark:text-gray-200 dark:group-hover:text-error-400">
                             Uang Keluar
                         </span>
                         <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400">
@@ -294,9 +425,9 @@
                 </a>
 
                 <a href="{{ route('panel.receipts.upload') }}"
-                    class="group flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-3 shadow-theme-xs transition-all hover:-translate-y-0.5 hover:border-purple-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/80 dark:hover:border-purple-500/30">
+                    class="group flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-3.5 shadow-theme-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-800/80 dark:hover:border-purple-500/30">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-gray-800 group-hover:text-purple-600 dark:text-gray-200 dark:group-hover:text-purple-400">
+                        <span class="text-xs font-bold text-gray-800 group-hover:text-purple-600 dark:text-gray-200 dark:group-hover:text-purple-400">
                             Unggah Nota
                         </span>
                         <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-500/15 dark:text-purple-400">
@@ -311,69 +442,72 @@
         </div>
     </div>
 
-    {{-- Baris 3: Grafik Analisis (ApexCharts) --}}
-    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
-        {{-- Chart 1: Arus Kas 6 Bulan --}}
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs xl:col-span-8">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+    {{-- Baris Target Realisasi Penerimaan SPK (TailAdmin Progress Gauge Widget) --}}
+    @if (! empty($data['realisasiSpk']))
+        <div class="mt-6 rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Grafik Arus Kas Operasional</h3>
-                    <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">
-                        Perbandingan uang masuk vs uang keluar 6 bulan terakhir
+                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Realisasi Penerimaan Kontrak SPK</h3>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Pencapaian penerimaan pembayaran terhadap total komitmen kontrak seluruh SPK
                     </p>
                 </div>
-                <div class="flex items-center gap-4 text-theme-xs">
-                    <span class="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300">
-                        <span class="h-3 w-3 rounded-full bg-brand-500"></span> Masuk
-                    </span>
-                    <span class="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300">
-                        <span class="h-3 w-3 rounded-full bg-error-500"></span> Keluar
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">Tingkat Penagihan:</span>
+                    <span class="inline-flex items-center rounded-lg bg-brand-50 px-2.5 py-1 text-sm font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400 angka">
+                        {{ $data['realisasiSpk']['persenDiterima'] }}%
                     </span>
                 </div>
             </div>
 
-            <div id="chartArusKasAdmin" class="w-full h-[290px]"></div>
-        </div>
-
-        {{-- Chart 2: Komposisi Status SPK --}}
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 md:p-6 shadow-theme-xs xl:col-span-4 flex flex-col justify-between">
-            <div>
-                <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Sebaran Status SPK</h3>
-                <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">
-                    Distribusi seluruh SPK dalam sistem
-                </p>
-                <div id="chartStatusSpkAdmin" class="w-full flex items-center justify-center my-4 min-h-[220px]"></div>
+            <div class="mt-4 h-3 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shadow-inner">
+                <div class="h-full rounded-full bg-brand-500 transition-all duration-700" style="width: {{ min(100, $data['realisasiSpk']['persenDiterima']) }}%"></div>
             </div>
 
-            <div class="space-y-2 pt-3 border-t border-gray-100 dark:border-gray-800 text-theme-xs">
-                @foreach (array_filter($data['sebaranSpk'], fn($s) => $s['jumlah'] > 0) as $st)
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-600 dark:text-gray-400">{{ $st['label'] }}</span>
-                        <span class="font-bold text-gray-900 dark:text-white angka">{{ $st['jumlah'] }} SPK ({{ $st['persen'] }}%)</span>
-                    </div>
-                @endforeach
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs">
+                <div class="flex items-center justify-between sm:block">
+                    <span class="text-gray-500 dark:text-gray-400 block font-medium">Total Nilai SPK</span>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white angka block sm:mt-1">
+                        {{ Format::rupiah($data['realisasiSpk']['totalNilai']) }}
+                    </span>
+                </div>
+                <div class="flex items-center justify-between sm:block">
+                    <span class="text-gray-500 dark:text-gray-400 block font-medium">Dana Masuk Diterima</span>
+                    <span class="text-sm font-bold text-success-700 dark:text-success-400 angka block sm:mt-1">
+                        {{ Format::rupiah($data['realisasiSpk']['totalDiterima']) }}
+                    </span>
+                </div>
+                <div class="flex items-center justify-between sm:block">
+                    <span class="text-gray-500 dark:text-gray-400 block font-medium">Sisa Piutang Berjalan</span>
+                    <span class="text-sm font-bold text-warning-700 dark:text-warning-400 angka block sm:mt-1">
+                        {{ Format::rupiah($data['realisasiSpk']['sisaPiutang']) }}
+                    </span>
+                </div>
             </div>
         </div>
-    </div>
+    @endif
 
-    {{-- Baris 4: Dua Kolom Operasional (Transaksi Terbaru & SPK Berjalan) --}}
+    {{-- Baris 4: Dua Kolom Operasional (Transaksi Terbaru & SPK Berjalan) - TailAdmin Card Table Style --}}
     <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
 
         {{-- Transaksi Terbaru --}}
-        <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs overflow-hidden">
+        <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 shadow-theme-xs overflow-hidden flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
                     <div>
                         <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Transaksi Terbaru</h3>
-                        <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">Arus kas masuk & keluar terakhir</p>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Arus kas masuk & keluar terakhir</p>
                     </div>
-                    <a href="{{ route('panel.reports') }}" class="text-theme-xs font-semibold text-brand-500 hover:text-brand-600 dark:text-brand-400">
-                        Lihat Semua &rarr;
+                    <a href="{{ route('panel.reports') }}" class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
+                        <span>Lihat Semua</span>
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
                     </a>
                 </div>
 
                 @if ($data['terbaru'] === [])
-                    <div class="p-8 text-center text-theme-sm text-gray-500 dark:text-gray-400">
+                    <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
                         Belum ada transaksi tercatat.
                     </div>
                 @else
@@ -405,7 +539,7 @@
                                     <p class="text-xs font-bold angka {{ $trx['jenis'] === 'masuk' ? 'text-success-700 dark:text-success-400' : 'text-error-600 dark:text-error-400' }}">
                                         {{ $trx['jenis'] === 'masuk' ? '+' : '−' }} {{ Format::rupiah($trx['jumlah']) }}
                                     </p>
-                                    <span class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    <span class="inline-flex items-center rounded px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider {{ $trx['jenis'] === 'masuk' ? 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400' : 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400' }}">
                                         {{ $trx['jenis'] === 'masuk' ? 'MASUK' : 'KELUAR' }}
                                     </span>
                                 </div>
@@ -417,20 +551,23 @@
         </div>
 
         {{-- Kolom Kanan: SPK Berjalan --}}
-        <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs overflow-hidden">
+        <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 shadow-theme-xs overflow-hidden flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
                     <div>
                         <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">SPK Berjalan Aktif</h3>
-                        <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">Pekerjaan lapangan sedang berlangsung</p>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Pekerjaan lapangan sedang berlangsung</p>
                     </div>
-                    <a href="{{ route('panel.spk.index') }}" class="text-theme-xs font-semibold text-brand-500 hover:text-brand-600 dark:text-brand-400">
-                        Lihat Semua &rarr;
+                    <a href="{{ route('panel.spk.index') }}" class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
+                        <span>Lihat Semua</span>
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
                     </a>
                 </div>
 
                 @if ($data['spkBerjalan'] === [])
-                    <div class="p-8 text-center text-theme-sm text-gray-500 dark:text-gray-400">
+                    <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
                         Tidak ada SPK aktif saat ini.
                     </div>
                 @else
@@ -451,7 +588,7 @@
                                     <p class="text-xs font-bold text-gray-900 dark:text-white angka">
                                         {{ Format::rupiah($spk['nilai']) }}
                                     </p>
-                                    <span class="text-[10px] {{ $spk['lewat'] ? 'text-error-600 dark:text-error-400 font-semibold' : 'text-gray-500 dark:text-gray-400' }}">
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $spk['lewat'] ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">
                                         {{ $spk['label_tenggat'] }}
                                     </span>
                                 </div>
@@ -462,6 +599,117 @@
             </div>
         </div>
     </div>
+
+    {{-- Baris 5: SPK Perlu Perhatian Khusus & Komposisi Pengeluaran Operasional --}}
+    @if (! empty($data['spkPerluPerhatian']) || ! empty($data['pengeluaranKategori']))
+        <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
+            {{-- Tabel SPK Perlu Tindak Lanjut --}}
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 shadow-theme-xs overflow-hidden xl:col-span-8 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">SPK Mendesak & Perlu Tindak Lanjut</h3>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Prioritas operasional: pekerjaan lewat tenggat, revisi berkas, atau siap ditagihkan</p>
+                        </div>
+                        <a href="{{ route('panel.spk.monitoring', 'status') }}" class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
+                            <span>Monitoring</span>
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+                        </a>
+                    </div>
+
+                    @if (($data['spkPerluPerhatian'] ?? []) === [])
+                        <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            Tidak ada SPK mendesak saat ini. Semua pekerjaan aman.
+                        </div>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.02]">
+                                        <th class="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">SPK & Mitra</th>
+                                        <th class="px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status Lapangan</th>
+                                        <th class="px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tenggat Waktu</th>
+                                        <th class="px-5 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nilai SPK</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-xs">
+                                    @foreach ($data['spkPerluPerhatian'] as $perhatian)
+                                        <tr class="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                                            <td class="px-5 py-3.5">
+                                                <a href="{{ route('panel.spk.show', $perhatian['id']) }}" class="font-semibold text-brand-600 hover:underline dark:text-brand-400 block">
+                                                    {{ $perhatian['nomor_spk'] }}
+                                                </a>
+                                                <span class="text-[11px] text-gray-500 dark:text-gray-400 truncate block max-w-xs">
+                                                    {{ $perhatian['mitra'] }} &middot; {{ $perhatian['pekerjaan'] }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3.5">
+                                                <span class="inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                                    {{ $perhatian['status_spk'] }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3.5">
+                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $perhatian['lewat'] ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400' : 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400' }}">
+                                                    {{ $perhatian['label_tenggat'] }}
+                                                </span>
+                                            </td>
+                                            <td class="px-5 py-3.5 text-end font-bold text-gray-900 dark:text-white angka">
+                                                {{ Format::rupiah($perhatian['nilai']) }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Breakdown Kategori Pengeluaran Bulan Ini --}}
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Kategori Biaya Operasional</h3>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Pengeluaran bulan {{ now()->translatedFormat('F Y') }}</p>
+                        </div>
+                        <a href="{{ route('panel.cash-out.index') }}" class="text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                            Detail &rarr;
+                        </a>
+                    </div>
+
+                    @if (($data['pengeluaranKategori'] ?? []) === [])
+                        <div class="py-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                            Belum ada pengeluaran di bulan ini.
+                        </div>
+                    @else
+                        <div class="space-y-3.5">
+                            @foreach ($data['pengeluaranKategori'] as $pk)
+                                <div>
+                                    <div class="flex items-center justify-between text-xs mb-1">
+                                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ $pk['label'] }} ({{ $pk['jumlah_trx'] }}x)</span>
+                                        <span class="font-bold text-gray-900 dark:text-white angka">{{ Format::rupiah($pk['total']) }} ({{ $pk['persen'] }}%)</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-brand-500 h-full rounded-full" style="width: {{ min(100, max(4, $pk['persen'])) }}%"></div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                <div class="mt-5 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs">
+                    <span class="text-gray-500 dark:text-gray-400">Total Pengeluaran Bulan Ini</span>
+                    <span class="font-bold text-error-600 dark:text-error-400 angka">
+                        {{ Format::rupiah($data['bulanIni']['keluar']) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    @endif
 
     @push('scripts')
     <script>
@@ -483,30 +731,43 @@
                         ],
                         colors: ['#465fff', '#f04438'],
                         chart: {
-                            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+                            fontFamily: "Outfit, sans-serif",
                             type: 'bar',
                             height: 290,
                             background: 'transparent',
-                            toolbar: { show: false }
+                            toolbar: { show: false },
+                            zoom: { enabled: false }
                         },
                         theme: { mode: isDark() ? 'dark' : 'light' },
                         plotOptions: {
                             bar: {
                                 horizontal: false,
-                                columnWidth: '40%',
+                                columnWidth: '38%',
                                 borderRadius: 6,
                                 borderRadiusApplication: 'end'
                             }
                         },
                         dataLabels: { enabled: false },
-                        stroke: { show: true, width: 4, colors: ['transparent'] },
+                        stroke: { show: true, width: 3, colors: ['transparent'] },
                         xaxis: {
                             categories: @json($trenLabels),
                             axisBorder: { show: false },
-                            axisTicks: { show: false }
+                            axisTicks: { show: false },
+                            labels: {
+                                style: {
+                                    fontSize: '12px',
+                                    fontFamily: 'Outfit, sans-serif',
+                                    colors: isDark() ? '#94A3B8' : '#6B7280'
+                                }
+                            }
                         },
                         yaxis: {
                             labels: {
+                                style: {
+                                    fontSize: '12px',
+                                    fontFamily: 'Outfit, sans-serif',
+                                    colors: isDark() ? '#94A3B8' : '#6B7280'
+                                },
                                 formatter: function(val) {
                                     if (val >= 1000000000) return 'Rp ' + (val / 1000000000).toFixed(1) + ' M';
                                     if (val >= 1000000) return 'Rp ' + (val / 1000000).toFixed(0) + ' jt';
@@ -515,7 +776,12 @@
                             }
                         },
                         legend: { show: false },
-                        grid: { borderColor: isDark() ? '#1F2A37' : '#E5E7EB', yaxis: { lines: { show: true } } },
+                        grid: {
+                            borderColor: isDark() ? '#1E2640' : '#F3F4F6',
+                            strokeDashArray: 0,
+                            xaxis: { lines: { show: false } },
+                            yaxis: { lines: { show: true } }
+                        },
                         tooltip: {
                             theme: isDark() ? 'dark' : 'light',
                             y: {
@@ -538,7 +804,7 @@
                         labels: @json($spkLabels),
                         colors: ['#98a2b3', '#0ba5ec', '#f79009', '#12b76a', '#0F4C81', '#f04438'],
                         chart: {
-                            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+                            fontFamily: "Outfit, sans-serif",
                             type: 'donut',
                             height: 230,
                             background: 'transparent'
@@ -556,7 +822,8 @@
                                         value: {
                                             color: isDark() ? '#F8FAFC' : '#1D2939',
                                             fontSize: '22px',
-                                            fontWeight: 700
+                                            fontWeight: 700,
+                                            fontFamily: 'Outfit, sans-serif'
                                         },
                                         total: {
                                             show: true,
@@ -564,6 +831,7 @@
                                             color: isDark() ? '#98A2B3' : '#64748B',
                                             fontSize: '12px',
                                             fontWeight: 600,
+                                            fontFamily: 'Outfit, sans-serif',
                                             formatter: function(w) {
                                                 return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
                                             }

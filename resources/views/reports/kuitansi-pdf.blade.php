@@ -131,7 +131,7 @@
                 </td>
                 <td style="vertical-align: top; padding-left: 8px;">
                     <div class="kop-nama">PT BARELANG KONTRAKTOR SARANA</div>
-                    <div class="kop-sub">Subkontraktor PT PLN Batam · Jasa Konstruksi & Ketenagalistrikan</div>
+                    <div class="kop-sub">Jasa Konstruksi & Ketenagalistrikan</div>
                     <div class="kop-sub">Pulau Batam, Kepulauan Riau — Indonesia</div>
                 </td>
                 <td style="text-align: right; vertical-align: top;">

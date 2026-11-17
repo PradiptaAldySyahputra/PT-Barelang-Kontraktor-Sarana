@@ -14,6 +14,11 @@
 
     <title>{{ $judul ?? 'Panel' }} · BKS</title>
 
+    {{-- Font Resmi TailAdmin: Outfit (Geometric Sans) --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
     @livewireStyles
     @vite(['resources/css/panel.css', 'resources/js/app.js'])
 

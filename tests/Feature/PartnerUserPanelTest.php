@@ -115,7 +115,7 @@ class PartnerUserPanelTest extends TestCase
         $this->actingAs($this->pengguna(Peran::Admin))
             ->delete(route('panel.partners.destroy', $mitra));
 
-        $this->assertDatabaseMissing('mitra', ['id' => $mitra->id]);
+        $this->assertSoftDeleted('mitra', ['id' => $mitra->id]);
     }
 
     public function test_tab_mitra_menyaring_kategori(): void

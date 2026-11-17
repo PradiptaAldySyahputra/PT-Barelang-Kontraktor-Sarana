@@ -92,7 +92,7 @@
                         </span>
                         <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800 dark:bg-blue-500/20 dark:text-blue-300">Rekening Giro</span>
                     </div>
-                    <h3 class="mt-3 text-theme-sm font-semibold text-gray-900 dark:text-white">Buku Bank (Rekening PLN)</h3>
+                    <h3 class="mt-3 text-theme-sm font-semibold text-gray-900 dark:text-white">Buku Bank (Rekening Perusahaan)</h3>
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
                         Catatan mutasi rekening perbankan untuk transaksi termin SPK dan vendor material.
                     </p>
@@ -120,7 +120,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                         </span>
-                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">Piutang PLN</span>
+                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">Piutang SPK</span>
                     </div>
                     <h3 class="mt-3 text-theme-sm font-semibold text-gray-900 dark:text-white">Laporan Piutang SPK</h3>
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">

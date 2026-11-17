@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\KategoriPengeluaran;
 use App\Enums\Peran;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CashIn\CashInController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\System\SystemController;
 use App\Http\Controllers\User\UserController;
 use App\Models\Export;
 use App\Models\Spk;
+use App\Models\UangKeluar;
 use App\Models\UangMasuk;
 use App\Services\LaporanEkspor;
 use App\Support\ArsipNota;
@@ -27,7 +29,9 @@ use App\Support\Nota;
 use App\Support\StatusBackup;
 use App\Support\TandaTangan;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -99,6 +103,39 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
             Route::put('cash-in/{uangMasuk}', [CashInController::class, 'update'])->name('cash-in.update');
             Route::delete('cash-in/{uangMasuk}', [CashInController::class, 'destroy'])->name('cash-in.destroy');
             Route::post('cash-in/{id}/restore', [CashInController::class, 'restore'])->name('cash-in.restore');
+            Route::post('cash-transfer', function (Request $request) {
+                $data = $request->validate([
+                    'dari_akun' => ['required', 'in:kas,bank'],
+                    'ke_akun' => ['required', 'in:kas,bank', 'different:dari_akun'],
+                    'jumlah' => ['required', 'numeric', 'min:1'],
+                    'tanggal' => ['required', 'date'],
+                    'keterangan' => ['nullable', 'string', 'max:255'],
+                ]);
+
+                $labelDari = $data['dari_akun'] === 'kas' ? 'Kas' : 'Bank';
+                $labelKe = $data['ke_akun'] === 'kas' ? 'Kas' : 'Bank';
+                $catatan = trim((string) ($data['keterangan'] ?? ''));
+                $suffix = $catatan !== '' ? " ({$catatan})" : '';
+
+                DB::transaction(function () use ($data, $labelDari, $labelKe, $suffix): void {
+                    UangKeluar::create([
+                        'akun' => $data['dari_akun'],
+                        'kategori' => KategoriPengeluaran::Lainnya->value,
+                        'jumlah' => $data['jumlah'],
+                        'tanggal' => $data['tanggal'],
+                        'keterangan' => "Pindah dana ke {$labelKe}{$suffix}",
+                    ]);
+
+                    UangMasuk::create([
+                        'akun' => $data['ke_akun'],
+                        'jumlah' => $data['jumlah'],
+                        'tanggal' => $data['tanggal'],
+                        'keterangan' => "Pindah dana dari {$labelDari}{$suffix}",
+                    ]);
+                });
+
+                return back()->with('sukses', "Pindah dana dari {$labelDari} ke {$labelKe} berhasil dicatat.");
+            })->name('cash-transfer.store');
         });
 
         // Modul Uang Keluar

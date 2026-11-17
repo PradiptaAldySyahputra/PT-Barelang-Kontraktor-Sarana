@@ -71,8 +71,42 @@ final class ReceiptUploadForm extends Component
     {
         abort_unless((bool) auth()->user()?->bolehInput(), 403);
 
-        $this->daftarNota = [];
-        $this->kunciOcr = null;
+        // 1. Cek apakah ada proses OCR yang sedang berjalan di latar belakang
+        $kunciPending = session()->get('bks_ocr_kunci_pending');
+        $pathPending = session()->get('bks_ocr_path_pending');
+        $jenisPending = session()->get('bks_ocr_jenis_pending');
+
+        if ($kunciPending && Cache::has(EkstrakNotaOcr::kunciCache($kunciPending))) {
+            // Pekerjaan latar belakang sudah selesai saat pengguna pergi! Ambil hasilnya sekarang.
+            $this->kunciOcr = $kunciPending;
+            $this->berkasTersimpanPath = $pathPending;
+            $this->jenisTransaksi = $jenisPending ?? 'keluar';
+            session()->forget(['bks_ocr_kunci_pending', 'bks_ocr_path_pending', 'bks_ocr_jenis_pending']);
+            $this->periksaHasilOcr();
+
+            return;
+        } elseif ($kunciPending) {
+            // Pekerjaan latar belakang masih berjalan di antrean
+            $this->kunciOcr = $kunciPending;
+            $this->berkasTersimpanPath = $pathPending;
+            $this->jenisTransaksi = $jenisPending ?? 'keluar';
+            $this->sedangProses = true;
+            $this->pesanStatus = 'Melanjutkan pemantauan OCR yang berjalan di latar belakang...';
+
+            return;
+        }
+
+        // 2. Jika sebelumnya ada draf nota yang sudah selesai diekstrak dan belum disimpan
+        $tersimpanSesi = session()->get('bks_draft_unggah_nota');
+        if (is_array($tersimpanSesi) && ! empty($tersimpanSesi['daftarNota'])) {
+            $this->daftarNota = $tersimpanSesi['daftarNota'];
+            $this->berkasTersimpanPath = $tersimpanSesi['berkasTersimpanPath'] ?? null;
+            $this->jenisTransaksi = $tersimpanSesi['jenisTransaksi'] ?? 'keluar';
+            $this->pesanStatus = 'Draf nota dari sesi sebelumnya dipulihkan otomatis.';
+        } else {
+            $this->daftarNota = [];
+            $this->kunciOcr = null;
+        }
     }
 
     public function updatedBerkasNota(): void
@@ -124,7 +158,12 @@ final class ReceiptUploadForm extends Component
         //    menunggu Python, hasilnya diambil lewat polling `periksaHasilOcr`.
         $this->kunciOcr = (string) Str::uuid();
         EkstrakNotaOcr::dispatch($this->kunciOcr, $pathRelatif);
-        $this->pesanStatus = 'Berkas terunggah. OCR berjalan di latar belakang - kartu nota muncul otomatis.';
+        $this->pesanStatus = 'Berkas terunggah. OCR berjalan di latar belakang - Anda dapat berpindah halaman dengan aman.';
+
+        // Simpan penanda bahwa proses OCR sedang berjalan ke sesi pengguna
+        session()->put('bks_ocr_kunci_pending', $this->kunciOcr);
+        session()->put('bks_ocr_path_pending', $pathRelatif);
+        session()->put('bks_ocr_jenis_pending', $this->jenisTransaksi);
 
         // Antrean `sync` menyelesaikan job seketika: ambil hasilnya sekarang.
         $this->periksaHasilOcr();
@@ -148,8 +187,18 @@ final class ReceiptUploadForm extends Component
         Cache::forget(EkstrakNotaOcr::kunciCache($this->kunciOcr));
         $this->kunciOcr = null;
 
+        // Bersihkan sesi antrean pending karena hasil sudah siap diproses
+        session()->forget(['bks_ocr_kunci_pending', 'bks_ocr_path_pending', 'bks_ocr_jenis_pending']);
+
         $this->terapkanHasil($hasil);
         $this->sedangProses = false;
+
+        // Simpan draf ke sesi pengguna agar tidak hilang saat berpindah halaman
+        session()->put('bks_draft_unggah_nota', [
+            'daftarNota' => $this->daftarNota,
+            'berkasTersimpanPath' => $this->berkasTersimpanPath,
+            'jenisTransaksi' => $this->jenisTransaksi,
+        ]);
     }
 
     /**
@@ -398,11 +447,23 @@ final class ReceiptUploadForm extends Component
         $this->daftarNota = [];
         $this->berkasNota = null;
         $this->berkasTersimpanPath = null;
+        session()->forget(['bks_draft_unggah_nota', 'bks_ocr_kunci_pending', 'bks_ocr_path_pending', 'bks_ocr_jenis_pending']);
 
         $labelJenis = $this->jenisTransaksi === 'masuk' ? 'uang masuk' : 'uang keluar';
         session()->flash('berhasil', "Berhasil menyimpan {$countDisimpan} nota {$labelJenis} ke dalam arsip & sistem.");
 
         $this->redirectRoute('panel.receipts', navigate: false);
+    }
+
+    public function bersihkanDraf(): void
+    {
+        $this->daftarNota = [];
+        $this->berkasNota = null;
+        $this->berkasTersimpanPath = null;
+        $this->kunciOcr = null;
+        $this->sedangProses = false;
+        $this->pesanStatus = null;
+        session()->forget(['bks_draft_unggah_nota', 'bks_ocr_kunci_pending', 'bks_ocr_path_pending', 'bks_ocr_jenis_pending']);
     }
 
     public function render(): View

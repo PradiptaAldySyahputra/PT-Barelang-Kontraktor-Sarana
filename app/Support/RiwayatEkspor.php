@@ -141,7 +141,7 @@ final class RiwayatEkspor
 
             return match ($kode) {
                 'buku-kas' => 'Buku Kas Operasional',
-                'buku-bank' => 'Buku Bank (Rekening PLN)',
+                'buku-bank' => 'Buku Bank (Rekening Perusahaan)',
                 'piutang' => 'Laporan Piutang SPK',
                 'tenggat' => 'Laporan Tenggat SPK',
                 'spk' => 'Daftar Seluruh SPK',

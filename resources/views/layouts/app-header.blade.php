@@ -104,8 +104,8 @@
 
         <!-- Application Menu (mobile) and Right Side Actions (desktop) -->
         <div :class="isApplicationMenuOpen ? 'flex' : 'hidden'"
-            class="items-center justify-between w-full gap-4 px-5 py-4 xl:flex shadow-theme-md xl:justify-end xl:px-0 xl:shadow-none">
-            <div class="flex items-center gap-2 2xsm:gap-3">
+            class="items-center justify-between w-full gap-4 px-5 py-4 bg-white dark:bg-gray-900 xl:flex shadow-theme-md xl:justify-end xl:px-0 xl:shadow-none">
+            <div class="flex items-center gap-3 sm:gap-3.5">
                 <!-- Theme Toggle Button -->
                 <button
                     class="relative flex items-center justify-center text-gray-500 transition-colors bg-white border border-gray-200 rounded-full hover:text-dark-900 h-11 w-11 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -128,6 +128,9 @@
                 <!-- Notification Dropdown -->
                 <x-header.notification-dropdown />
             </div>
+
+            <!-- Divider pemisah halus antar modul tools dan profil pengguna -->
+            <div class="hidden xl:block h-8 w-px bg-gray-200 dark:bg-gray-800"></div>
 
             <!-- User Dropdown -->
             <x-header.user-dropdown />

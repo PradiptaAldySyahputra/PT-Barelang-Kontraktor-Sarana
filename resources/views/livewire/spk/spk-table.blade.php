@@ -40,7 +40,7 @@
     {{-- ============================================================
          KEPALA: ringkasan + penyaring (TailAdmin Style)
          ============================================================ --}}
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-theme-xs">
+    <div class="overflow-hidden rounded-2xl border border-gray-300 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-theme-xs">
 
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
             <div>

@@ -10,10 +10,83 @@
 @endphp
 
 <x-layouts.app :judul="$judul" :keterangan="$keterangan">
-    <div class="mx-auto max-w-3xl space-y-4">
+    <div class="mx-auto max-w-5xl" x-data="{
+        editProfil: {{ $errors->has('nama') || $errors->has('email') || $errors->has('avatar') || $errors->has('tanda_tangan') ? 'true' : 'false' }},
+        editSandi: {{ $errors->has('sandi_lama') || $errors->has('sandi_baru') ? 'true' : 'false' }}
+    }">
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 lg:p-6 dark:border-gray-800 dark:bg-white/[0.03] shadow-theme-xs">
+            <h3 class="mb-5 text-lg font-semibold text-gray-800 lg:mb-7 dark:text-white/90">Profil Saya</h3>
+            <div class="space-y-6">
 
-        {{-- Data diri --}}
-        <form method="POST" action="{{ route('panel.profile.update') }}" enctype="multipart/form-data" class="{{ $kelasKartu }}">
+        {{-- TailAdmin Pro: Profile Header Summary Card --}}
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 lg:p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-5">
+                    <div class="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-brand-50 dark:border-gray-700 dark:bg-brand-500/15 flex items-center justify-center">
+                        @if ($pengguna->urlAvatar())
+                            <img src="{{ $pengguna->urlAvatar() }}" alt="{{ $pengguna->nama }}" class="h-full w-full object-cover">
+                        @else
+                            <span class="text-2xl font-bold text-brand-600 dark:text-brand-400">
+                                {{ strtoupper(substr($pengguna->nama ?? 'U', 0, 1)) }}
+                            </span>
+                        @endif
+                    </div>
+                    <div class="text-center sm:text-left">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            {{ $pengguna->nama }}
+                        </h3>
+                        <div class="mt-1 flex flex-wrap items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 sm:justify-start">
+                            <span class="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-400 capitalize">
+                                {{ $pengguna->peran?->value ?? 'Pengguna' }}
+                            </span>
+                            <span class="hidden sm:inline">&middot;</span>
+                            <span>{{ $pengguna->email }}</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" @click="editProfil = !editProfil"
+                    class="inline-flex items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03] dark:hover:text-white transition">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                    </svg>
+                    <span x-text="editProfil ? 'Tutup Edit' : 'Edit Profil'">Edit Profil</span>
+                </button>
+            </div>
+        </div>
+
+        {{-- TailAdmin Pro: Personal Information (Read-Only Summary) --}}
+        <div x-show="!editProfil" class="rounded-2xl border border-gray-200 bg-white p-5 lg:p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="flex items-center justify-between gap-4 mb-5">
+                <h4 class="text-base font-semibold text-gray-800 dark:text-white/90">Informasi Pribadi</h4>
+                <button type="button" @click="editProfil = true"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.03] transition">
+                    Edit
+                </button>
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-6">
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Nama Lengkap</p>
+                    <p class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">{{ $pengguna->nama }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Alamat Email</p>
+                    <p class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">{{ $pengguna->email }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Peran Akun</p>
+                    <p class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90 capitalize">{{ $pengguna->peran?->value ?? 'Pengguna' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Tanda Tangan Digital</p>
+                    <p class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">
+                        {{ $pengguna->tanda_tangan_path ? 'Sudah terunggah' : 'Belum diunggah' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Data diri (Form Edit) --}}
+        <form x-show="editProfil" x-cloak method="POST" action="{{ route('panel.profile.update') }}" enctype="multipart/form-data" class="{{ $kelasKartu }}">
             @csrf
             @method('PUT')
 
@@ -302,5 +375,7 @@
                 </button>
             </div>
         </form>
+            </div>
+        </div>
     </div>
 </x-layouts.app>

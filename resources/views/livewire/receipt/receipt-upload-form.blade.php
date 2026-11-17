@@ -1,7 +1,7 @@
 @php
     $kelasInput = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3.5 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-500';
     $kelasLabel = 'mb-1.5 block text-theme-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300';
-    $kelasKartu = 'rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] md:p-6';
+    $kelasKartu = 'rounded-2xl border border-gray-300 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] md:p-6';
 @endphp
 
 <div class="space-y-5" @if ($sedangProses) wire:poll.2s="periksaHasilOcr" @endif>
@@ -50,6 +50,15 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
+                @if (! empty($daftarNota) || $berkasTersimpanPath)
+                    <button type="button" wire:click="bersihkanDraf"
+                        class="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-error-200 bg-error-50 px-3 text-theme-xs font-semibold text-error-700 shadow-theme-xs transition hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Reset Unggahan</span>
+                    </button>
+                @endif
                 <button type="button" wire:click="tambahNotaManual" wire:loading.attr="disabled"
                     class="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 text-theme-xs font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
                     <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

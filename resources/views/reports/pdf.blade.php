@@ -119,7 +119,7 @@
                 </td>
                 <td style="vertical-align: middle; text-align: left; border: none; padding: 0 0 0 8px;">
                     <div class="nama" style="color: #0F4C81; font-size: 13px; font-weight: bold;">PT BARELANG KONTRAKTOR SARANA</div>
-                    <div class="alamat" style="font-size: 8px; color: #4b5563;">Subkontraktor PT PLN Batam · Pulau Batam, Kepulauan Riau</div>
+                    <div class="alamat" style="font-size: 8px; color: #4b5563;">Jasa Konstruksi & Ketenagalistrikan · Pulau Batam, Kepulauan Riau</div>
                 </td>
             </tr>
         </table>

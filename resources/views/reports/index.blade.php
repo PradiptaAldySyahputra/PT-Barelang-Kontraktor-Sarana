@@ -36,12 +36,44 @@
         <section class="{{ $kelasKartu }} p-4 md:p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 {{-- Periode Filter --}}
-                <form method="GET" action="{{ route('panel.reports') }}"
-                    class="flex min-w-0 flex-1 flex-wrap items-center gap-2" role="group" aria-label="Periode laporan">
-                    <input type="hidden" name="periode" value="0">
+                <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                    <form method="GET" action="{{ route('panel.reports') }}"
+                        class="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Periode laporan">
+                        <input type="hidden" name="periode" value="{{ $periode }}">
 
-                        <x-common.filter-tanggal id="tanggal-laporan" mode="get" :otomatis="true" :tanggal="(string) ($tanggalMulai ?? '')" :lebar="'sm:w-40'" />
-                </form>
+                        <x-common.filter-tanggal id="tanggal-laporan" mode="get" :otomatis="true" :tanggal="(string) ($tanggalMulai ?? '')" :lebar="'sm:w-44'" />
+                    </form>
+
+                    {{-- Tombol Presets Periode Cepat --}}
+                    <div class="flex flex-wrap items-center gap-1 text-xs">
+                        <a href="{{ route('panel.reports', ['periode' => 1]) }}"
+                            class="rounded-lg border px-2.5 py-1.5 text-theme-xs font-semibold shadow-theme-xs transition {{ $periode === 1 && empty($tanggalMulai) ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
+                            Bulan Ini
+                        </a>
+                        <a href="{{ route('panel.reports', ['periode' => 3]) }}"
+                            class="rounded-lg border px-2.5 py-1.5 text-theme-xs font-semibold shadow-theme-xs transition {{ $periode === 3 && empty($tanggalMulai) ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
+                            3 Bulan
+                        </a>
+                        <a href="{{ route('panel.reports', ['periode' => 12]) }}"
+                            class="rounded-lg border px-2.5 py-1.5 text-theme-xs font-semibold shadow-theme-xs transition {{ $periode === 12 && empty($tanggalMulai) ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
+                            1 Tahun
+                        </a>
+                        <a href="{{ route('panel.reports', ['periode' => 0]) }}"
+                            class="rounded-lg border px-2.5 py-1.5 text-theme-xs font-semibold shadow-theme-xs transition {{ $periode === 0 && empty($tanggalMulai) ? 'border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-500/15 dark:text-brand-400' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
+                            Semua
+                        </a>
+                        @if ($tanggalMulai)
+                            <a href="{{ route('panel.reports', ['periode' => 1]) }}"
+                                title="Reset filter tanggal"
+                                class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-theme-xs font-semibold text-error-600 hover:bg-error-50 dark:border-gray-700 dark:bg-gray-800 dark:text-error-400">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Reset
+                            </a>
+                        @endif
+                    </div>
+                </div>
 
                 {{-- Dropdown Ekspor Laporan Resmi PT BKS --}}
                 <div class="relative shrink-0" x-data="{ openExport: false }" @click.outside="openExport = false">
@@ -255,7 +287,7 @@
                         <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
                             <div class="flex items-center gap-2.5">
                                 <span class="h-3 w-3 rounded-full bg-blue-500"></span>
-                                <h4 class="text-base font-semibold text-gray-900 dark:text-white">Buku Bank (Rekening PLN)</h4>
+                                <h4 class="text-base font-semibold text-gray-900 dark:text-white">Buku Bank (Rekening Perusahaan)</h4>
                             </div>
                             <button type="button" @click="activeTab = 'buku-bank'"
                                 class="text-theme-xs font-semibold text-brand-600 hover:underline dark:text-brand-400">
@@ -524,7 +556,7 @@
             <section class="{{ $kelasKartu }} overflow-hidden">
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
                     <div>
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Buku Bank (Rekening PLN Batam)</h3>
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Buku Bank (Rekening Perusahaan)</h3>
                         <p class="mt-0.5 text-theme-xs text-gray-500 dark:text-gray-400">Mutasi penerimaan termin kontrak SPK dan pembayaran vendor besar</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
@@ -687,7 +719,7 @@
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 dark:text-white">Piutang Belum Tertagih per SPK</h3>
                         <p class="text-theme-xs text-gray-500 dark:text-gray-400">
-                            {{ $data['daftarPiutang']->count() }} SPK belum lunas dari PLN Batam
+                            {{ $data['daftarPiutang']->count() }} SPK belum lunas
                         </p>
                     </div>
                     <a href="{{ route('laporan.ekspor', array_merge(['jenis' => 'piutang', 'format' => 'xlsx'], $paramPeriode)) }}"

@@ -101,6 +101,8 @@ final class DashboardSummary
                 'persen' => $nilaiSpk > 0 ? min(100.0, round($diterimaDariSpk / $nilaiSpk * 100, 1)) : 0.0,
             ],
 
+            'saldo' => $saldo,
+
             'tren' => self::trenEnamBulan(),
             'sebaranTagihan' => self::sebaranStatusTagihan(),
             'sebaranSpk' => self::sebaranStatusSpk(),
@@ -243,6 +245,10 @@ final class DashboardSummary
 
         $mendekatiTenggat = Spk::mendekatiTenggat()->count();
         $lewatTenggat = Spk::lewatTenggat()->count();
+        $revisiDokumen = Spk::where('status_spk', StatusSpk::RevisiDokumen->value)->count();
+
+        $nilaiTotalSpk = (float) Spk::sum('nilai_spk');
+        $masukTotalSpk = (float) UangMasuk::whereNotNull('spk_id')->sum('jumlah');
 
         return [
             'saldo' => $saldo,
@@ -260,6 +266,13 @@ final class DashboardSummary
                     $keluarBulanIni,
                     (float) UangKeluar::whereBetween('tanggal', [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()])->sum('jumlah'),
                 ),
+            ],
+
+            'realisasiSpk' => [
+                'totalNilai' => $nilaiTotalSpk,
+                'totalDiterima' => $masukTotalSpk,
+                'sisaPiutang' => max(0.0, $nilaiTotalSpk - $masukTotalSpk),
+                'persenDiterima' => $nilaiTotalSpk > 0 ? round(($masukTotalSpk / $nilaiTotalSpk) * 100, 1) : 0.0,
             ],
 
             // Yang harus dikerjakan hari ini - bukan angka hiasan.
@@ -282,16 +295,93 @@ final class DashboardSummary
                     'ket' => 'Perlu tindak lanjut',
                     'nada' => $lewatTenggat > 0 ? 'bahaya' : 'aman',
                 ],
+                [
+                    'label' => 'Revisi dokumen',
+                    'jumlah' => $revisiDokumen,
+                    'ket' => 'Perbaikan berkas mitra',
+                    'nada' => $revisiDokumen > 0 ? 'perhatian' : 'aman',
+                ],
             ],
 
             'terbaru' => self::aktivitasTerbaru(8),
             'spkBerjalan' => self::spkBerjalan(6),
+            'spkPerluPerhatian' => self::spkPerluPerhatian(5),
+            'pengeluaranKategori' => self::pengeluaranPerKategoriBulanIni(),
             'jumlahMitra' => Mitra::count(),
             'spkBerjalanCount' => Spk::berjalan()->count(),
             'tren' => self::trenEnamBulan(),
             'sebaranSpk' => self::sebaranStatusSpk(),
             'hariIni' => self::mutasiHariIni(),
         ];
+    }
+
+    /**
+     * Komposisi pengeluaran operasional per kategori bulan ini.
+     *
+     * @return list<array{kategori: string, label: string, total: float, jumlah_trx: int, persen: float}>
+     */
+    public static function pengeluaranPerKategoriBulanIni(): array
+    {
+        $awalBulan = now()->startOfMonth();
+        $totalKeluar = (float) UangKeluar::where('tanggal', '>=', $awalBulan)->sum('jumlah');
+
+        $rows = UangKeluar::query()
+            ->selectRaw('kategori, SUM(jumlah) as total, COUNT(*) as jumlah_trx')
+            ->where('tanggal', '>=', $awalBulan)
+            ->groupBy('kategori')
+            ->orderByDesc('total')
+            ->get();
+
+        return $rows->map(static function ($r) use ($totalKeluar): array {
+            $kat = $r->kategori;
+            $subtotal = (float) $r->total;
+
+            return [
+                'kategori' => $kat?->value ?? 'lainnya',
+                'label' => $kat?->label() ?? 'Lainnya',
+                'total' => $subtotal,
+                'jumlah_trx' => (int) $r->jumlah_trx,
+                'persen' => $totalKeluar > 0 ? round(($subtotal / $totalKeluar) * 100, 1) : 0.0,
+            ];
+        })->all();
+    }
+
+    /**
+     * SPK yang memerlukan perhatian operasional Admin segera (lewat tenggat atau siap ditagih).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function spkPerluPerhatian(int $batas = 5): array
+    {
+        return Spk::query()
+            ->with('mitra:id,nama')
+            ->where(function ($q): void {
+                $q->lewatTenggat()
+                    ->orWhere('status_spk', StatusSpk::RevisiDokumen->value)
+                    ->orWhere(function ($sub): void {
+                        $sub->where('status_spk', StatusSpk::Selesai->value)
+                            ->where(function ($st): void {
+                                $st->whereNull('status_tagihan')
+                                    ->orWhere('status_tagihan', StatusTagihan::BelumDitagihkan->value);
+                            });
+                    });
+            })
+            ->orderBy('tanggal_akhir')
+            ->limit($batas)
+            ->get()
+            ->map(static fn (Spk $s): array => [
+                'id' => $s->id,
+                'nomor_spk' => $s->nomor_spk,
+                'pekerjaan' => $s->nama_pekerjaan,
+                'mitra' => $s->mitra?->nama ?? '-',
+                'nilai' => (float) $s->nilai_spk,
+                'status_spk' => $s->status_spk?->label() ?? '-',
+                'status_tagihan' => $s->status_tagihan?->label() ?? 'Belum Ditagihkan',
+                'label_tenggat' => $s->labelTenggat(),
+                'lewat' => $s->sudahLewatTenggat(),
+                'sisa_hari' => $s->sisaTenggatHari(),
+            ])
+            ->all();
     }
 
     /**
