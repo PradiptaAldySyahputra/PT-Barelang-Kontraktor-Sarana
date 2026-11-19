@@ -8,20 +8,16 @@ use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
 use App\Enums\Peran;
 use App\Support\ArsipNota;
-use App\Support\ImporTransaksi;
-use App\Support\PembacaImpor;
 use App\Support\RiwayatEkspor;
 use App\Support\StatusBackup;
 use App\Support\StatusSistem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
- * Halaman sistem: Arsip Nota, Ekspor & Unduhan, Backup, Status Sistem, Impor Data.
+ * Halaman sistem: Arsip Nota, Ekspor & Unduhan, Backup, Status Sistem.
  *
  * Semua perhitungan ada di App\Support; halaman ini hanya menyusun tampilan
  * dan memeriksa hak akses. Tautan unduhan memakai rute yang sudah ada
@@ -37,6 +33,20 @@ final class SystemController
         $dari = $tanggal;
         $sampai = $tanggal;
 
+        // Preset periode (hari ini / 3 hari / 7 hari / bulan / tahun) mendahului tanggal tunggal.
+        $periode = $request->string('periode')->toString();
+        $awalPeriode = match ($periode) {
+            'hari-ini' => now()->format('Y-m-d'),
+            '7-hari' => now()->subDays(6)->format('Y-m-d'),
+            'bulan' => now()->startOfMonth()->format('Y-m-d'),
+            'tahun' => now()->startOfYear()->format('Y-m-d'),
+            default => null,
+        };
+        if ($awalPeriode !== null) {
+            $dari = $awalPeriode;
+            $sampai = now()->format('Y-m-d');
+        }
+
         $filter = [
             'tanggal_awal' => $dari,
             'tanggal_akhir' => $sampai,
@@ -46,27 +56,21 @@ final class SystemController
         ];
 
         $semuaArsip = ArsipNota::cari($filter);
-        $perHalaman = 15;
-        $halaman = (int) $request->input('page', 1);
-        $total = $semuaArsip->count();
-        $arsipSlice = $semuaArsip->slice(($halaman - 1) * $perHalaman, $perHalaman)->values();
-
-        $arsipPaginated = new LengthAwarePaginator(
-            $arsipSlice,
-            $total,
-            $perHalaman,
-            $halaman,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        $semua = (bool) $request->boolean('semua');
+        $perHalaman = 50;
+        $daftar = $semua ? $semuaArsip : $semuaArsip->take($perHalaman)->values();
 
         return view('system.receipts', [
             'judul' => 'Arsip Nota',
             'keterangan' => 'Semua berkas bukti uang masuk & uang keluar',
-            'arsip' => $arsipPaginated,
+            'arsip' => $daftar,
             'semuaArsip' => $semuaArsip,
+            'semua' => $semua,
+            'batas' => $perHalaman,
             'opsiAkun' => AkunKas::opsi(),
             'opsiKategori' => KategoriPengeluaran::opsi(),
             'filter' => $filter,
+            'periode' => $periode,
         ]);
     }
 
@@ -141,88 +145,6 @@ final class SystemController
                     ? $keluaran
                     : ($exit === 0 ? 'Berkas backup dibuat.' : 'Backup gagal. Periksa konfigurasi database & mysqldump.'),
             );
-    }
-
-    public function import(): View
-    {
-        $this->pastikanAdmin();
-
-        return view('system.import', [
-            'judul' => 'Impor Data',
-            'keterangan' => 'Impor uang masuk / uang keluar dari CSV',
-            'hasil' => session('impor_hasil'),
-        ]);
-    }
-
-    public function importStore(Request $request): RedirectResponse
-    {
-        $this->pastikanAdmin();
-
-        $data = $request->validate([
-            'jenis' => ['required', 'in:spk,masuk,keluar'],
-            'berkas' => ['required', 'file', 'mimes:csv,txt,xlsx', 'max:10240'],
-        ]);
-
-        $berkas = $request->file('berkas');
-
-        if ($berkas === null) {
-            return back()->with('gagal', 'Berkas tidak terbaca.');
-        }
-
-        // Simpan dulu dengan ekstensi aslinya: pembaca (OpenSpout) menentukan
-        // format dari ekstensi, sedangkan berkas sementara PHP tidak punya.
-        $nama = uniqid('impor-', true).'.'.strtolower($berkas->getClientOriginalExtension());
-        $berkas->storeAs('impor', $nama, 'local');
-
-        $path = Storage::disk('local')->path('impor/'.$nama);
-
-        if (! is_file($path)) {
-            return back()->with('gagal', 'Berkas gagal disimpan.');
-        }
-
-        // Berkas mentah berisi data keuangan: hapus apa pun yang terjadi,
-        // termasuk bila pembacaan gagal di tengah jalan.
-        try {
-            $baris = PembacaImpor::baca($path);
-        } finally {
-            @unlink($path);
-        }
-
-        $hasil = match ($data['jenis']) {
-            'spk' => ImporTransaksi::spk($baris),
-            'keluar' => ImporTransaksi::uangKeluar($baris),
-            default => ImporTransaksi::uangMasuk($baris),
-        };
-
-        return redirect()
-            ->route('panel.import')
-            ->with('berhasil', $hasil['ditambah'].' ditambah · '.$hasil['dilewati'].' dilewati · '.count($hasil['gagal']).' gagal')
-            ->with('impor_hasil', array_merge($hasil, ['jenis' => $data['jenis']]));
-    }
-
-    public function template(Request $request)
-    {
-        $this->pastikanAdmin();
-
-        $jenis = $request->query('jenis', 'transaksi');
-
-        if ($jenis === 'spk') {
-            $csv = "nomor_spk,tanggal_spk,nama_pekerjaan,lokasi,nilai_spk,mitra,keterangan\n"
-                ."0001.SPK/DAN.01.03/PLNBATAM020300/2026,2026-01-05,Pemasangan Jaringan Pelanggan,Batam Tersebar,20000000,PT PLN Batam,Pekerjaan selesai\n"
-                .",,Pemeliharaan Gedung,Batu Apar,35000000,PT PLN Batam,Tanpa SPK resmi\n";
-
-            return response()->streamDownload(function () use ($csv): void {
-                echo $csv;
-            }, 'template-impor-spk.csv', ['Content-Type' => 'text/csv']);
-        }
-
-        $csv = "tanggal,jumlah,akun,nomor_spk,kategori,penerima,keterangan\n"
-            ."2026-01-05,1500000,Kas,,,Setoran awal\n"
-            ."2026-01-06,2500000,Bank,,material,Toko A,Beli material\n";
-
-        return response()->streamDownload(function () use ($csv): void {
-            echo $csv;
-        }, 'template-impor.csv', ['Content-Type' => 'text/csv']);
     }
 
     private function pastikanAdmin(): void

@@ -2,20 +2,23 @@
     Dashboard Admin (operasional) - TailAdmin Harmonized Design
 --}}
 @use('App\Support\Format')
-@php
-    $nadaKpi = [
-        'netral' => 'text-gray-900 dark:text-white',
-        'aman' => 'text-success-700 dark:text-success-500',
-        'perhatian' => 'text-warning-700 dark:text-warning-500',
-        'bahaya' => 'text-error-600 dark:text-error-400 dark:text-error-500',
-    ];
 
+@php
     $trenLabels = array_map(fn($t) => $t['label'], $data['tren'] ?? []);
     $trenMasuk = array_map(fn($t) => (float) $t['masuk'], $data['tren'] ?? []);
     $trenKeluar = array_map(fn($t) => (float) $t['keluar'], $data['tren'] ?? []);
-
-    $spkLabels = array_map(fn($s) => $s['label'], $data['sebaranSpk'] ?? []);
-    $spkJumlah = array_map(fn($s) => (int) $s['jumlah'], $data['sebaranSpk'] ?? []);
+    $warnaHex = [
+        'primary' => '#465FFF', 'success' => '#12B76A', 'warning' => '#F79009',
+        'danger' => '#F04438', 'info' => '#0BA5EC', 'gray' => '#98A2B3',
+    ];
+    $spkStatus = array_values(array_filter($data['sebaranSpk'] ?? [], fn($s) => (int) $s['jumlah'] > 0));
+    $spkStatus = array_map(static function ($s) use ($warnaHex) {
+        $s['warna'] = $warnaHex[$s['warna']] ?? '#98A2B3';
+        return $s;
+    }, $spkStatus);
+    $spkStatusLabels = array_map(fn($s) => $s['label'], $spkStatus);
+    $spkStatusJumlah = array_map(fn($s) => (int) $s['jumlah'], $spkStatus);
+    $spkStatusWarna = array_map(fn($s) => $s['warna'], $spkStatus);
 @endphp
 
 <x-layouts.app :judul="$judul" :keterangan="$keterangan">
@@ -208,7 +211,7 @@
             <div class="mt-5 flex items-end justify-between">
                 <div>
                     <span class="text-sm text-gray-500 dark:text-gray-400">SPK Berjalan Aktif</span>
-                    <h4 class="mt-2 text-xl font-bold angka text-gray-900 dark:text-white sm:text-2xl">
+                    <h4 class="mt-2 text-lg font-bold angka text-gray-900 dark:text-white sm:text-xl">
                         {{ $data['spkBerjalanCount'] }} SPK
                     </h4>
                 </div>
@@ -219,43 +222,55 @@
         </div>
     </div>
 
-    {{-- Baris Antrean Tindakan Operasional (Actionable Task Pulse - TailAdmin Badge Alert Style) --}}
-    @if (($data['antrean'] ?? []) !== [])
-        <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            @foreach ($data['antrean'] as $item)
-                @php
-                    $warnaBg = match ($item['nada']) {
-                        'bahaya' => 'bg-error-50/70 border-error-200 dark:bg-error-500/10 dark:border-error-500/20 text-error-700 dark:text-error-400 hover:border-error-300 dark:hover:border-error-500/40',
-                        'perhatian' => 'bg-warning-50/70 border-warning-200 dark:bg-warning-500/10 dark:border-warning-500/20 text-warning-700 dark:text-warning-400 hover:border-warning-300 dark:hover:border-warning-500/40',
-                        default => 'bg-gray-50/80 border-gray-200 dark:bg-gray-800/60 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700',
-                    };
-                    $badgePill = match ($item['nada']) {
-                        'bahaya' => 'bg-error-100 text-error-700 dark:bg-error-500/20 dark:text-error-300',
-                        'perhatian' => 'bg-warning-100 text-warning-800 dark:bg-warning-500/20 dark:text-warning-300',
-                        default => 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-                    };
-                    $ruteTarget = match ($item['label']) {
-                        'SPK belum ditagihkan' => route('panel.spk.monitoring', 'billing'),
-                        'Mendekati tenggat' => route('panel.spk.calendar'),
-                        'Lewat tenggat' => route('panel.spk.monitoring', 'status'),
-                        'Revisi dokumen' => route('panel.spk.monitoring', 'status'),
-                        default => route('panel.spk.index'),
-                    };
-                @endphp
-                <a href="{{ $ruteTarget }}" class="flex items-center justify-between rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-theme-xs {{ $warnaBg }}">
-                    <div class="min-w-0 pr-3">
-                        <span class="text-sm font-bold block truncate">{{ $item['label'] }}</span>
-                        <span class="text-xs opacity-80 block mt-0.5">{{ $item['ket'] }}</span>
-                    </div>
-                    <span class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl px-2.5 text-base font-bold angka shrink-0 shadow-xs {{ $badgePill }}">
-                        {{ $item['jumlah'] }}
+    {{-- Baris 2: Tren Arus Kas + Status Pengerjaan SPK (ApexCharts) --}}
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-7">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Pergerakan Arus Kas</h3>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Uang masuk vs keluar 6 bulan terakhir</p>
+                </div>
+                <div class="flex items-center gap-4 text-xs">
+                    <span class="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300">
+                        <span class="h-3 w-3 rounded-full bg-[#465fff]"></span> Masuk
                     </span>
-                </a>
-            @endforeach
+                    <span class="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300">
+                        <span class="h-3 w-3 rounded-full bg-[#f04438]"></span> Keluar
+                    </span>
+                </div>
+            </div>
+            <div id="chartArusKasAdmin" class="w-full h-[290px]"></div>
         </div>
-    @endif
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-5">
+            <div class="mb-4">
+                <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Status Pengerjaan SPK</h3>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Sebaran status penyelesaian pekerjaan</p>
+            </div>
+            <div id="chartStatusSpkAdmin" class="w-full flex items-center justify-center my-3 min-h-[220px]"></div>
+            <ul class="mt-2 space-y-2">
+                @foreach ($spkStatus as $s)
+                    @php
+                        $ruteStatus = match ($s['label']) {
+                            'Sudah Ditagihkan' => route('panel.spk.monitoring', 'billing'),
+                            'Berjalan', 'Revisi Dokumen' => route('panel.spk.monitoring', 'status'),
+                            default => route('panel.spk.index'),
+                        };
+                    @endphp
+                    <li>
+                        <a href="{{ $ruteStatus }}" class="flex items-center justify-between gap-2 group">
+                            <span class="flex items-center gap-2.5 min-w-0">
+                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $s['warna'] }}"></span>
+                                <span class="truncate text-sm text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">{{ $s['label'] }}</span>
+                            </span>
+                            <span class="font-bold text-gray-900 dark:text-white angka shrink-0">{{ $s['jumlah'] }} SPK ({{ $s['persen'] }}%)</span>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    </div>
 
-    {{-- Baris 2: Ringkasan Bulan Ini & Aksi Cepat Operasional --}}
+    {{-- Baris 3: Ringkasan Bulan Ini & Aksi Cepat Operasional --}}
     <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
         {{-- Ringkasan Kas Bulan Ini --}}
         <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-7 flex flex-col justify-between">
@@ -442,51 +457,6 @@
         </div>
     </div>
 
-    {{-- Baris Target Realisasi Penerimaan SPK (TailAdmin Progress Gauge Widget) --}}
-    @if (! empty($data['realisasiSpk']))
-        <div class="mt-6 rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Realisasi Penerimaan Kontrak SPK</h3>
-                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                        Pencapaian penerimaan pembayaran terhadap total komitmen kontrak seluruh SPK
-                    </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">Tingkat Penagihan:</span>
-                    <span class="inline-flex items-center rounded-lg bg-brand-50 px-2.5 py-1 text-sm font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400 angka">
-                        {{ $data['realisasiSpk']['persenDiterima'] }}%
-                    </span>
-                </div>
-            </div>
-
-            <div class="mt-4 h-3 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shadow-inner">
-                <div class="h-full rounded-full bg-brand-500 transition-all duration-700" style="width: {{ min(100, $data['realisasiSpk']['persenDiterima']) }}%"></div>
-            </div>
-
-            <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs">
-                <div class="flex items-center justify-between sm:block">
-                    <span class="text-gray-500 dark:text-gray-400 block font-medium">Total Nilai SPK</span>
-                    <span class="text-sm font-bold text-gray-900 dark:text-white angka block sm:mt-1">
-                        {{ Format::rupiah($data['realisasiSpk']['totalNilai']) }}
-                    </span>
-                </div>
-                <div class="flex items-center justify-between sm:block">
-                    <span class="text-gray-500 dark:text-gray-400 block font-medium">Dana Masuk Diterima</span>
-                    <span class="text-sm font-bold text-success-700 dark:text-success-400 angka block sm:mt-1">
-                        {{ Format::rupiah($data['realisasiSpk']['totalDiterima']) }}
-                    </span>
-                </div>
-                <div class="flex items-center justify-between sm:block">
-                    <span class="text-gray-500 dark:text-gray-400 block font-medium">Sisa Piutang Berjalan</span>
-                    <span class="text-sm font-bold text-warning-700 dark:text-warning-400 angka block sm:mt-1">
-                        {{ Format::rupiah($data['realisasiSpk']['sisaPiutang']) }}
-                    </span>
-                </div>
-            </div>
-        </div>
-    @endif
-
     {{-- Baris 4: Dua Kolom Operasional (Transaksi Terbaru & SPK Berjalan) - TailAdmin Card Table Style --}}
     <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
 
@@ -599,12 +569,11 @@
             </div>
         </div>
     </div>
-
-    {{-- Baris 5: SPK Perlu Perhatian Khusus & Komposisi Pengeluaran Operasional --}}
-    @if (! empty($data['spkPerluPerhatian']) || ! empty($data['pengeluaranKategori']))
+    {{-- Baris 5: SPK Mendesak & Perlu Tindak Lanjut --}}
+    @if (! empty($data['spkPerluPerhatian']))
         <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
             {{-- Tabel SPK Perlu Tindak Lanjut --}}
-            <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 shadow-theme-xs overflow-hidden xl:col-span-8 flex flex-col justify-between">
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 shadow-theme-xs overflow-hidden xl:col-span-12 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
                         <div>
@@ -666,61 +635,21 @@
                     @endif
                 </div>
             </div>
-
-            {{-- Breakdown Kategori Pengeluaran Bulan Ini --}}
-            <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-4 flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Kategori Biaya Operasional</h3>
-                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Pengeluaran bulan {{ now()->translatedFormat('F Y') }}</p>
-                        </div>
-                        <a href="{{ route('panel.cash-out.index') }}" class="text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400">
-                            Detail &rarr;
-                        </a>
-                    </div>
-
-                    @if (($data['pengeluaranKategori'] ?? []) === [])
-                        <div class="py-8 text-center text-xs text-gray-500 dark:text-gray-400">
-                            Belum ada pengeluaran di bulan ini.
-                        </div>
-                    @else
-                        <div class="space-y-3.5">
-                            @foreach ($data['pengeluaranKategori'] as $pk)
-                                <div>
-                                    <div class="flex items-center justify-between text-xs mb-1">
-                                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ $pk['label'] }} ({{ $pk['jumlah_trx'] }}x)</span>
-                                        <span class="font-bold text-gray-900 dark:text-white angka">{{ Format::rupiah($pk['total']) }} ({{ $pk['persen'] }}%)</span>
-                                    </div>
-                                    <div class="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
-                                        <div class="bg-brand-500 h-full rounded-full" style="width: {{ min(100, max(4, $pk['persen'])) }}%"></div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-
-                <div class="mt-5 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs">
-                    <span class="text-gray-500 dark:text-gray-400">Total Pengeluaran Bulan Ini</span>
-                    <span class="font-bold text-error-600 dark:text-error-400 angka">
-                        {{ Format::rupiah($data['bulanIni']['keluar']) }}
-                    </span>
-                </div>
-            </div>
         </div>
     @endif
+
+
 
     @push('scripts')
     <script>
         (function() {
             const isDark = () => document.documentElement.classList.contains('dark');
-            const charts = {};
+            let chartArusKas = null;
+            let chartStatusSpk = null;
 
             function initAdminCharts() {
                 if (typeof window.ApexCharts === 'undefined') return;
 
-                // Chart Arus Kas Admin
                 const elArusKas = document.querySelector('#chartArusKasAdmin');
                 if (elArusKas && !elArusKas.dataset.rendered) {
                     elArusKas.dataset.rendered = 'true';
@@ -732,23 +661,24 @@
                         colors: ['#465fff', '#f04438'],
                         chart: {
                             fontFamily: "Outfit, sans-serif",
-                            type: 'bar',
+                            type: 'line',
                             height: 290,
                             background: 'transparent',
                             toolbar: { show: false },
                             zoom: { enabled: false }
                         },
                         theme: { mode: isDark() ? 'dark' : 'light' },
-                        plotOptions: {
-                            bar: {
-                                horizontal: false,
-                                columnWidth: '38%',
-                                borderRadius: 6,
-                                borderRadiusApplication: 'end'
-                            }
+                        stroke: {
+                            curve: 'smooth',
+                            width: 3
+                        },
+                        markers: {
+                            size: 5,
+                            strokeWidth: 3,
+                            hover: { size: 6 }
                         },
                         dataLabels: { enabled: false },
-                        stroke: { show: true, width: 3, colors: ['transparent'] },
+                        fill: { type: 'solid', opacity: 1 },
                         xaxis: {
                             categories: @json($trenLabels),
                             axisBorder: { show: false },
@@ -791,26 +721,23 @@
                             }
                         }
                     };
-                    charts.arusKas = new window.ApexCharts(elArusKas, optionsArusKas);
-                    charts.arusKas.render();
+                    chartArusKas = new window.ApexCharts(elArusKas, optionsArusKas);
+                    chartArusKas.render();
                 }
 
-                // Chart Sebaran Status SPK
-                const elStatus = document.querySelector('#chartStatusSpkAdmin');
-                if (elStatus && !elStatus.dataset.rendered) {
-                    elStatus.dataset.rendered = 'true';
-                    const optionsStatus = {
-                        series: @json($spkJumlah),
-                        labels: @json($spkLabels),
-                        colors: ['#98a2b3', '#0ba5ec', '#f79009', '#12b76a', '#0F4C81', '#f04438'],
+                const elStatusSpk = document.querySelector('#chartStatusSpkAdmin');
+                if (elStatusSpk && !elStatusSpk.dataset.rendered) {
+                    elStatusSpk.dataset.rendered = 'true';
+                    const optionsStatusSpk = {
+                        series: @json($spkStatusJumlah),
+                        labels: @json($spkStatusLabels),
+                        colors: @json($spkStatusWarna),
                         chart: {
                             fontFamily: "Outfit, sans-serif",
                             type: 'donut',
                             height: 230,
                             background: 'transparent'
                         },
-                        theme: { mode: isDark() ? 'dark' : 'light' },
-                        stroke: { colors: [isDark() ? '#111827' : '#ffffff'], width: 2 },
                         dataLabels: { enabled: false },
                         legend: { show: false },
                         plotOptions: {
@@ -839,32 +766,43 @@
                                     }
                                 }
                             }
+                        },
+                        stroke: { colors: [isDark() ? '#111827' : '#ffffff'], width: 2 },
+                        tooltip: {
+                            theme: isDark() ? 'dark' : 'light',
+                            y: { formatter: (val) => val + ' SPK' }
                         }
                     };
-                    charts.status = new window.ApexCharts(elStatus, optionsStatus);
-                    charts.status.render();
+                    chartStatusSpk = new window.ApexCharts(elStatusSpk, optionsStatusSpk);
+                    chartStatusSpk.render();
                 }
             }
 
-            // Sinkronkan warna chart saat tema di-toggle
-            function syncTheme() {
+            function syncTema() {
                 const dark = isDark();
                 const mode = dark ? 'dark' : 'light';
-                charts.arusKas?.updateOptions({
+                chartArusKas?.updateOptions({
                     theme: { mode },
-                    grid: { borderColor: dark ? '#1F2A37' : '#E5E7EB' },
+                    grid: { borderColor: dark ? '#1E2640' : '#F3F4F6' },
                     tooltip: { theme: mode }
                 });
-                charts.status?.updateOptions({
+                chartStatusSpk?.updateOptions({
                     theme: { mode },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                labels: {
+                                    value: { color: dark ? '#F8FAFC' : '#1D2939' },
+                                    total: { color: dark ? '#98A2B3' : '#64748B' }
+                                }
+                            }
+                        }
+                    },
                     stroke: { colors: [dark ? '#111827' : '#ffffff'], width: 2 },
-                    plotOptions: { pie: { donut: { labels: {
-                        value: { color: dark ? '#F8FAFC' : '#1D2939' },
-                        total: { color: dark ? '#98A2B3' : '#64748B' }
-                    } } } }
+                    tooltip: { theme: mode }
                 });
             }
-            new MutationObserver(syncTheme).observe(document.documentElement, {
+            new MutationObserver(syncTema).observe(document.documentElement, {
                 attributes: true,
                 attributeFilter: ['class', 'data-color-scheme']
             });

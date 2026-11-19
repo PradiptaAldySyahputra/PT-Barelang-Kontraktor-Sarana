@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\StatusSpk;
+use App\Models\Mitra;
 use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
@@ -75,5 +76,42 @@ class DashboardSummaryTest extends TestCase
         $this->assertContains('SPK/TEST/TERBIT/01', $nomorTerdaftar);
         $this->assertContains('SPK/TEST/BERJALAN/02', $nomorTerdaftar);
         $this->assertNotContains('SPK/TEST/DRAFT/03', $nomorTerdaftar);
+    }
+
+    public function test_top_mitra_piutang_mengecualikan_spk_dibatalkan(): void
+    {
+        $alpha = Mitra::factory()->create(['nama' => 'PT Alpha']);
+        $beta = Mitra::factory()->create(['nama' => 'PT Beta']);
+
+        Spk::factory()->create([
+            'mitra_id' => $alpha->id,
+            'nilai_spk' => 100000000,
+            'status_spk' => StatusSpk::Berjalan,
+        ]);
+        UangMasuk::factory()->create([
+            'spk_id' => Spk::where('mitra_id', $alpha->id)->first()->id,
+            'jumlah' => 40000000,
+            'tanggal' => now()->toDateString(),
+        ]);
+        Spk::factory()->create([
+            'mitra_id' => $beta->id,
+            'nilai_spk' => 50000000,
+            'status_spk' => StatusSpk::Berjalan,
+        ]);
+        // SPK Dibatalkan tidak boleh ikut dihitung.
+        Spk::factory()->create([
+            'mitra_id' => $alpha->id,
+            'nilai_spk' => 500000000,
+            'status_spk' => StatusSpk::Dibatalkan,
+        ]);
+
+        $top = DashboardSummary::eksekutif()['topMitraPiutang'];
+
+        $this->assertCount(2, $top);
+        $this->assertSame('PT Alpha', $top[0]['mitra']);
+        $this->assertSame(100000000.0, $top[0]['nilai']);
+        $this->assertSame(60000000.0, $top[0]['sisa']);
+        $this->assertSame('PT Beta', $top[1]['mitra']);
+        $this->assertSame(50000000.0, $top[1]['sisa']);
     }
 }

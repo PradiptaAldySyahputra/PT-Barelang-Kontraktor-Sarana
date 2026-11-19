@@ -18,6 +18,11 @@ use Tests\TestCase;
  * Keputusan pengguna: **CUKUP 3 NILAI** -
  *   Belum / Sudah Diantar / Diterima
  * (nilai tambahan bisa menyusul bila diperlukan)
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class StatusAntarTest extends TestCase
 {

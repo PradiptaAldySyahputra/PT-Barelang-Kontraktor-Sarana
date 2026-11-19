@@ -188,18 +188,18 @@ class SpkTableTest extends TestCase
     }
 
     /* =====================================================
-       Paginasi
+       Filter & kap tampilan
        ===================================================== */
 
-    public function test_mengubah_penyaring_kembali_ke_halaman_satu(): void
+    public function test_perubahan_filter_mereset_tampilan_terbatas(): void
     {
         Spk::factory()->count(20)->create();
 
         Livewire::actingAs($this->admin())
             ->test(SpkTable::class)
-            ->call('setPage', 2)
-            ->assertSet('paginators.page', 2)
+            ->set('semua', true)
+            ->assertSet('semua', true)
             ->set('cari', 'SPK')
-            ->assertSet('paginators.page', 1);
+            ->assertSet('semua', false);
     }
 }

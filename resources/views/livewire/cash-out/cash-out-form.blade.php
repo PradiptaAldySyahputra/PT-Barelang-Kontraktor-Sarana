@@ -51,7 +51,7 @@
                     <input id="tgl-{{ $kunci }}" type="date" max="{{ now()->format('Y-m-d') }}"
                         wire:model="baris.{{ $kunci }}.tanggal" class="mt-1 {{ $kelasInput }}">
                     @error("baris.$kunci.tanggal")
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -63,7 +63,7 @@
                         x-on:input="$el.value = $el.value.replace(/\D+/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')"
                         class="mt-1 {{ $kelasInput }} angka">
                     @error("baris.$kunci.jumlah")
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -75,7 +75,7 @@
                         @endforeach
                     </select>
                     @error("baris.$kunci.akun")
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -88,7 +88,7 @@
                         @endforeach
                     </select>
                     @error("baris.$kunci.kategori")
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -98,7 +98,7 @@
                         wire:model="baris.{{ $kunci }}.detail_kategori" class="mt-1 {{ $kelasInput }}"
                         placeholder="mis. kabel NYY 2x4">
                     @error("baris.$kunci.detail_kategori")
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -107,7 +107,7 @@
                     <input id="penerima-{{ $kunci }}" type="text" maxlength="255"
                         wire:model="baris.{{ $kunci }}.penerima" class="mt-1 {{ $kelasInput }}">
                     @error("baris.$kunci.penerima")
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -132,7 +132,7 @@
                         />
                     </div>
                     @error("baris.$kunci.spk_id")
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -141,7 +141,7 @@
                     <input id="ket-{{ $kunci }}" type="text" maxlength="255"
                         wire:model="baris.{{ $kunci }}.keterangan" class="mt-1 {{ $kelasInput }}">
                     @error("baris.$kunci.keterangan")
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
@@ -184,7 +184,7 @@
                 </div>
 
                 @error("unggahan.$kunci.*")
-                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                 @enderror
 
                 @if (filled($pesanOcr[$kunci] ?? ''))

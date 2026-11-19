@@ -223,7 +223,7 @@
                             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-7">
                                 <div>
                                     <label class="{{ $kelasLabel }}">
-                                        Nominal Rupiah (Rp) <span class="text-error-600 dark:text-error-400 dark:text-error-500">*</span>
+                                        Nominal Rupiah (Rp) <span class="text-error-600 dark:text-error-400">*</span>
                                     </label>
                                     <input type="text" inputmode="numeric" autocomplete="off" placeholder="0"
                                         wire:model.defer="daftarNota.{{ $idx }}.nominal"
@@ -237,7 +237,7 @@
 
                                 <div>
                                     <label class="{{ $kelasLabel }}">
-                                        Tanggal Transaksi <span class="text-error-600 dark:text-error-400 dark:text-error-500">*</span>
+                                        Tanggal Transaksi <span class="text-error-600 dark:text-error-400">*</span>
                                     </label>
                                     <input type="date" wire:model.defer="daftarNota.{{ $idx }}.tanggal" class="{{ $kelasInput }}">
                                     @error('daftarNota.'.$idx.'.tanggal')
@@ -257,7 +257,7 @@
                                 @if ($jenisTransaksi === 'keluar')
                                     <div>
                                         <label class="{{ $kelasLabel }}">
-                                            Kategori Pengeluaran <span class="text-error-600 dark:text-error-400 dark:text-error-500">*</span>
+                                            Kategori Pengeluaran <span class="text-error-600 dark:text-error-400">*</span>
                                         </label>
                                         <select wire:model.defer="daftarNota.{{ $idx }}.kategori" class="{{ $kelasInput }}">
                                             @foreach ($opsiKategori as $val => $label)
@@ -269,7 +269,7 @@
 
                                 <div>
                                     <label class="{{ $kelasLabel }}">
-                                        Sumber Akun Kas <span class="text-error-600 dark:text-error-400 dark:text-error-500">*</span>
+                                        Sumber Akun Kas <span class="text-error-600 dark:text-error-400">*</span>
                                     </label>
                                     <select wire:model.defer="daftarNota.{{ $idx }}.akun" class="{{ $kelasInput }}">
                                         @foreach ($opsiAkun as $val => $label)

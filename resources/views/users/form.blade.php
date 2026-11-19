@@ -30,7 +30,7 @@
                         value="{{ old('nama', $pengguna?->nama) }}"
                         class="mt-1.5 h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-500">
                     @error('nama')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -43,7 +43,7 @@
                         class="mt-1.5 h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-500">
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Dipakai untuk login.</p>
                     @error('email')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -68,7 +68,7 @@
                             Admin = input &amp; kelola data operasional. Direktur = Super Admin (akses penuh seluruh fitur + manajemen akun).
                         </p>
                         @error('peran')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -104,7 +104,7 @@
                         @endif
                     </p>
                     @error('password')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
             </div>

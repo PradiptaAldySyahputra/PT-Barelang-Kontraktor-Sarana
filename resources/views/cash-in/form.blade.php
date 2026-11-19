@@ -54,7 +54,7 @@
                         </label>
                     </div>
                     @error('mode')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </fieldset>
 
@@ -68,7 +68,7 @@
                         @endforeach
                     </select>
                     @error('akun')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
@@ -92,7 +92,7 @@
                     Nomor SPK &amp; nama pekerjaan terisi otomatis dari SPK yang dipilih.
                 </p>
                 @error('spk_id')
-                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                 @enderror
             </div>
         </section>
@@ -107,7 +107,7 @@
                     <input id="nomor_spk" name="nomor_spk" type="text" maxlength="150"
                         value="{{ old('nomor_spk', $uangMasuk?->nomor_spk) }}" class="mt-1.5 {{ $kelasInput }}">
                     @error('nomor_spk')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
@@ -115,7 +115,7 @@
                     <input id="nama_pekerjaan" name="nama_pekerjaan" type="text" maxlength="255"
                         value="{{ old('nama_pekerjaan', $uangMasuk?->nama_pekerjaan) }}" class="mt-1.5 {{ $kelasInput }}">
                     @error('nama_pekerjaan')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
@@ -133,7 +133,7 @@
                         class="mt-1.5 {{ $kelasInput }}">
                     <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Tidak boleh melewati hari ini.</p>
                     @error('tanggal')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
@@ -147,7 +147,7 @@
                         Pemisah ribuan otomatis. Tidak boleh melebihi sisa piutang SPK.
                     </p>
                     @error('jumlah')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
@@ -161,7 +161,7 @@
                         @endforeach
                     </select>
                     @error('mitra_id')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
                 <div>
@@ -179,7 +179,7 @@
                         value="{{ old('keterangan', $uangMasuk?->keterangan) }}"
                         placeholder="mis. termin 1" class="mt-1.5 {{ $kelasInput }}">
                     @error('keterangan')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
@@ -214,7 +214,7 @@
                     class="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-theme-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-theme-xs file:font-medium dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 dark:file:bg-white/10">
                 <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">JPG, PNG, WEBP, atau PDF.</p>
                 @error('bukti.*')
-                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                    <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                 @enderror
             </div>
         </section>

@@ -12,6 +12,11 @@ use Tests\TestCase;
  *
  * Dipakai untuk memisahkan buku KAS dan BANK - permintaan pengguna agar
  * laporan keuangan bisa disajikan terpisah seperti Excel perusahaan.
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class AkunKasTest extends TestCase
 {

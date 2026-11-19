@@ -209,7 +209,6 @@ final class ReceiptUploadForm extends Component
     private function terapkanHasil(array $hasil): void
     {
         $this->daftarNota = [];
-        $tglDefault = now()->toDateString();
 
         if ($hasil['ok'] ?? false) {
             $items = is_array($hasil['nota'] ?? null) ? $hasil['nota'] : [];
@@ -226,7 +225,7 @@ final class ReceiptUploadForm extends Component
                         $potonganUrl = Nota::url($item['potongan']);
                     }
 
-                    $kategoriVal = KategoriPengeluaran::Nota->value;
+                    $kategoriVal = KategoriPengeluaran::Lainnya->value;
                     if (! empty($item['kategori']) && KategoriPengeluaran::tryFrom((string) $item['kategori']) !== null) {
                         $kategoriVal = $item['kategori'];
                     }
@@ -236,7 +235,9 @@ final class ReceiptUploadForm extends Component
                         'ke' => (int) ($item['ke'] ?? ($idx + 1)),
                         'potongan' => $potonganUrl,
                         'potongan_path' => $item['potongan'] ?? null,
-                        'tanggal' => ! empty($item['tanggal']) ? Carbon::parse($item['tanggal'])->toDateString() : $tglDefault,
+                        // Tanggal utamakan hasil OCR; bila tidak terbaca BIARKAN kosong
+                        // (admin mengisi tanggal asli nota) — jangan diam-diam memakai hari upload.
+                        'tanggal' => ! empty($item['tanggal']) ? Carbon::parse($item['tanggal'])->toDateString() : null,
                         'nominal' => $item['nominal'] ?? null,
                         'penerima' => $item['penerima'] ?? null,
                         'kategori' => $kategoriVal,
@@ -267,7 +268,7 @@ final class ReceiptUploadForm extends Component
             'tanggal' => now()->toDateString(),
             'nominal' => $nominal,
             'penerima' => $penerima,
-            'kategori' => $kategori ?? KategoriPengeluaran::Nota->value,
+            'kategori' => $kategori ?? KategoriPengeluaran::Lainnya->value,
             'keterangan' => $keterangan ?? 'Nota Satuan',
             'spk_id' => null,
             'akun' => AkunKas::Kas->value,
@@ -361,7 +362,7 @@ final class ReceiptUploadForm extends Component
             $terimaPerSpk = [];
             foreach ($this->daftarNota as $idx => $item) {
                 if (! empty($item['spk_id'])) {
-                    $targetSpk = Spk::find($item['spk_id']);
+                    $targetSpk = Spk::withTrashed()->find($item['spk_id']);
                     if ($targetSpk) {
                         $sudah = $terimaPerSpk[$targetSpk->id] ?? $targetSpk->totalPenerimaan();
                         $batas = (float) $targetSpk->nilai_spk - $sudah;

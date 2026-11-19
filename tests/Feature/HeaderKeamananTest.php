@@ -13,6 +13,12 @@ use Tests\TestCase;
  * keamanan → halaman admin bisa dimuat dalam <iframe> situs lain
  * (clickjacking), dan browser boleh menebak tipe berkas.
  */
+/**
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
+ */
 class HeaderKeamananTest extends TestCase
 {
     public function test_halaman_mengirim_header_keamanan(): void

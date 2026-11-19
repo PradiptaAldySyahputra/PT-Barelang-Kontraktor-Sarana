@@ -13,6 +13,11 @@ use Tests\TestCase;
  * ⚠️ SARAN USER (9 Okt 2026):
  * "Hindari angka mentah tanpa konteks - selalu pasangkan dengan perbandingan
  *  (bulan lalu, target)."
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class PerbandinganKpiTest extends TestCase
 {

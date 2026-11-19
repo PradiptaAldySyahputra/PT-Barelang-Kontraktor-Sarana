@@ -60,16 +60,23 @@
         <div class="{{ $kelasKartu }} p-5 md:p-6">
             <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-2.5">
-                        <span class="angka min-w-0 break-all text-xl font-bold text-gray-900 dark:text-white md:text-2xl">
-                            {{ $spk->nomor_spk }}
-                        </span>
-                        <span class="inline-flex rounded-lg px-2.5 py-0.5 text-xs font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
-                            {{ $spk->status_spk?->label() ?? 'Draft' }}
-                        </span>
-                        <span class="inline-flex rounded-lg px-2.5 py-0.5 text-xs font-semibold {{ $badge($spk->status_tagihan?->warnaBadge()) }}">
-                            {{ $spk->status_tagihan?->label() ?? 'Belum Ditagihkan' }}
-                        </span>
+                    <div class="space-y-2">
+                        <div>
+                            <span class="angka min-w-0 break-words text-xl font-bold text-gray-900 dark:text-white md:text-2xl">
+                                {{ $spk->nomor_spk }}
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="inline-flex shrink-0 whitespace-nowrap rounded-lg px-2.5 py-0.5 text-theme-xs font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
+                                {{ $spk->status_spk?->label() ?? 'Draft' }}
+                            </span>
+                            <span class="inline-flex shrink-0 whitespace-nowrap rounded-lg px-2.5 py-0.5 text-theme-xs font-semibold {{ $badge($spk->status_tagihan?->warnaBadge()) }}">
+                                {{ $spk->status_tagihan?->label() ?? 'Belum Ditagihkan' }}
+                            </span>
+                            <span class="inline-flex shrink-0 whitespace-nowrap rounded-lg px-2.5 py-0.5 text-theme-xs font-semibold {{ $badge($spk->status_antar?->warnaBadge()) }}">
+                                {{ $spk->status_antar?->label() ?? 'Belum Diantar' }}
+                            </span>
+                        </div>
                     </div>
                     <p class="mt-1.5 text-theme-sm text-gray-600 dark:text-gray-300">
                         {{ $spk->nama_pekerjaan }} &middot; <strong class="text-gray-800 dark:text-white">{{ $spk->mitra?->nama ?? 'Tanpa Mitra' }}</strong>
@@ -86,18 +93,18 @@
                             Ubah SPK
                         </a>
                         <a href="{{ route('panel.spk.status', ['spk' => $spk, 'asal' => 'show']) }}"
-                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 sm:flex-none dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400"
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-theme-sm font-semibold text-amber-700 transition hover:bg-amber-100 sm:flex-none dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400"
                             title="Ubah tahapan pengerjaan">
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
                             </svg>
                             Ubah Status Pekerjaan
                         </a>
 
                         <a href="{{ route('panel.spk.billing', ['spk' => $spk, 'asal' => 'show']) }}"
-                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 sm:flex-none dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400"
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2 text-theme-sm font-semibold text-brand-700 transition hover:bg-brand-100 sm:flex-none dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400"
                             title="Ubah status penagihan & pembayaran">
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v8.25m0 0a60.073 60.073 0 0 0 15.797 2.101c.727.198 1.453-.342 1.453-1.096V6.75A.75.75 0 0 0 18.75 6H18m-1.5-1.5H3.75" />
                             </svg>
                             Ubah Status Tagihan
@@ -107,8 +114,11 @@
                             @csrf
                             @method('DELETE')
                             <button type="submit"
-                                class="inline-flex w-full items-center justify-center gap-1 rounded-xl px-2.5 py-2 text-xs font-semibold text-error-600 transition hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-500/10"
+                                class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-error-200 bg-white px-3.5 py-2 text-theme-sm font-semibold text-error-600 transition hover:bg-error-50 dark:border-error-500/30 dark:bg-gray-800 dark:text-error-400 dark:hover:bg-error-500/10"
                                 title="Hapus SPK ini">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                </svg>
                                 Hapus
                             </button>
                         </form>
@@ -128,8 +138,8 @@
                             $isCurrent = $spk->status_spk?->value === $key;
                             $isDone = $posisiStatus >= $stepNum;
                         @endphp
-                        <div class="flex min-w-0 items-center gap-2 rounded-xl border p-2.5 text-[11px] font-semibold transition sm:text-xs {{ $isCurrent ? 'border-brand-500 bg-brand-50/50 text-brand-700 dark:border-brand-400 dark:bg-brand-500/10 dark:text-brand-300' : ($isDone ? 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-300' : 'border-dashed border-gray-200 text-gray-500 dark:text-gray-400 dark:border-gray-700 dark:text-gray-500') }}">
-                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] {{ $isDone ? 'bg-brand-500 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">
+                        <div class="flex min-w-0 items-center gap-2 rounded-xl border p-3 text-theme-sm font-semibold transition {{ $isCurrent ? 'border-brand-500 bg-brand-50/50 text-brand-700 dark:border-brand-400 dark:bg-brand-500/10 dark:text-brand-300' : ($isDone ? 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-300' : 'border-dashed border-gray-200 text-gray-500 dark:text-gray-400 dark:border-gray-700 dark:text-gray-500') }}">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-theme-xs {{ $isDone ? 'bg-brand-500 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">
                                 @if ($isDone)
                                     <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                         <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
@@ -173,7 +183,7 @@
 
             <div class="{{ $kelasKartu }} p-5">
                 <span class="{{ $kelasLabel }}">Pengeluaran Lapangan</span>
-                <h4 class="{{ $kelasNilai }} angka text-error-600 dark:text-error-400 dark:text-error-500">
+                <h4 class="{{ $kelasNilai }} angka text-error-600 dark:text-error-400">
                     {{ Format::rupiah($totalKeluar) }}
                 </h4>
                 <span class="mt-1 block text-theme-xs text-gray-500 dark:text-gray-400">Biaya material & subkon</span>
@@ -229,12 +239,12 @@
                     Informasi Kontrak & Lokasi
                 </h3>
 
-                <dl class="mt-4 grid gap-4 sm:grid-cols-3">
+                <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                     <div class="min-w-0">
                         <dt class="{{ $kelasLabel }}">Nomor SPK</dt>
                         <dd class="{{ $kelasNilai }} angka break-all">{{ $spk->nomor_spk }}</dd>
                     </div>
-                    <div class="sm:col-span-2">
+                    <div class="min-w-0">
                         <dt class="{{ $kelasLabel }}">Nama Pekerjaan</dt>
                         <dd class="{{ $kelasNilai }}">{{ $spk->nama_pekerjaan }}</dd>
                     </div>
@@ -248,16 +258,22 @@
                     </div>
                     <div>
                         <dt class="{{ $kelasLabel }}">Pelaksana Pekerjaan</dt>
-                        <dd class="mt-1">
-                            <span class="{{ $badge($spk->dikerjakan_oleh?->warnaBadge()) }} inline-flex rounded px-2 py-0.5 text-xs font-semibold">
-                                {{ $spk->dikerjakan_oleh?->label() ?? '—' }}
+                        <dd class="{{ $kelasNilai }}">
+                            <span class="inline-flex items-center gap-2 flex-wrap">
+                                <span class="{{ $badge($spk->dikerjakan_oleh?->warnaBadge()) }} inline-flex rounded-md px-2.5 py-0.5 text-theme-xs font-semibold align-middle">
+                                    {{ $spk->dikerjakan_oleh?->label() ?? '—' }}
+                                </span>
+                                @if ($spk->subkon)
+                                    <span class="text-theme-sm font-medium text-gray-600 dark:text-gray-300">
+                                        Subkon: {{ $spk->subkon->nama }}
+                                    </span>
+                                @endif
                             </span>
-                            @if ($spk->subkon)
-                                <p class="mt-1 text-theme-xs font-medium text-gray-600 dark:text-gray-300">
-                                    Subkon: {{ $spk->subkon->nama }}
-                                </p>
-                            @endif
                         </dd>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <dt class="{{ $kelasLabel }}">Keterangan</dt>
+                        <dd class="{{ $kelasNilai }}">{{ $spk->keterangan ?: '—' }}</dd>
                     </div>
                 </dl>
             </section>
@@ -269,7 +285,7 @@
                         Jadwal & Berkas
                     </h3>
 
-                    <dl class="mt-4 space-y-3">
+                    <dl class="mt-3 space-y-2">
                         <div class="flex items-center justify-between">
                             <dt class="{{ $kelasLabel }}">Tanggal Mulai</dt>
                             <dd class="text-theme-sm font-semibold text-gray-800 dark:text-white">
@@ -285,7 +301,7 @@
                     </dl>
 
                     @if ($spk->pernahDiperpanjang())
-                        <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+                        <div class="mt-3 border-t border-gray-100 pt-2.5 dark:border-gray-800">
                             <p class="{{ $kelasLabel }}">Riwayat Perpanjangan ({{ $spk->jumlahPerpanjangan() }}x)</p>
                             <ul class="mt-2 space-y-1.5 text-theme-xs text-gray-600 dark:text-gray-300">
                                 @foreach ($spk->perpanjangan as $item)
@@ -305,7 +321,7 @@
                     @endif
 
                     @if ($spk->dokumen)
-                        <div class="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800">
+                        <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
                             <p class="{{ $kelasLabel }}">Dokumen SPK Tersimpan ({{ count($spk->dokumen) }})</p>
                             <ul class="mt-2 space-y-2">
                                 @foreach ($spk->dokumen as $path)
@@ -318,6 +334,38 @@
                                             </svg>
                                             <span class="truncate">{{ basename($path) }}</span>
                                         </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if ($spk->pengantaran)
+                        <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+                            <p class="{{ $kelasLabel }}">Pengantaran Dokumen ({{ count($spk->pengantaran) }})</p>
+                            <ul class="mt-2 space-y-3">
+                                @foreach ($spk->pengantaran as $antar)
+                                    @php $statusAntar = \App\Enums\StatusAntar::tryFrom((string) ($antar['status'] ?? '')) ?? \App\Enums\StatusAntar::Belum; @endphp
+                                    <li class="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <span class="angka text-theme-sm font-semibold text-gray-800 dark:text-white">
+                                                {{ ! empty($antar['tanggal']) ? \Illuminate\Support\Carbon::parse($antar['tanggal'])->format('d/m/Y') : '—' }}
+                                            </span>
+                                            <span class="inline-flex rounded px-2 py-0.5 text-theme-xs font-semibold {{ $badge($statusAntar->warnaBadge()) }}">
+                                                {{ $statusAntar->label() }}
+                                            </span>
+                                        </div>
+                                        <div class="mt-1.5 space-y-0.5 text-theme-xs text-gray-600 dark:text-gray-300">
+                                            @if (! empty($antar['oleh']))
+                                                <p>Dibawa oleh: <strong class="text-gray-800 dark:text-white">{{ $antar['oleh'] }}</strong></p>
+                                            @endif
+                                            @if (! empty($antar['tujuan']))
+                                                <p>Tujuan: <strong class="text-gray-800 dark:text-white">{{ $antar['tujuan'] }}</strong></p>
+                                            @endif
+                                            @if (! empty($antar['catatan']))
+                                                <p class="text-gray-500 dark:text-gray-400">{{ $antar['catatan'] }}</p>
+                                            @endif
+                                        </div>
                                     </li>
                                 @endforeach
                             </ul>
@@ -340,7 +388,7 @@
                     </div>
                     @if ($bolehUbah)
                         <a href="{{ route('panel.cash-in.create', ['spk_id' => $spk->id]) }}"
-                            class="inline-flex items-center gap-1.5 rounded-lg border border-success-200 bg-success-50 px-3 py-1.5 text-xs font-semibold text-success-700 hover:bg-success-100 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400 transition">
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-success-200 bg-success-50 px-3 py-1.5 text-theme-sm font-semibold text-success-700 hover:bg-success-100 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400 transition">
                             + Uang Masuk
                         </a>
                     @endif
@@ -370,14 +418,14 @@
                                         </td>
                                         <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300">{{ $masuk->akun?->label() ?? '—' }}</td>
                                         <td class="px-3 py-2.5 text-gray-600 dark:text-gray-400">{{ $masuk->keterangan ?: '—' }}</td>
-                                        <td class="px-4 py-2.5 text-right font-bold angka text-success-700 dark:text-success-500">
+                                        <td class="px-4 py-2.5 text-right font-bold angka whitespace-nowrap text-success-700 dark:text-success-500">
                                             + {{ Format::rupiah($masuk->jumlah) }}
                                         </td>
                                         <td class="px-3 py-2.5 text-right">
                                             <a href="{{ route('panel.cash-in.kuitansi', $masuk) }}"
-                                                class="inline-flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400 transition"
+                                                class="inline-flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2 py-1 text-theme-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400 transition"
                                                 title="Cetak Kuitansi Resmi PDF">
-                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24-1.076-.641-2.127-1.19-3.134a9.75 9.75 0 0 1-.77-2.327A5.99 5.99 0 0 1 12 3c1.78 0 3.376.777 4.48 2.02.44.498.81 1.05 1.09 1.648.55 1.007.95 2.058 1.19 3.134m-12.04 0c.34 1.52.88 2.97 1.59 4.31m8.86-4.31c.34 1.52.88 2.97 1.59 4.31M12 18.75a3 3 0 0 0 3-3V12a3 3 0 0 0-6 0v3.75a3 3 0 0 0 3 3Z" />
                                                 </svg>
                                                 Kuitansi
@@ -402,7 +450,7 @@
                     </div>
                     @if ($bolehUbah)
                         <a href="{{ route('panel.cash-out.create') }}"
-                            class="inline-flex items-center gap-1.5 rounded-lg border border-error-200 bg-error-50 px-3 py-1.5 text-xs font-semibold text-error-700 hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400 transition">
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-error-200 bg-error-50 px-3 py-1.5 text-theme-sm font-semibold text-error-700 hover:bg-error-100 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400 transition">
                             + Uang Keluar
                         </a>
                     @endif
@@ -431,7 +479,7 @@
                                         </td>
                                         <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300">{{ $keluar->detail_kategori ?: ($keluar->kategori?->label() ?? '—') }}</td>
                                         <td class="px-3 py-2.5 text-gray-600 dark:text-gray-400">{{ $keluar->penerima ?: '—' }}</td>
-                                        <td class="px-4 py-2.5 text-right font-bold angka text-error-600 dark:text-error-400 dark:text-error-500">
+                                        <td class="px-4 py-2.5 text-right font-bold angka whitespace-nowrap text-error-600 dark:text-error-400">
                                             − {{ Format::rupiah($keluar->jumlah) }}
                                         </td>
                                     </tr>

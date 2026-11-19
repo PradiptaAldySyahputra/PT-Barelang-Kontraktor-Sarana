@@ -277,7 +277,7 @@
                                     <td class="angka px-3 py-2.5 text-theme-xs text-gray-700 dark:text-gray-300">
                                         {{ $baris['baris_sukses'] }}/{{ $baris['total_baris'] }}
                                         @if ($baris['baris_gagal'] > 0)
-                                            <span class="text-[11px] text-error-600 dark:text-error-400 dark:text-error-500 font-semibold">({{ $baris['baris_gagal'] }} gagal)</span>
+                                            <span class="text-[11px] text-error-600 dark:text-error-400 font-semibold">({{ $baris['baris_gagal'] }} gagal)</span>
                                         @endif
                                     </td>
                                     <td class="px-3 py-2.5">

@@ -21,6 +21,11 @@ use Tests\TestCase;
  * Acuan resolusi: skrip OCR me-render PDF di 200 DPI. Untuk kertas A4
  * (8,27" × 11,69") itu ≈ 1654 × 2339 piksel. Jadi sisi terpanjang hasil
  * kompresi TIDAK BOLEH jauh di bawah itu, atau tulisan kecil akan hilang.
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class KompresiUntukOcrTest extends TestCase
 {

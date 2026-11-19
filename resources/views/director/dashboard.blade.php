@@ -17,10 +17,6 @@
 
     $selisihBulanIni = (float) $data['bulanIni']['masuk'] - (float) $data['bulanIni']['keluar'];
     $isNetDefisit = $selisihBulanIni < 0;
-
-    $nilaiPekerjaan = $data['kpi'][0] ?? ['nilai' => 'Rp 0', 'ket' => '0 SPK'];
-    $belumDiterima = $data['kpi'][1] ?? ['nilai' => 'Rp 0', 'ket' => '0 SPK'];
-    $lewatTenggat = $data['kpi'][3] ?? ['nilai' => '0', 'ket' => 'Semua sesuai jadwal'];
 @endphp
 
 <x-layouts.app :judul="$judul" :keterangan="$keterangan">
@@ -72,10 +68,10 @@
         </div>
     </div>
 
-    {{-- Baris 1: Hero Saldo Overview (TailAdmin Finance Pro) + 3 KPI Cards --}}
+    {{-- Baris 1: Hero Saldo Overview (TailAdmin Finance Pro) --}}
     <div class="grid grid-cols-1 gap-5 xl:grid-cols-12 items-stretch">
-        {{-- Total Balance Hero Card (Col 6 xl) --}}
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-6 flex flex-col justify-between">
+        {{-- Total Balance Hero Card (Full Width) --}}
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-12 flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
                     <div>
@@ -134,73 +130,41 @@
                 </a>
             </div>
         </div>
-
-        {{-- 3 KPI Cards Vertikal/Horizontal (Col 6 xl) --}}
-        <div class="xl:col-span-6 grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-4">
-            {{-- KPI 1: Nilai Pekerjaan --}}
-            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 flex items-center justify-between shadow-theme-xs">
-                <div class="flex items-center gap-4 min-w-0">
-                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400 shadow-theme-xs">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <div class="min-w-0">
-                        <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Nilai Pekerjaan Terkontrak</span>
-                        <h4 class="text-lg font-bold angka text-gray-900 dark:text-white truncate">
-                            {{ $nilaiPekerjaan['nilai'] }}
-                        </h4>
-                    </div>
-                </div>
-                <span class="inline-flex shrink-0 items-center rounded-lg bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
-                    {{ $nilaiPekerjaan['ket'] }}
-                </span>
-            </div>
-
-            {{-- KPI 2: Belum Diterima (Sisa Piutang) --}}
-            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 flex items-center justify-between shadow-theme-xs">
-                <div class="flex items-center gap-4 min-w-0">
-                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400 shadow-theme-xs">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="min-w-0">
-                        <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Piutang Belum Diterima</span>
-                        <h4 class="text-lg font-bold angka text-warning-700 dark:text-warning-400 truncate">
-                            {{ $belumDiterima['nilai'] }}
-                        </h4>
-                    </div>
-                </div>
-                <span class="inline-flex shrink-0 items-center rounded-lg bg-warning-50 px-2 py-0.5 text-xs font-semibold text-warning-700 dark:bg-warning-500/15 dark:text-warning-400">
-                    {{ $belumDiterima['ket'] }}
-                </span>
-            </div>
-
-            {{-- KPI 3: Lewat Tenggat --}}
-            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 flex items-center justify-between shadow-theme-xs">
-                <div class="flex items-center gap-4 min-w-0">
-                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400 shadow-theme-xs">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                    </div>
-                    <div class="min-w-0">
-                        <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">SPK Lewat Tenggat</span>
-                        <h4 class="text-lg font-bold angka text-error-600 dark:text-error-400 truncate">
-                            {{ $lewatTenggat['nilai'] }} Proyek
-                        </h4>
-                    </div>
-                </div>
-                <span class="inline-flex shrink-0 items-center rounded-lg bg-error-50 px-2 py-0.5 text-xs font-semibold text-error-700 dark:bg-error-500/15 dark:text-error-400">
-                    {{ $lewatTenggat['ket'] }}
-                </span>
-            </div>
-        </div>
     </div>
 
-    {{-- Baris 2: Ringkasan Arus Kas Bulan Ini & Realisasi Penagihan Kontrak (Grid 7 : 5) --}}
-    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
+    {{-- Baris 2: Ringkasan KPI Eksekutif (data penting) --}}
+    <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        @foreach ($data['kpi'] ?? [] as $kpi)
+            @php
+                $nadaStyle = match ($kpi['nada'] ?? 'netral') {
+                    'bahaya' => 'text-error-600 dark:text-error-400',
+                    'aman' => 'text-success-700 dark:text-success-400',
+                    default => 'text-gray-900 dark:text-white',
+                };
+                $ikon = match ($kpi['label'] ?? '') {
+                    'Nilai Pekerjaan' => 'M7.5 21V4.5A1.5 1.5 0 019 3h9a1.5 1.5 0 011.5 1.5V21m-12 0a1.5 1.5 0 01-1.5-1.5v-3h4.5V19.5A1.5 1.5 0 017.5 21zm9-9h3m-3-3h3m-3-3h3',
+                    'Belum Diterima' => 'M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z',
+                    'Lewat Tenggat' => 'M12 9v3.75m0 3v.008m9-3.758a9 9 0 11-18 0 9 9 0 0118 0z',
+                    default => 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
+                };
+            @endphp
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ $kpi['label'] }}</span>
+                    <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $ikon }}" />
+                        </svg>
+                    </span>
+                </div>
+                <p class="mt-3 break-words text-xl font-bold angka {{ $nadaStyle }}">{{ $kpi['nilai'] }}</p>
+                <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ $kpi['ket'] }}</p>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- Baris 3: Ringkasan Arus Kas Bulan Ini & Realisasi Penagihan Kontrak (Grid 7 : 5) --}}
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-start">
         {{-- Ringkasan Bulan Ini (7 grid) --}}
         <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-7 flex flex-col justify-between">
             <div>
@@ -329,6 +293,16 @@
                         </span>
                     </div>
                 </div>
+
+                @php
+                    $sisaPiutang = max(0.0, (float) ($data['tertagih']['nilai'] ?? 0) - (float) ($data['tertagih']['diterima'] ?? 0));
+                @endphp
+                <div class="mt-2 flex items-center justify-between rounded-xl bg-error-50/40 dark:bg-error-500/5 border border-error-200/70 dark:border-error-500/20 px-3 py-2.5 text-xs">
+                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block font-medium">Sisa Piutang</span>
+                    <span class="font-bold text-error-700 dark:text-error-400 angka">
+                        {{ Format::rupiah($sisaPiutang) }}
+                    </span>
+                </div>
             </div>
 
             <div class="mt-4 grid grid-cols-2 gap-2.5">
@@ -404,80 +378,100 @@
         </div>
     </div>
 
-    {{-- Baris 4: SPK Prioritas Pantauan (TailAdmin Table Card) --}}
-    <div class="mt-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 shadow-theme-xs overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+    {{-- Baris 5: Prioritas Piutang Eksekutif (SPK prioritas & top mitra piutang) --}}
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
+        {{-- SPK Prioritas Pantauan --}}
+        <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 shadow-theme-xs overflow-hidden xl:col-span-8 flex flex-col justify-between">
             <div>
-                <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">SPK Prioritas Pantauan</h3>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    Diurutkan dari yang telah melewati tenggat, disusul sisa piutang terbesar
-                </p>
+                <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">SPK Prioritas Pantauan</h3>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Lewat tenggat dulu, lalu sisa piutang terbesar</p>
+                    </div>
+                    <a href="{{ route('panel.spk.monitoring', 'status') }}" class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
+                        <span>Monitoring</span>
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                    </a>
+                </div>
+
+                @if (($data['spkPrioritas'] ?? []) === [])
+                    <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Tidak ada SPK yang perlu dipantau. Semua piutang aman.
+                    </div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.02]">
+                                    <th class="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">SPK & Mitra</th>
+                                    <th class="px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status Tagihan</th>
+                                    <th class="px-4 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sisa Piutang</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-xs">
+                                @foreach ($data['spkPrioritas'] as $prioritas)
+                                    <tr class="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                                        <td class="px-5 py-3.5">
+                                            <a href="{{ route('panel.spk.show', $prioritas['id']) }}" class="font-semibold text-brand-600 hover:underline dark:text-brand-400 block">
+                                                {{ $prioritas['nomor_spk'] }}
+                                            </a>
+                                            <span class="text-[11px] text-gray-500 dark:text-gray-400 truncate block max-w-xs">
+                                                {{ $prioritas['mitra'] }} &middot; {{ $prioritas['pekerjaan'] }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3.5">
+                                            <span class="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-semibold {{ $prioritas['lewat'] ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400' : 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400' }}">
+                                                {{ $prioritas['status_tagihan'] }} &middot; {{ $prioritas['label_tenggat'] }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3.5 text-end font-bold text-gray-900 dark:text-white angka">
+                                            {{ Format::rupiah($prioritas['sisa']) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
             </div>
-            <a href="{{ route('panel.spk.index') }}"
-                class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
-                <span>Lihat Semua SPK</span>
-                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-            </a>
         </div>
 
-        @if ($data['spkPrioritas'] === [])
-            <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                Semua SPK sudah lunas. Tidak ada tagihan tertunda.
-            </div>
-        @else
-            <div class="overflow-x-auto">
-                <table class="w-full min-w-[720px] text-left">
-                    <thead>
-                        <tr class="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.02]">
-                            <th class="px-5 py-3 text-start font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">SPK / Pekerjaan</th>
-                            <th class="px-4 py-3 text-start font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">Mitra</th>
-                            <th class="px-4 py-3 text-end font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">Nilai Kontrak</th>
-                            <th class="px-4 py-3 text-end font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">Sisa Piutang</th>
-                            <th class="px-4 py-3 text-start font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">Tenggat</th>
-                            <th class="px-5 py-3 text-start font-medium text-gray-500 text-xs uppercase tracking-wider dark:text-gray-400">Status Tagihan</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @foreach ($data['spkPrioritas'] as $spk)
-                            <tr class="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
-                                <td class="px-5 py-4">
-                                    <a href="{{ route('panel.spk.show', $spk['id']) }}" class="block group">
-                                        <span class="font-semibold text-xs text-brand-600 hover:underline dark:text-brand-400">
-                                            {{ $spk['nomor_spk'] }}
-                                        </span>
-                                        <span class="block truncate text-[11px] text-gray-500 dark:text-gray-400 max-w-xs mt-0.5">
-                                            {{ $spk['pekerjaan'] }}
-                                        </span>
-                                    </a>
-                                </td>
-                                <td class="px-4 py-4 text-xs text-gray-700 dark:text-gray-300 font-medium">
-                                    {{ $spk['mitra'] }}
-                                </td>
-                                <td class="px-4 py-4 text-end text-xs text-gray-700 dark:text-gray-300 angka font-medium">
-                                    {{ Format::rupiah($spk['nilai']) }}
-                                </td>
-                                <td class="px-4 py-4 text-end text-xs font-bold text-gray-900 dark:text-white angka">
-                                    {{ Format::rupiah($spk['sisa']) }}
-                                </td>
-                                <td class="px-4 py-4 text-xs">
-                                    <span class="block text-gray-700 dark:text-gray-300 font-medium">{{ $spk['tenggat'] }}</span>
-                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold mt-0.5 {{ $spk['lewat'] ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">
-                                        {{ $spk['label_tenggat'] }}
-                                    </span>
-                                </td>
-                                <td class="px-5 py-4">
-                                    <span class="inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
-                                        {{ $spk['status_tagihan'] }}
-                                    </span>
-                                </td>
-                            </tr>
+        {{-- Top Mitra Piutang --}}
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-4 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Top Mitra Piutang</h3>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Mitra dengan sisa tagihan terbesar</p>
+                    </div>
+                </div>
+
+                @if (($data['topMitraPiutang'] ?? []) === [])
+                    <div class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Belum ada piutang tercatat.
+                    </div>
+                @else
+                    <div class="space-y-3">
+                        @foreach ($data['topMitraPiutang'] as $mitra)
+                            <div class="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/70 px-3.5 py-3 dark:border-gray-800 dark:bg-white/[0.02]">
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+                                    {{ mb_substr($mitra['mitra'], 0, 1) }}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-xs font-semibold text-gray-800 dark:text-white/90">{{ $mitra['mitra'] }}</p>
+                                    <p class="truncate text-[11px] text-gray-500 dark:text-gray-400">Sisa tagihan</p>
+                                </div>
+                                <span class="shrink-0 text-sm font-bold text-error-600 dark:text-error-400 angka">
+                                    {{ Format::rupiah($mitra['sisa']) }}
+                                </span>
+                            </div>
                         @endforeach
-                    </tbody>
-                </table>
+                    </div>
+                @endif
             </div>
-        @endif
+        </div>
     </div>
 
     @push('scripts')

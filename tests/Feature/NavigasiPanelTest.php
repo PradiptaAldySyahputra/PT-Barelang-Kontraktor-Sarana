@@ -223,7 +223,6 @@ final class NavigasiPanelTest extends TestCase
             [route('panel.users.index'), 'Pengguna', route('panel.users.index')],
             [route('panel.status'), 'Sistem', route('panel.status')],
             [route('panel.backup'), 'Sistem', route('panel.status')],
-            [route('panel.import'), 'Sistem', route('panel.status')],
         ];
 
         foreach ($harapan as [$url, $label, $urlInduk]) {
@@ -274,7 +273,6 @@ final class NavigasiPanelTest extends TestCase
             route('panel.users.index'),
             route('panel.status'),
             route('panel.backup'),
-            route('panel.import'),
             route('panel.profile'),
             route('panel.spk.show', $this->spk),
             route('panel.spk.create'),
@@ -344,7 +342,6 @@ final class NavigasiPanelTest extends TestCase
             route('panel.users.index'),
             route('panel.status'),
             route('panel.backup'),
-            route('panel.import'),
         ] as $url) {
             $this->assertNull($this->kembaliUrl($this->html($url, $this->direktur)), "Tombol Kembali tidak boleh ada di {$url}");
         }

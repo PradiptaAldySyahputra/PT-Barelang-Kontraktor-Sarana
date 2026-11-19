@@ -18,6 +18,11 @@ use PHPUnit\Framework\TestCase;
  *
  * Tes ini mengunci perilaku parser memakai teks OCR NYATA (dari berkas
  * 57-nota) supaya perbaikan tidak menurunkan kualitas baca.
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class PembacaIsiNotaTest extends TestCase
 {
@@ -64,6 +69,25 @@ class PembacaIsiNotaTest extends TestCase
         ]);
 
         $this->assertSame('2026-03-15', $hasil['tanggal']);
+    }
+
+    public function test_mengurai_tanggal_nama_bulan_full(): void
+    {
+        $hasil = PembacaIsiNota::urai([
+            'NOTA No. :',
+            'Tanggal 19 November 2026',
+        ]);
+
+        $this->assertSame('2026-11-19', $hasil['tanggal']);
+    }
+
+    public function test_mengurai_tanggal_nama_bulan_singkat(): void
+    {
+        $hasil = PembacaIsiNota::urai([
+            'Jakarta, 19 Nov 2026',
+        ]);
+
+        $this->assertSame('2026-11-19', $hasil['tanggal']);
     }
 
     public function test_mengurai_penerima_setelah_kepada_yth(): void

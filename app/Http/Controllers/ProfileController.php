@@ -27,7 +27,7 @@ final class ProfileController
     {
         return view('profile.index', [
             'judul' => 'Profil Saya',
-            'keterangan' => 'Data diri, foto, tanda tangan, dan kata sandi',
+            'keterangan' => 'Data diri, foto, dan kata sandi',
             'pengguna' => $request->user(),
         ]);
     }
@@ -133,5 +133,20 @@ final class ProfileController
         return redirect()
             ->route('panel.profile')
             ->with('berhasil', 'Kata sandi diganti. Sesi lain sudah diputus.');
+    }
+
+    public function putusSesiLain(Request $request): RedirectResponse
+    {
+        /** @var Pengguna $pengguna */
+        $pengguna = $request->user();
+
+        DB::table('sessions')
+            ->where('user_id', $pengguna->id)
+            ->where('id', '!=', $request->session()->getId())
+            ->delete();
+
+        return redirect()
+            ->route('panel.profile')
+            ->with('berhasil', 'Semua sesi lain telah diputus.');
     }
 }

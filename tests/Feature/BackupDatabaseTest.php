@@ -24,6 +24,11 @@ use Tests\TestCase;
  *   1. berkas .sql.gz terbentuk & isinya benar (hasil gunzip = dump),
  *   2. retensi `--hari` menghapus berkas lama,
  *   3. `--simpan` tetap menyimpan meski dump gagal.
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class BackupDatabaseTest extends TestCase
 {

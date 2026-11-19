@@ -229,6 +229,15 @@ final class PembacaIsiNota
      */
     private static function cariTanggal(array $baris): ?string
     {
+        $bulan = [
+            'januari' => 1, 'februari' => 2, 'maret' => 3, 'april' => 4,
+            'mei' => 5, 'juni' => 6, 'juli' => 7, 'agustus' => 8,
+            'september' => 9, 'oktober' => 10, 'november' => 11, 'desember' => 12,
+            'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4,
+            'jun' => 6, 'jul' => 7, 'agu' => 8, 'sep' => 9, 'sept' => 9,
+            'okt' => 10, 'nov' => 11, 'des' => 12,
+        ];
+
         foreach ($baris as $t) {
             // dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy
             if (preg_match('#\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})\b#', $t, $m)) {
@@ -249,6 +258,23 @@ final class PembacaIsiNota
             if (preg_match('#\b(\d{4})-(\d{2})-(\d{2})\b#', $t, $m)) {
                 if (checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
                     return sprintf('%04d-%02d-%02d', $m[1], $m[2], $m[3]);
+                }
+            }
+
+            // dd MMMMM yyyy — nama bulan Indonesia ("19 November 2026")
+            if (preg_match('#\b(\d{1,2})\s*[-/.\s]?\s*(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember|jan|feb|mar|apr|jun|jul|agu|sep|sept|okt|nov|des)\s*[-/.\s]?\s*(\d{2,4})\b#i', $t, $m)) {
+                $bl = $bulan[mb_strtolower($m[2])] ?? null;
+
+                if ($bl !== null) {
+                    $th = (int) $m[3];
+
+                    if ($th < 100) {
+                        $th += 2000;
+                    }
+
+                    if (checkdate($bl, (int) $m[1], $th)) {
+                        return sprintf('%04d-%02d-%02d', $th, $bl, (int) $m[1]);
+                    }
                 }
             }
         }

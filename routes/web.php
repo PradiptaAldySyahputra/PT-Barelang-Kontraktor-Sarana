@@ -55,6 +55,7 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
         Route::get('profile', [ProfileController::class, 'edit'])->name('profile');
         Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+        Route::post('profile/sesi/putus', [ProfileController::class, 'putusSesiLain'])->name('profile.sesi.putus');
 
         // SPK
         Route::get('spk', SpkIndexController::class)->name('spk.index');
@@ -108,7 +109,7 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
                     'dari_akun' => ['required', 'in:kas,bank'],
                     'ke_akun' => ['required', 'in:kas,bank', 'different:dari_akun'],
                     'jumlah' => ['required', 'numeric', 'min:1'],
-                    'tanggal' => ['required', 'date'],
+                    'tanggal' => ['required', 'date', 'before_or_equal:today'],
                     'keterangan' => ['nullable', 'string', 'max:255'],
                 ]);
 
@@ -172,9 +173,6 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
             Route::get('system-status', [SystemController::class, 'status'])->name('system');
             Route::get('backup', [SystemController::class, 'backup'])->name('backup');
             Route::post('backup/run', [SystemController::class, 'backupRun'])->name('backup.run');
-            Route::get('import', [SystemController::class, 'import'])->name('import');
-            Route::post('import', [SystemController::class, 'importStore'])->name('import.store');
-            Route::get('import/template', [SystemController::class, 'template'])->name('import.template');
         });
     });
 
@@ -213,6 +211,9 @@ $handlerNotaLihat = function (string $path) {
     $bersih = str_replace('\\', '/', $path);
     abort_if(str_contains($bersih, '..') || str_starts_with($bersih, '/'), 404, 'Path tidak sah.');
     $disk = Storage::disk('nota');
+    // Hanya layani berkas di dalam akar direktori yang dikenal.
+    $akar = explode('/', $bersih, 2)[0];
+    abort_unless(in_array($akar, ['uang_keluar', 'uang_masuk', 'spk', 'profil'], true), 404, 'Direktori tidak dikenali.');
     abort_unless($disk->exists($bersih), 404);
 
     return $disk->response($bersih);
@@ -308,8 +309,23 @@ Route::get('/panel/arsip-nota/unduh', $handlerArsipUnduh)->middleware(['auth', '
 Route::get('/admin/arsip-nota/unduh', $handlerArsipUnduh)->middleware(['auth', 'peran:admin,direktur']);
 
 $handlerArsipZip = function () {
-    $dari = request()->string('dari')->toString() ?: request()->string('tgl')->toString() ?: null;
-    $sampai = request()->string('sampai')->toString() ?: request()->string('tgl')->toString() ?: null;
+    $dari = request()->string('dari')->toString() ?: request()->string('tanggal')->toString() ?: request()->string('tgl')->toString() ?: null;
+    $sampai = request()->string('sampai')->toString() ?: request()->string('tanggal')->toString() ?: request()->string('tgl')->toString() ?: null;
+
+    // Preset periode (hari ini / 3 hari / 7 hari / bulan / tahun) mendahului tanggal tunggal.
+    $periode = request()->string('periode')->toString();
+    $awalPeriode = match ($periode) {
+        'hari-ini' => now()->format('Y-m-d'),
+        '7-hari' => now()->subDays(6)->format('Y-m-d'),
+        'bulan' => now()->startOfMonth()->format('Y-m-d'),
+        'tahun' => now()->startOfYear()->format('Y-m-d'),
+        default => null,
+    };
+    if ($awalPeriode !== null) {
+        $dari = $awalPeriode;
+        $sampai = now()->format('Y-m-d');
+    }
+
     if ($dari && $sampai && $dari > $sampai) {
         [$dari, $sampai] = [$sampai, $dari];
     }

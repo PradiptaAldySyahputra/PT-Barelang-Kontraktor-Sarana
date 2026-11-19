@@ -232,54 +232,6 @@ Jenis laporan: Daftar SPK · Piutang · Uang Masuk per Bulan · Pengeluaran per 
 > 📌 Ekspor mengikuti **filter yang sedang aktif** dan **periode** yang dipilih.
 > Kalau memilih periode 3 bulan, ekspor hanya 3 bulan itu.
 
-### 3.8 Impor Data (Daftar SPK & Transaksi Keuangan)
-
-**Sistem → Impor Data** (`/panel/import`)
-
-Admin dapat melakukan migrasi atau pengunggahan data massal dari berkas spreadsheet (`.xlsx`, `.csv`, `.txt`) tanpa risiko duplikasi data (*append-only*).
-
-#### 1. Pilihan Jenis Data
-Ada **3 pilihan jenis data** yang dapat diimpor:
-- **Daftar SPK**: Mengimpor daftar kontrak/pekerjaan SPK ke sistem. Mendukung penomoran SPK resmi maupun baris pekerjaan tanpa nomor SPK (otomatis diberi nomor `TANPA-SPK-xxxx`). Kolom status tagihan otomatis disinkronkan menjadi *Dibayar* jika kolom catatan bayar/keterangan mengindikasikan pelunasan ke rekening BKS.
-- **Uang Masuk**: Mengimpor mutasi penerimaan kas/bank. Otomatis menautkan ke SPK terkait bila nomor SPK cocok serta menjaga batas sisa piutang SPK.
-- **Uang Keluar**: Mengimpor mutasi biaya operasional atau biaya pekerjaan lapangan. Mendukung pemetaan otomatis kategori pengeluaran dan SPK terkait.
-
-#### 2. Format Template & Kolom
-Template dapat diunduh langsung melalui tautan di bawah kolom unggah berkas:
-- **Template SPK**: Kolom `nomor_spk`, `tanggal_spk`, `nama_pekerjaan`, `lokasi`, `nilai_spk`, `mitra`, `keterangan`, `catatan_bayar`.
-- **Template Transaksi (Uang Masuk / Keluar)**: Kolom `tanggal`, `jumlah`, `akun` (Kas/Bank), `nomor_spk`, `kategori`, `penerima`, `keterangan`.
-
-#### 3. Fleksibilitas & Toleransi Format Excel
-Sistem impor dirancang toleran terhadap kebiasaan format lembar kerja Excel:
-- **Toleransi Header & Judul**: Baris kop surat, judul laporan di baris teratas, baris kosong, dan baris rumus total (`=SUM(...)`) otomatis dilewati. Sistem mendeteksi baris tabel data sebenarnya secara cerdas.
-- **Variasi Format Tanggal**: Mendukung tanggal standar ISO (`YYYY-MM-DD`), format Indonesia dengan garis miring (`DD/MM/YYYY`, `D/M/YY`), format strip (`DD-MM-YYYY`), maupun format *serial number* bawaan Excel (mis. `45469`).
-- **Pencegahan Duplikat**: Baris yang sudah pernah diimpor atau nomor SPK yang sudah terdaftar akan otomatis dilewati tanpa menggagalkan baris lainnya.
-- **Laporan Hasil**: Setelah diproses, sistem menyajikan rincian jumlah baris **Ditambah**, **Dilewati (duplikat)**, dan baris **Gagal** (jika ada kesalahan validasi).
-
-#### 4. Impor Massal Arsip Kantor via CLI (`bks:impor-arsip`)
-Selain melalui web panel, administrator server dapat memanfaatkan perintah CLI Artisan untuk migrasi data awal (*onboarding*) dari berkas arsip kantor secara langsung di terminal:
-
-```bash
-# 1. Simulasi cek data arsip (dry-run) tanpa menulis ke database
-php artisan bks:impor-arsip --dry-run
-
-# 2. Impor berkas arsip default kantor (LIST SPK 2026.xlsx)
-php artisan bks:impor-arsip
-
-# 3. Impor dari lokasi berkas Excel kustom tertentu
-php artisan bks:impor-arsip "/lokasi/arsip/daftar-spk.xlsx"
-
-# 4. Impor langsung tanpa dialog konfirmasi (mode otomasi / skrip)
-php artisan bks:impor-arsip --force
-```
-
-Keunggulan perintah CLI:
-- **Deteksi Otomatis Berkas Default**: Jika argumen berkas dikosongkan, sistem otomatis memeriksa ketersediaan berkas standar di `BKS-Data-Perusahaan/dokumen/LIST SPK 2026.xlsx`.
-- **Mode Uji Coba Aman (`--dry-run`)**: Menghitung baris valid dan estimasi duplikat tanpa mengubah isi database.
-- **Toleran & Aman**: Mengabaikan baris rumus/total Excel dan mencegah duplikasi nomor SPK secara *append-only*.
-
----
-
 ### 3.9 Menghapus Data
 
 Hapus bersifat **soft delete** — data tidak benar-benar hilang, bisa dipulihkan

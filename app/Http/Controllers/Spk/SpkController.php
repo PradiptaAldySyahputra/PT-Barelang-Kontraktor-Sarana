@@ -50,6 +50,7 @@ final class SpkController
             'spk' => null,
             'kembali' => route('panel.spk.index'),
             'opsiStatusAntar' => StatusAntar::opsi(),
+            'riwayatAntar' => old('pengantaran', []),
             'opsiDikerjakan' => DikerjakanOleh::opsi(),
             'daftarMitra' => $this->daftarMitra(),
             'daftarSubkon' => $this->daftarSubkon(),
@@ -65,6 +66,12 @@ final class SpkController
         $data['status_tagihan'] = StatusTagihan::BelumDitagihkan->value;
         $data['dibuat_oleh'] = $request->user()?->id;
         $data['dokumen'] = $this->simpanDokumen($request, []);
+
+        // Riwayat pengantaran -> status terkini diturunkan dari entri terakhir.
+        [$riwayatAntar, $statusAntar, $tanggalAntar] = $this->susunPengantaran($request->input('pengantaran', []));
+        $data['pengantaran'] = $riwayatAntar;
+        $data['status_antar'] = $statusAntar;
+        $data['tanggal_antar'] = $tanggalAntar;
 
         $spk = Spk::query()->create($data);
         NotifikasiOperasional::segarkan();
@@ -105,6 +112,7 @@ final class SpkController
             'asal' => $asal,
             'kembali' => $kembali,
             'opsiStatusAntar' => StatusAntar::opsi(),
+            'riwayatAntar' => old('pengantaran', $spk->pengantaran ?? []),
             'opsiDikerjakan' => DikerjakanOleh::opsi(),
             'daftarMitra' => $this->daftarMitra(),
             'daftarSubkon' => $this->daftarSubkon(),
@@ -120,6 +128,12 @@ final class SpkController
         /** @var list<string> $hapus */
         $hapus = array_values(array_filter((array) $request->input('hapus_dokumen', [])));
         $data['dokumen'] = $this->simpanDokumen($request, $spk->dokumen ?? [], $hapus);
+
+        // Riwayat pengantaran -> status terkini diturunkan dari entri terakhir.
+        [$riwayatAntar, $statusAntar, $tanggalAntar] = $this->susunPengantaran($request->input('pengantaran', []));
+        $data['pengantaran'] = $riwayatAntar;
+        $data['status_antar'] = $statusAntar;
+        $data['tanggal_antar'] = $tanggalAntar;
 
         $nilaiLama = (float) $spk->nilai_spk;
         $tenggatLama = $spk->tanggal_akhir?->toDateString();
@@ -358,8 +372,14 @@ final class SpkController
             'nilai_spk' => ['required', 'numeric', 'min:0', 'max:'.self::BATAS_NOMINAL],
             'jenis_sumber' => ['nullable', Rule::in(['pln', 'luar', 'internal', 'lainnya'])],
             'sheet_lama' => ['nullable', 'string', 'max:100'],
-            'status_antar' => ['required', Rule::in(array_keys(StatusAntar::opsi()))],
+            'status_antar' => ['nullable', Rule::in(array_keys(StatusAntar::opsi()))],
             'tanggal_antar' => ['nullable', 'date', 'before_or_equal:today'],
+            'pengantaran' => ['nullable', 'array', 'max:20'],
+            'pengantaran.*.tanggal' => ['nullable', 'date', 'before_or_equal:today'],
+            'pengantaran.*.status' => ['nullable', Rule::in(array_keys(StatusAntar::opsi()))],
+            'pengantaran.*.oleh' => ['nullable', 'string', 'max:100'],
+            'pengantaran.*.tujuan' => ['nullable', 'string', 'max:100'],
+            'pengantaran.*.catatan' => ['nullable', 'string', 'max:255'],
             'keterangan' => ['nullable', 'string', 'max:255'],
             'dikerjakan_oleh' => ['required', Rule::in(array_keys(DikerjakanOleh::opsi()))],
             'subkon_id' => ['nullable', 'integer', 'exists:mitra,id', 'required_if:dikerjakan_oleh,'.DikerjakanOleh::Subkon->value],
@@ -401,6 +421,61 @@ final class SpkController
      * @param  list<string>  $hapus
      * @return list<string>
      */
+    /**
+     * Susun riwayat pengantaran dari input repeater form, lalu turunkan status
+     * terkini (`status_antar`) dan tanggal dari entri TERAKHIR.
+     *
+     * @param  list<array<string|int, mixed>>  $input
+     * @return array{0: list<array<string, string|null>>, 1: string, 2: ?string}
+     */
+    private function susunPengantaran(array $input): array
+    {
+        $riwayat = [];
+        foreach ($input as $entri) {
+            if (! is_array($entri)) {
+                continue;
+            }
+            $tanggal = isset($entri['tanggal']) && filled($entri['tanggal'])
+                ? Carbon::parse((string) $entri['tanggal'])->toDateString()
+                : null;
+            $status = isset($entri['status']) && filled($entri['status'])
+                ? (string) $entri['status']
+                : StatusAntar::Belum->value;
+            $oleh = isset($entri['oleh']) ? trim((string) $entri['oleh']) : '';
+            $tujuan = isset($entri['tujuan']) ? trim((string) $entri['tujuan']) : '';
+            $catatan = isset($entri['catatan']) ? trim((string) $entri['catatan']) : '';
+
+            // Buang baris kosong (belum diisi sama sekali).
+            if ($tanggal === null && $oleh === '' && $tujuan === '' && $catatan === '') {
+                continue;
+            }
+
+            $riwayat[] = [
+                'tanggal' => $tanggal,
+                'status' => $status,
+                'oleh' => $oleh !== '' ? $oleh : null,
+                'tujuan' => $tujuan !== '' ? $tujuan : null,
+                'catatan' => $catatan !== '' ? $catatan : null,
+            ];
+        }
+
+        // Urut kronologis (jika tanggal tidak terisi, taruh di belakang).
+        usort($riwayat, static fn (array $a, array $b): int => strcmp(
+            (string) ($a['tanggal'] ?? ''),
+            (string) ($b['tanggal'] ?? '')
+        ));
+
+        if ($riwayat === []) {
+            return [[], StatusAntar::Belum->value, null];
+        }
+
+        $terakhir = $riwayat[array_key_last($riwayat)];
+        $statusTerkini = (string) ($terakhir['status'] ?? StatusAntar::Belum->value);
+        $tanggalTerkini = $terakhir['tanggal'];
+
+        return [$riwayat, $statusTerkini, $tanggalTerkini];
+    }
+
     private function simpanDokumen(Request $request, array $lama, array $hapus = []): array
     {
         $hasil = array_values(array_diff($lama, $hapus));

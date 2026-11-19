@@ -181,14 +181,14 @@
                     {{-- 2. Total Keluar --}}
                     <div class="min-w-0 overflow-hidden rounded-xl bg-gray-50/60 p-4 dark:bg-white/[0.02]">
                         <dt class="{{ $kelasLabel }}">Total Uang Keluar</dt>
-                        <dd class="{{ $kelasNilai }} text-error-600 dark:text-error-400 dark:text-error-500">{{ Format::rupiah($data['totalKeluar']) }}</dd>
+                        <dd class="{{ $kelasNilai }} text-error-600 dark:text-error-400">{{ Format::rupiah($data['totalKeluar']) }}</dd>
                         <dd class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Biaya operasional & proyek</dd>
                     </div>
 
                     {{-- 3. Surplus / Defisit --}}
                     <div class="min-w-0 overflow-hidden rounded-xl bg-gray-50/60 p-4 dark:bg-white/[0.02]">
                         <dt class="{{ $kelasLabel }}">Surplus / Defisit</dt>
-                        <dd class="{{ $kelasNilai }} {{ $data['selisih'] < 0 ? 'text-error-600 dark:text-error-400 dark:text-error-500' : 'text-success-700 dark:text-success-500' }}">
+                        <dd class="{{ $kelasNilai }} {{ $data['selisih'] < 0 ? 'text-error-600 dark:text-error-400' : 'text-success-700 dark:text-success-500' }}">
                             {{ Format::rupiah($data['selisih']) }}
                         </dd>
                         <dd class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">Net selisih arus kas</dd>
@@ -666,8 +666,8 @@
                                     <tr>
                                         <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100">{{ $bulan['label'] }}</td>
                                         <td class="angka px-3 py-2.5 text-right text-success-700 dark:text-success-500">{{ Format::rupiah($bulan['masuk']) }}</td>
-                                        <td class="angka px-3 py-2.5 text-right text-error-600 dark:text-error-400 dark:text-error-500">{{ Format::rupiah($bulan['keluar']) }}</td>
-                                        <td class="angka px-4 py-2.5 text-right font-bold {{ $bulan['selisih'] < 0 ? 'text-error-600 dark:text-error-400 dark:text-error-500' : 'text-success-700 dark:text-success-500' }}">
+                                        <td class="angka px-3 py-2.5 text-right text-error-600 dark:text-error-400">{{ Format::rupiah($bulan['keluar']) }}</td>
+                                        <td class="angka px-4 py-2.5 text-right font-bold {{ $bulan['selisih'] < 0 ? 'text-error-600 dark:text-error-400' : 'text-success-700 dark:text-success-500' }}">
                                             {{ Format::rupiah($bulan['selisih']) }}
                                         </td>
                                     </tr>
@@ -772,7 +772,7 @@
         {{-- TAB 6: TENGGAT SPK (Lewat & Mendekati) --}}
         <div id="tab-tenggat" role="tabpanel" class="grid gap-6 xl:grid-cols-2" x-show="activeTab === 'tenggat'">
             @foreach ([
-                'spkLewatTenggat' => ['Lewat Batas Waktu', 'text-error-600 dark:text-error-400 dark:text-error-500'],
+                'spkLewatTenggat' => ['Lewat Batas Waktu', 'text-error-600 dark:text-error-400'],
                 'spkMendekatiTenggat' => ['Mendekati Batas Waktu (≤ 14 hari)', 'text-warning-700 dark:text-warning-500'],
             ] as $kunci => [$judulTenggat, $warna])
                 <section class="{{ $kelasKartu }} overflow-hidden">
@@ -848,7 +848,7 @@
                     labels: labels,
                     colors: ['#465fff', '#0ba5ec', '#f79009', '#12b76a', '#7a5af8', '#f04438', '#98a2b3'],
                     chart: {
-                        fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+                        fontFamily: "Outfit, sans-serif",
                         type: 'donut',
                         height: 250,
                         background: 'transparent'

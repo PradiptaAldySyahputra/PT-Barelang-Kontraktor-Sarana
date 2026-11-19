@@ -99,7 +99,7 @@
             </div>
         @else
             {{-- Desktop Table: 100% Fit Tanpa Truncate Kaku --}}
-            <div class="hidden overflow-hidden md:block border-t border-gray-100 dark:border-gray-800">
+            <div class="hidden md:block overflow-x-auto border-t border-gray-100 dark:border-gray-800">
                 <table class="w-full text-left text-theme-sm">
                     <thead>
                         <tr class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-400">

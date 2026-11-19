@@ -291,7 +291,7 @@ final class CashOutForm extends Component
                     'bukti' => $bukti,
                 ];
 
-                if ($this->recordId !== null) {
+                if ($this->recordId !== null && $jumlahBaris === 0) {
                     UangKeluar::query()->findOrFail($this->recordId)->update($atribut);
                 } else {
                     UangKeluar::query()->create($atribut);

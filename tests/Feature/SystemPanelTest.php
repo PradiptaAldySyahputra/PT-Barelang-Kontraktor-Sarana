@@ -13,15 +13,13 @@ use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
  * Halaman sistem (Arsip Nota, Ekspor & Unduhan, Status Sistem, Backup,
- * Impor Data) + Profil akun pada panel Blade.
+ * Halaman Sistem + Profil akun pada panel Blade.
  */
 class SystemPanelTest extends TestCase
 {
@@ -31,51 +29,6 @@ class SystemPanelTest extends TestCase
     {
         return Pengguna::factory()->create(['peran' => $peran]);
     }
-
-    public function test_admin_bisa_mengunggah_berkas_impor_csv(): void
-    {
-        Storage::fake('local');
-        $admin = $this->pengguna(Peran::Admin);
-
-        $kontenCsv = "tanggal,jumlah,akun,kategori,penerima,keterangan\n".
-            now()->format('Y-m-d').",500000,kas,material,Toko Bangunan Uji,Beli semen 10 sak\n";
-
-        $fileCsv = UploadedFile::fake()->createWithContent('impor-transaksi.csv', $kontenCsv);
-
-        $response = $this->actingAs($admin)
-            ->post(route('panel.import.store'), [
-                'jenis' => 'keluar',
-                'berkas' => $fileCsv,
-            ]);
-
-        $response->assertRedirect(route('panel.import'));
-        $response->assertSessionHas('berhasil');
-        $response->assertSessionHas('impor_hasil');
-    }
-
-    public function test_direktur_juga_bisa_menjalankan_impor_data(): void
-    {
-        Storage::fake('local');
-        $direktur = $this->pengguna(Peran::Direktur);
-
-        $kontenCsv = "tanggal,jumlah,akun,kategori,penerima,keterangan\n".
-            now()->format('Y-m-d').",750000,kas,material,Vendor Baja Batam,Beli besi beton\n";
-
-        $fileCsv = UploadedFile::fake()->createWithContent('impor-direktur.csv', $kontenCsv);
-
-        $response = $this->actingAs($direktur)
-            ->post(route('panel.import.store'), [
-                'jenis' => 'keluar',
-                'berkas' => $fileCsv,
-            ]);
-
-        $response->assertRedirect(route('panel.import'));
-        $response->assertSessionHas('berhasil');
-    }
-
-    /* =====================================================
-       Hak akses per halaman
-       ===================================================== */
 
     public function test_halaman_bersama_boleh_dibuka_kedua_peran(): void
     {
@@ -98,60 +51,10 @@ class SystemPanelTest extends TestCase
         foreach ([Peran::Admin, Peran::Direktur] as $peran) {
             $pengguna = $this->pengguna($peran);
 
-            foreach (['/panel/status', '/panel/backup', '/panel/import'] as $url) {
+            foreach (['/panel/status', '/panel/backup'] as $url) {
                 $this->actingAs($pengguna)->get($url)->assertOk();
             }
         }
-    }
-
-    /* =====================================================
-       Impor data
-       ===================================================== */
-
-    public function test_impor_uang_masuk_dari_csv(): void
-    {
-        $csv = "tanggal,jumlah,akun,kategori,penerima,keterangan\n"
-            ."2026-01-05,1500000,Kas,,,Setoran awal\n"
-            ."2026-01-06,2500000,Bank,,,Termin 1\n";
-
-        $berkas = UploadedFile::fake()->createWithContent('impor.csv', $csv);
-
-        $this->actingAs($this->pengguna(Peran::Admin))
-            ->post('/panel/import', ['jenis' => 'masuk', 'berkas' => $berkas])
-            ->assertRedirect(route('panel.import'));
-
-        $this->assertSame(2, UangMasuk::query()->count());
-        $this->assertSame(4_000_000.0, (float) UangMasuk::query()->sum('jumlah'));
-    }
-
-    public function test_impor_csv_dengan_nomor_spk_otomatis_menautkan_spk_id_dan_menjaga_batas_piutang(): void
-    {
-        $spk = Spk::factory()->create([
-            'nomor_spk' => 'SPK/IMPOR/BTM/2026/001',
-            'nilai_spk' => 5_000_000,
-        ]);
-
-        // Baris 1 (3jt) valid -> masuk ke SPK; Baris 2 (4jt) melebihi sisa piutang 2jt -> ditolak
-        $csv = "tanggal,jumlah,akun,nomor_spk,kategori,penerima,keterangan\n"
-            ."2026-01-10,3000000,Bank,SPK/IMPOR/BTM/2026/001,,,Termin 1\n"
-            ."2026-01-11,4000000,Bank,SPK/IMPOR/BTM/2026/001,,,Termin 2 Lebih\n";
-
-        $berkas = UploadedFile::fake()->createWithContent('impor-spk.csv', $csv);
-
-        $this->actingAs($this->pengguna(Peran::Admin))
-            ->post('/panel/import', ['jenis' => 'masuk', 'berkas' => $berkas])
-            ->assertRedirect(route('panel.import'));
-
-        $this->assertSame(1, UangMasuk::where('spk_id', $spk->id)->count());
-        $this->assertSame(3_000_000.0, (float) UangMasuk::where('spk_id', $spk->id)->sum('jumlah'));
-    }
-
-    public function test_template_impor_bisa_diunduh(): void
-    {
-        $this->actingAs($this->pengguna(Peran::Admin))
-            ->get(route('panel.import.template'))
-            ->assertOk()
-            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 
     /* =====================================================

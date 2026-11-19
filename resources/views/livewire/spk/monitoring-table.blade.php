@@ -45,8 +45,9 @@
             </p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 px-5 py-3.5 bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800">
-            <div class="relative min-w-0 flex-1 sm:max-w-xs">
+        <div class="bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="relative min-w-0 flex-1 sm:max-w-xs">
                 <label for="cari-monitoring" class="sr-only">Cari di tabel ini</label>
                 <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" fill="none"
                     viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
@@ -82,12 +83,26 @@
                 </select>
             @endif
 
+            <label class="sr-only" for="saring-antar">Status pengantaran</label>
+            <select id="saring-antar" wire:model.live="antar"
+                class="h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800">
+                <option value="">Semua pengantaran</option>
+                @foreach ($opsiStatusAntar as $nilai => $label)
+                    <option value="{{ $nilai }}">{{ $label }}</option>
+                @endforeach
+            </select>
+
             @if ($adaPenyaring)
                 <button type="button" wire:click="bersihkan"
                     class="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition">
                     Bersihkan
                 </button>
             @endif
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-200/70 pt-3 dark:border-gray-700/60">
+                <x-common.filter-periode :periode="$periode" />
+            </div>
         </div>
 
         @if ($daftar->isEmpty())
@@ -102,7 +117,7 @@
             </div>
         @else
             {{-- Desktop Table: 100% Fit Tanpa Scroll Samping --}}
-            <div class="hidden overflow-hidden md:block border-t border-gray-100 dark:border-gray-800">
+            <div class="hidden md:block overflow-x-auto border-t border-gray-100 dark:border-gray-800">
                 <table class="w-full text-left text-theme-sm">
                     <thead>
                         <tr class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-400">
@@ -147,7 +162,7 @@
                                 {{-- SPK & Mitra --}}
                                 <td class="px-4 py-3 align-top">
                                     <a href="{{ route('panel.spk.show', ['spk' => $spk, 'asal' => $asal]) }}"
-                                        class="angka block font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                                        class="angka block font-semibold text-blue-600 hover:underline dark:text-blue-400"
                                         title="Klik untuk membuka detail SPK {{ $spk->nomor_spk }}">
                                         {{ $spk->nomor_spk }}
                                     </a>
@@ -161,7 +176,7 @@
                                     <p class="text-gray-900 dark:text-gray-100 font-medium">{{ $spk->nama_pekerjaan }}</p>
                                     <div class="mt-1 flex flex-wrap items-center gap-1.5 text-theme-xs">
                                         <span class="text-gray-500 dark:text-gray-400">Tenggat:</span>
-                                        <span class="font-semibold {{ $sisa !== null && $sisa < 0 ? 'text-error-600 dark:text-error-400 dark:text-error-500' : ($sisa !== null && $sisa <= 14 ? 'text-warning-700 dark:text-warning-500' : 'text-gray-700 dark:text-gray-300') }}"
+                                        <span class="font-semibold {{ $sisa !== null && $sisa < 0 ? 'text-error-600 dark:text-error-400' : ($sisa !== null && $sisa <= 14 ? 'text-warning-700 dark:text-warning-500' : 'text-gray-700 dark:text-gray-300') }}"
                                             title="{{ $sisa === null ? '' : ($sisa < 0 ? 'Lewat '.abs($sisa).' hari' : 'Sisa '.$sisa.' hari') }}">
                                             {{ $spk->tenggatEfektif()?->format('d/m/Y') ?? '—' }}
                                         </span>
@@ -264,11 +279,11 @@
                                 {{ $spk->nomor_spk }}
                             </a>
                             @if ($mode === 'status')
-                                <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
+                                <span class="inline-flex shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_spk?->warnaBadge()) }}">
                                     {{ $spk->status_spk?->label() ?? 'Draft' }}
                                 </span>
                             @else
-                                <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_tagihan?->warnaBadge()) }}">
+                                <span class="inline-flex shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $badge($spk->status_tagihan?->warnaBadge()) }}">
                                     {{ $spk->status_tagihan?->labelPendek() ?? 'Belum ditagih' }}
                                 </span>
                             @endif
@@ -314,9 +329,15 @@
                 @endforeach
             </ul>
 
-            @if ($daftar->hasPages())
-                <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-800">
-                    {{ $daftar->links() }}
+            @if (! $semua && $ringkas['jumlah'] > 50)
+                <div class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800">
+                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">
+                        Menampilkan 50 dari {{ Format::angka($ringkas['jumlah']) }} SPK.
+                    </p>
+                    <button type="button" wire:click="$set('semua', true)"
+                        class="text-theme-xs font-semibold text-brand-600 hover:underline dark:text-brand-400">
+                        Tampilkan Semua
+                    </button>
                 </div>
             @endif
         @endif

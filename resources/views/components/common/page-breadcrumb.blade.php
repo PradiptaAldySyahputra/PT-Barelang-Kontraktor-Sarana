@@ -59,7 +59,7 @@
         $induk = ['Pengguna', route('panel.users.index')];
     } elseif (str_starts_with($namaRute, 'panel.receipts')) {
         $induk = ['Nota & Bukti', route('panel.receipts')];
-    } elseif (in_array($namaRute, ['panel.status', 'panel.system', 'panel.import', 'panel.import.store', 'panel.import.template'], true)
+    } elseif (in_array($namaRute, ['panel.status', 'panel.system'], true)
         || str_starts_with($namaRute, 'panel.backup')) {
         $induk = ['Sistem', route('panel.status')];
     }

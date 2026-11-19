@@ -96,7 +96,6 @@ final class PanelSemuaHalamanTest extends TestCase
             '/panel/partners/'.$this->mitra->id.'/edit',
             '/panel/status',
             '/panel/backup',
-            '/panel/import',
             '/panel/profile',
         ];
 
@@ -138,7 +137,6 @@ final class PanelSemuaHalamanTest extends TestCase
             '/panel/users/'.$this->admin->id.'/edit',
             '/panel/status',
             '/panel/backup',
-            '/panel/import',
             '/panel/profile',
         ];
 

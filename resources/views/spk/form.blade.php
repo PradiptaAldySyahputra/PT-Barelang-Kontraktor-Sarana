@@ -162,14 +162,6 @@
                             <p class="{{ $kelasError }}">{{ $message }}</p>
                         @enderror
                     </div>
-                    <div>
-                        <label for="sheet_lama" class="{{ $kelasLabel }}">Sheet Lama (referensi Excel)</label>
-                        <input id="sheet_lama" name="sheet_lama" type="text" maxlength="100"
-                            value="{{ old('sheet_lama', $spk?->sheet_lama) }}" class="{{ $kelasInput }}">
-                        @error('sheet_lama')
-                            <p class="{{ $kelasError }}">{{ $message }}</p>
-                        @enderror
-                    </div>
                 </div>
             </section>
 
@@ -181,30 +173,49 @@
                 </p>
 
                 <div class="mt-4 space-y-4">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <label for="status_antar" class="{{ $kelasLabel }}">Status Pengantaran</label>
-                            <select id="status_antar" name="status_antar" required class="{{ $kelasInput }}">
-                                @foreach ($opsiStatusAntar as $nilai => $label)
-                                    <option value="{{ $nilai }}"
-                                        @selected(old('status_antar', $spk?->status_antar?->value ?? 'belum') === $nilai)>
-                                        {{ $label }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('status_antar')
-                                <p class="{{ $kelasError }}">{{ $message }}</p>
-                            @enderror
+                    {{-- Pengantaran dokumen: satu entri (status terkini). --}}
+                    @php $antarTerkini = collect($riwayatAntar)->last() ?? []; @endphp
+                    <div>
+                        <p class="text-theme-xs text-gray-500 dark:text-gray-400">Catat status pengantaran dokumen SPK.</p>
+                    </div>
+
+                    <div class="rounded-xl border border-gray-200 p-3 dark:border-gray-800">
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label class="{{ $kelasLabel }}">Tanggal</label>
+                                <input type="date" name="pengantaran[0][tanggal]"
+                                    value="{{ $antarTerkini['tanggal'] ?? '' }}" max="{{ now()->format('Y-m-d') }}"
+                                    class="{{ $kelasInput }}">
+                            </div>
+                            <div>
+                                <label class="{{ $kelasLabel }}">Status</label>
+                                <select name="pengantaran[0][status]" class="{{ $kelasInput }}">
+                                    @foreach ($opsiStatusAntar as $nilai => $label)
+                                        <option value="{{ $nilai }}" @selected(($antarTerkini['status'] ?? 'belum') === $nilai)>
+                                            {{ $label }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="{{ $kelasLabel }}">Dibawa oleh</label>
+                                <input type="text" name="pengantaran[0][oleh]"
+                                    value="{{ $antarTerkini['oleh'] ?? '' }}" maxlength="100" placeholder="mis. pak ipul"
+                                    class="{{ $kelasInput }}">
+                            </div>
+                            <div>
+                                <label class="{{ $kelasLabel }}">Ke mana / tujuan</label>
+                                <input type="text" name="pengantaran[0][tujuan]"
+                                    value="{{ $antarTerkini['tujuan'] ?? '' }}" maxlength="100" placeholder="mis. ke imperium"
+                                    class="{{ $kelasInput }}">
+                            </div>
                         </div>
-                        <div>
-                            <label for="tanggal_antar" class="{{ $kelasLabel }}">Tanggal Diantar</label>
-                            <input id="tanggal_antar" name="tanggal_antar" type="date"
-                                max="{{ now()->format('Y-m-d') }}"
-                                value="{{ old('tanggal_antar', $spk?->tanggal_antar?->format('Y-m-d')) }}"
+                        <div class="mt-3">
+                            <label class="{{ $kelasLabel }}">Catatan</label>
+                            <input type="text" name="pengantaran[0][catatan]"
+                                value="{{ $antarTerkini['catatan'] ?? '' }}" maxlength="255"
+                                placeholder="mis. revisi kuitansi dan permohonan"
                                 class="{{ $kelasInput }}">
-                            @error('tanggal_antar')
-                                <p class="{{ $kelasError }}">{{ $message }}</p>
-                            @enderror
                         </div>
                     </div>
 

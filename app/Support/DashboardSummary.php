@@ -6,13 +6,14 @@ namespace App\Support;
 
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
-use App\Models\Mitra;
 use App\Models\Spk;
 use App\Models\UangKeluar;
 use App\Models\UangMasuk;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * RINGKASAN DASBOR PANEL BLADE - satu-satunya sumber angka dashboard.
@@ -46,7 +47,11 @@ final class DashboardSummary
      */
     public static function eksekutif(): array
     {
-        $nilaiSpk = (float) Spk::sum('nilai_spk');
+        // SPK Dibatalkan tidak menerima pembayaran → kecualikan dari nilai & piutang.
+        $aktif = fn (Builder $q) => $q->where('status_spk', '!=', StatusSpk::Dibatalkan->value)->orWhereNull('status_spk');
+
+        $jumlahSpkAktif = Spk::query()->where($aktif)->count();
+        $nilaiSpk = (float) Spk::query()->where($aktif)->sum('nilai_spk');
         $diterimaDariSpk = (float) UangMasuk::whereNotNull('spk_id')->sum('jumlah');
         $belumDiterima = max(0.0, $nilaiSpk - $diterimaDariSpk);
 
@@ -65,13 +70,13 @@ final class DashboardSummary
                 [
                     'label' => 'Nilai Pekerjaan',
                     'nilai' => Format::rupiah($nilaiSpk),
-                    'ket' => Spk::count().' SPK tercatat',
+                    'ket' => $jumlahSpkAktif.' SPK tercatat',
                     'nada' => 'netral',
                 ],
                 [
                     'label' => 'Belum Diterima',
                     'nilai' => Format::rupiah($belumDiterima),
-                    'ket' => Spk::belumLunas()->count().' SPK belum lunas',
+                    'ket' => Spk::belumLunas()->where($aktif)->count().' SPK belum lunas',
                     'nada' => $belumDiterima > 0 ? 'perhatian' : 'aman',
                 ],
                 [
@@ -105,8 +110,8 @@ final class DashboardSummary
 
             'tren' => self::trenEnamBulan(),
             'sebaranTagihan' => self::sebaranStatusTagihan(),
-            'sebaranSpk' => self::sebaranStatusSpk(),
             'spkPrioritas' => self::spkPrioritas(),
+            'topMitraPiutang' => self::topMitraPiutang(),
             'hariIni' => self::mutasiHariIni(),
         ];
     }
@@ -202,6 +207,10 @@ final class DashboardSummary
                 $q->where('status_tagihan', '!=', StatusTagihan::Dibayar->value)
                     ->orWhereNull('status_tagihan');
             })
+            // Urutkan di SQL: lewat tenggat dulu, lalu sisa piutang terbesar.
+            ->orderByRaw('(tanggal_akhir IS NOT NULL AND tanggal_akhir < CURDATE()) DESC')
+            ->orderByRaw('(COALESCE(nilai_spk, 0) - COALESCE(total_masuk, 0)) DESC')
+            ->limit(5)
             ->get()
             ->map(static function (Spk $s): array {
                 $diterima = $s->totalPenerimaan();
@@ -219,15 +228,42 @@ final class DashboardSummary
                     'status_tagihan' => $s->status_tagihan?->label() ?? 'Belum Ditagihkan',
                 ];
             })
-            ->sortByDesc(static fn (array $i): float => ($i['lewat'] ? 1e12 : 0.0) + $i['sisa'])
-            ->take(5)
             ->values()
             ->all();
     }
 
+    /**
+     * Lima mitra dengan sisa piutang terbesar (hanya SPK aktif).
+     *
+     * @return list<array{mitra: string, nilai: float, sisa: float}>
+     */
+    private static function topMitraPiutang(int $batas = 5): array
+    {
+        $aktif = fn (Builder $q) => $q->where('status_spk', '!=', StatusSpk::Dibatalkan->value)->orWhereNull('status_spk');
+
+        // Dataset inner: SPK aktif + total diterima per SPK (withSum).
+        $inner = Spk::query()->withSum('uangMasuk as total_masuk', 'jumlah')->where($aktif);
+
+        // Agregasi per mitra di SQL, bukan di PHP.
+        $baris = DB::query()
+            ->fromSub($inner, 'data')
+            ->join('mitra', 'mitra.id', '=', 'data.mitra_id')
+            ->selectRaw('mitra.id AS mitra_id, mitra.nama AS nama_mitra, SUM(data.nilai_spk) AS total_nilai, COALESCE(SUM(data.total_masuk), 0) AS total_masuk')
+            ->groupBy('mitra.id', 'mitra.nama')
+            ->orderByDesc(DB::raw('(SUM(data.nilai_spk) - COALESCE(SUM(data.total_masuk), 0))'))
+            ->limit($batas)
+            ->get();
+
+        return $baris->map(static fn ($r): array => [
+            'mitra' => $r->nama_mitra,
+            'nilai' => (float) $r->total_nilai,
+            'sisa' => max(0.0, (float) $r->total_nilai - (float) $r->total_masuk),
+        ])->values()->all();
+    }
+
     /* =========================================================
-       ADMIN - dashboard operasional
-       ========================================================= */
+      ADMIN - dashboard operasional
+      ========================================================= */
 
     /**
      * @return array<string, mixed>
@@ -247,7 +283,8 @@ final class DashboardSummary
         $lewatTenggat = Spk::lewatTenggat()->count();
         $revisiDokumen = Spk::where('status_spk', StatusSpk::RevisiDokumen->value)->count();
 
-        $nilaiTotalSpk = (float) Spk::sum('nilai_spk');
+        $aktif = fn (Builder $q) => $q->where('status_spk', '!=', StatusSpk::Dibatalkan->value)->orWhereNull('status_spk');
+        $nilaiTotalSpk = (float) Spk::query()->where($aktif)->sum('nilai_spk');
         $masukTotalSpk = (float) UangMasuk::whereNotNull('spk_id')->sum('jumlah');
 
         return [
@@ -307,7 +344,6 @@ final class DashboardSummary
             'spkBerjalan' => self::spkBerjalan(6),
             'spkPerluPerhatian' => self::spkPerluPerhatian(5),
             'pengeluaranKategori' => self::pengeluaranPerKategoriBulanIni(),
-            'jumlahMitra' => Mitra::count(),
             'spkBerjalanCount' => Spk::berjalan()->count(),
             'tren' => self::trenEnamBulan(),
             'sebaranSpk' => self::sebaranStatusSpk(),

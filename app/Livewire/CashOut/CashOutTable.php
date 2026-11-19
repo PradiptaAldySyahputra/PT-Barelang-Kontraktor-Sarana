@@ -11,7 +11,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 /**
  * Tabel daftar Uang Keluar (`/panel/cash-out`).
@@ -23,20 +22,25 @@ use Livewire\WithPagination;
  */
 final class CashOutTable extends Component
 {
-    use WithPagination;
-
     /**
      * @var list<string>
      */
     private const URUT_SAH = ['tanggal', 'jumlah', 'created_at'];
 
-    private const PER_HALAMAN = 15;
+    /** Cap tampilan agar halaman tidak membengkak (pola laporan). */
+    private const BATAS_BARIS = 50;
 
     #[Url(as: 'q', except: '')]
     public string $cari = '';
 
     #[Url(as: 'tanggal', except: '')]
     public string $tanggal = '';
+
+    #[Url(as: 'periode', except: '')]
+    public string $periode = '';
+
+    #[Url(as: 'semua', except: false)]
+    public bool $semua = false;
 
     #[Url(except: '')]
     public string $akun = '';
@@ -58,8 +62,8 @@ final class CashOutTable extends Component
 
     public function updating(string $properti): void
     {
-        if (in_array($properti, ['cari', 'tanggal', 'akun', 'kategori', 'sumber', 'terhapus'], true)) {
-            $this->resetPage();
+        if (in_array($properti, ['cari', 'tanggal', 'periode', 'akun', 'kategori', 'sumber', 'terhapus'], true)) {
+            $this->semua = false;
         }
     }
 
@@ -81,8 +85,7 @@ final class CashOutTable extends Component
 
     public function bersihkan(): void
     {
-        $this->reset('cari', 'tanggal', 'akun', 'kategori', 'sumber', 'terhapus');
-        $this->resetPage();
+        $this->reset('cari', 'tanggal', 'periode', 'akun', 'kategori', 'sumber', 'terhapus', 'semua');
     }
 
     public function render(): View
@@ -93,7 +96,8 @@ final class CashOutTable extends Component
             'daftar' => (clone $kueri)
                 ->with(['spk:id,nomor_spk'])
                 ->orderBy($this->urut, $this->arah)
-                ->paginate(self::PER_HALAMAN),
+                ->when(! $this->semua, fn ($q) => $q->limit(self::BATAS_BARIS))
+                ->get(),
             'ringkas' => [
                 'jumlah' => (clone $kueri)->count(),
                 'total' => (float) (clone $kueri)->sum('jumlah'),
@@ -102,12 +106,25 @@ final class CashOutTable extends Component
             'opsiKategori' => KategoriPengeluaran::opsi(),
             'adaPenyaring' => trim($this->cari) !== ''
                 || $this->tanggal !== ''
+                || $this->periode !== ''
                 || $this->akun !== ''
                 || $this->kategori !== ''
                 || $this->sumber !== ''
                 || $this->terhapus !== 'aktif',
             'bolehUbah' => (bool) auth()->user()?->bolehInput(),
         ]);
+    }
+
+    /** Tanggal awal dari preset periode ('' = tanpa batas, semua data). */
+    private function awalPeriode(): ?string
+    {
+        return match ($this->periode) {
+            'hari-ini' => now()->format('Y-m-d'),
+            '7-hari' => now()->subDays(6)->format('Y-m-d'),
+            'bulan' => now()->startOfMonth()->format('Y-m-d'),
+            'tahun' => now()->startOfYear()->format('Y-m-d'),
+            default => null,
+        };
     }
 
     /**
@@ -119,6 +136,7 @@ final class CashOutTable extends Component
             ->when($this->terhapus === 'aktif', fn (Builder $q) => $q->whereNull('deleted_at'))
             ->when($this->terhapus === 'saja', fn (Builder $q) => $q->onlyTrashed())
             ->when($this->tanggal !== '', fn (Builder $q) => $q->whereDate('tanggal', $this->tanggal))
+            ->when($this->awalPeriode() !== null, fn (Builder $q) => $q->whereDate('tanggal', '>=', $this->awalPeriode()))
             ->when($this->akun !== '', fn (Builder $q) => $q->where('akun', $this->akun))
             ->when($this->kategori !== '', fn (Builder $q) => $q->where('kategori', $this->kategori))
             ->when($this->sumber === 'spk', fn (Builder $q) => $q->whereNotNull('spk_id'))

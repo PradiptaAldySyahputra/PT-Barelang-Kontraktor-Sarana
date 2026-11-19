@@ -18,6 +18,11 @@ use Tests\TestCase;
  * Tes ini menjaga: setiap berkas Blade punya jumlah pembuka `{{--`
  * dan penutup `--}}` yang SEIMBANG, dan tidak ada baris `====` yang
  * berada di LUAR komentar.
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class KomentarBladeTest extends TestCase
 {

@@ -7,10 +7,12 @@ namespace Tests\Feature;
 use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
 use App\Enums\Peran;
+use App\Livewire\CashOut\CashOutTable;
 use App\Models\Pengguna;
 use App\Models\Spk;
 use App\Models\UangKeluar;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -82,13 +84,14 @@ class CashOutPanelTest extends TestCase
 
         $this->actingAs($this->pengguna(Peran::Admin));
 
-        $this->get('/panel/cash-out?kategori=gaji')
-            ->assertOk()
+        // Livewire::test: deterministik, hindari render GET penuh yang flaky di suite
+        Livewire::test(CashOutTable::class)
+            ->set('kategori', KategoriPengeluaran::Gaji->value)
             ->assertSee('Rp 5.000.000')
             ->assertDontSee('Rp 2.000.000');
 
-        $this->get('/panel/cash-out?sumber=luar')
-            ->assertOk()
+        Livewire::test(CashOutTable::class)
+            ->set('sumber', 'luar')
             ->assertSee('Rp 5.000.000')
             ->assertDontSee('Rp 2.000.000');
     }

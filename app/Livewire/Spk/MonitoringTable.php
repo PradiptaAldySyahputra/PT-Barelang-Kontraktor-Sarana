@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Spk;
 
+use App\Enums\StatusAntar;
 use App\Enums\StatusSpk;
 use App\Enums\StatusTagihan;
 use App\Models\Spk;
@@ -11,7 +12,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 /**
  * Tiga menu monitoring SPK dalam SATU komponen — bedanya hanya penyaring:
@@ -25,8 +25,6 @@ use Livewire\WithPagination;
  */
 final class MonitoringTable extends Component
 {
-    use WithPagination;
-
     /**
      * @var list<string>
      */
@@ -34,7 +32,7 @@ final class MonitoringTable extends Component
 
     private const MODE_SAH = ['status', 'billing', 'completed'];
 
-    private const PER_HALAMAN = 15;
+    private const PER_HALAMAN = 50;
 
     public string $mode = 'status';
 
@@ -47,8 +45,17 @@ final class MonitoringTable extends Component
     #[Url(except: '')]
     public string $tagihan = '';
 
+    #[Url(as: 'antar', except: '')]
+    public string $antar = '';
+
     #[Url(as: 'tanggal', except: '')]
     public string $tanggal = '';
+
+    #[Url(as: 'periode', except: '')]
+    public string $periode = '';
+
+    #[Url(as: 'semua', except: false)]
+    public bool $semua = false;
 
     #[Url(except: 'tanggal_akhir')]
     public string $urut = 'tanggal_akhir';
@@ -63,8 +70,8 @@ final class MonitoringTable extends Component
 
     public function updating(string $properti): void
     {
-        if (in_array($properti, ['cari', 'status', 'tagihan'], true)) {
-            $this->resetPage();
+        if (in_array($properti, ['cari', 'status', 'tagihan', 'antar', 'periode'], true)) {
+            $this->semua = false;
         }
     }
 
@@ -86,8 +93,7 @@ final class MonitoringTable extends Component
 
     public function bersihkan(): void
     {
-        $this->reset('cari', 'status', 'tagihan', 'tanggal');
-        $this->resetPage();
+        $this->reset('cari', 'status', 'tagihan', 'antar', 'tanggal', 'periode', 'semua');
     }
 
     public function render(): View
@@ -97,15 +103,18 @@ final class MonitoringTable extends Component
         return view('livewire.spk.monitoring-table', [
             'daftar' => (clone $kueri)
                 ->with(['mitra:id,nama', 'subkon:id,nama'])
+                ->withSum('uangMasuk as total_masuk', 'jumlah')
                 ->orderBy($this->urut, $this->arah)
-                ->paginate(self::PER_HALAMAN),
+                ->when(! $this->semua, fn ($q) => $q->limit(self::PER_HALAMAN))
+                ->get(),
             'ringkas' => [
                 'jumlah' => (clone $kueri)->count(),
             ],
             'opsiStatus' => StatusSpk::opsiProgres(),
             'opsiTagihan' => StatusTagihan::opsiPenagihan(),
+            'opsiStatusAntar' => StatusAntar::opsi(),
             'adaPenyaring' => trim($this->cari) !== '' || $this->status !== '' || $this->tagihan !== ''
-                || $this->tanggal !== '',
+                || $this->antar !== '' || $this->tanggal !== '' || $this->periode !== '',
             'bolehUbah' => (bool) auth()->user()?->bolehInput(),
             'asal' => match ($this->mode) {
                 'billing' => 'tagihan-spk',
@@ -113,6 +122,18 @@ final class MonitoringTable extends Component
                 default => 'status-spk',
             },
         ]);
+    }
+
+    /** Tanggal awal dari preset periode ('' = tanpa batas, semua data). */
+    private function awalPeriode(): ?string
+    {
+        return match ($this->periode) {
+            'hari-ini' => now()->format('Y-m-d'),
+            '7-hari' => now()->subDays(6)->format('Y-m-d'),
+            'bulan' => now()->startOfMonth()->format('Y-m-d'),
+            'tahun' => now()->startOfYear()->format('Y-m-d'),
+            default => null,
+        };
     }
 
     /**
@@ -143,7 +164,9 @@ final class MonitoringTable extends Component
                 });
             })
             ->when($this->tanggal !== '', fn (Builder $q) => $q->whereDate('tanggal_spk', $this->tanggal))
+            ->when($this->awalPeriode() !== null, fn (Builder $q) => $q->whereDate('tanggal_spk', '>=', $this->awalPeriode()))
             ->when($this->status !== '' && $this->mode === 'status', fn (Builder $q) => $q->where('status_spk', $this->status))
-            ->when($this->tagihan !== '' && $this->mode !== 'status', fn (Builder $q) => $q->where('status_tagihan', $this->tagihan));
+            ->when($this->tagihan !== '' && $this->mode !== 'status', fn (Builder $q) => $q->where('status_tagihan', $this->tagihan))
+            ->when($this->antar !== '', fn (Builder $q) => $q->where('status_antar', $this->antar));
     }
 }

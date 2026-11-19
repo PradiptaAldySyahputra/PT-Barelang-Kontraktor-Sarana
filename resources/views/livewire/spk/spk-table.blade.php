@@ -66,9 +66,9 @@
             @endif
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 px-5 py-3.5 bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800">
-
-            <div class="relative min-w-0 flex-1 sm:max-w-xs">
+        <div class="bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="relative min-w-0 flex-1 sm:max-w-xs">
                 <label for="cari-spk" class="sr-only">Cari di tabel ini</label>
                 <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" fill="none"
                     viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
@@ -100,6 +100,15 @@
                 @endforeach
             </select>
 
+            <label class="sr-only" for="saring-antar">Status pengantaran</label>
+            <select id="saring-antar" wire:model.live="antar"
+                class="h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800">
+                <option value="">Semua pengantaran</option>
+                @foreach ($opsiStatusAntar as $nilai => $label)
+                    <option value="{{ $nilai }}">{{ $label }}</option>
+                @endforeach
+            </select>
+
             @if ($adaPenyaring)
                 <button type="button" wire:click="bersihkan"
                     class="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition">
@@ -112,6 +121,11 @@
                 <span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500"></span>
                 Memuat data...
             </span>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-200/70 pt-3 dark:border-gray-700/60">
+                <x-common.filter-periode :periode="$periode" />
+            </div>
         </div>
 
         {{-- ========================================================
@@ -129,7 +143,7 @@
                 @endif
             </div>
         @else
-        <div class="hidden overflow-hidden md:block">
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-theme-sm">
                 <thead>
                     <tr
@@ -183,7 +197,7 @@
                             {{-- SPK & Mitra --}}
                             <td class="px-4 py-3 align-top">
                                 <a href="{{ route('panel.spk.show', $spk) }}" title="Klik untuk melihat detail SPK {{ $spk->nomor_spk }}"
-                                    class="angka block font-semibold text-brand-600 hover:underline dark:text-brand-400">
+                                    class="angka block font-semibold text-blue-600 hover:underline dark:text-blue-400">
                                     {{ $spk->nomor_spk }}
                                 </a>
                                 <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-theme-xs text-gray-500 dark:text-gray-400">
@@ -219,11 +233,11 @@
                             </td>
 
                             {{-- Waktu & Tenggat --}}
-                            <td class="px-3 py-3 align-top whitespace-nowrap text-theme-xs">
-                                <span class="block text-gray-500 dark:text-gray-400">
+                            <td class="px-3 py-3 align-top text-theme-xs">
+                                <span class="block whitespace-nowrap text-gray-500 dark:text-gray-400">
                                     Mulai: {{ $spk->tanggal_spk?->format('d/m/Y') ?? '—' }}
                                 </span>
-                                <span class="mt-0.5 block font-semibold {{ $sisa !== null && $sisa < 0 ? 'text-error-600 dark:text-error-400 dark:text-error-500' : ($sisa !== null && $sisa <= 14 ? 'text-warning-700 dark:text-warning-500' : 'text-gray-700 dark:text-gray-300') }}"
+                                <span class="mt-0.5 block whitespace-nowrap font-semibold {{ $sisa !== null && $sisa < 0 ? 'text-error-600 dark:text-error-400' : ($sisa !== null && $sisa <= 14 ? 'text-warning-700 dark:text-warning-500' : 'text-gray-700 dark:text-gray-300') }}"
                                     title="@if ($sisa !== null) {{ $sisa < 0 ? 'Lewat ' . abs($sisa) . ' hari' : 'Sisa ' . $sisa . ' hari' }} @endif">
                                     Tenggat: {{ $spk->tenggatEfektif()?->format('d/m/Y') ?? '—' }}
                                 </span>
@@ -278,11 +292,11 @@
                 <li wire:key="spk-card-{{ $spk->id }}" class="p-4 space-y-2.5">
                     <div class="flex items-start justify-between gap-3">
                         <a href="{{ route('panel.spk.show', $spk) }}"
-                            class="angka text-theme-sm font-semibold text-brand-600 dark:text-brand-400">
+                            class="angka text-theme-sm font-semibold text-blue-600 dark:text-blue-400">
                             {{ $spk->nomor_spk }}
                         </a>
                         <span
-                            class="{{ $badge($spk->status_tagihan?->warnaBadge()) }} shrink-0 rounded px-1.5 py-0.5 text-theme-xs font-medium">
+                            class="{{ $badge($spk->status_tagihan?->warnaBadge()) }} shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-theme-xs font-medium">
                             {{ $spk->status_tagihan?->label() ?? 'Belum ditagihkan' }}
                         </span>
                     </div>
@@ -307,7 +321,7 @@
                         @if ($sisa !== null)
                             <span class="text-gray-300 dark:text-gray-700">·</span>
                             <span
-                                class="{{ $sisa < 0 ? 'font-medium text-error-600 dark:text-error-400 dark:text-error-500' : ($sisa <= 14 ? 'font-medium text-warning-700 dark:text-warning-500' : '') }}">
+                                class="{{ $sisa < 0 ? 'font-medium text-error-600 dark:text-error-400' : ($sisa <= 14 ? 'font-medium text-warning-700 dark:text-warning-500' : '') }}">
                                 {{ $sisa < 0 ? 'lewat ' . abs($sisa) . ' hari' : $sisa . ' hari lagi' }}
                             </span>
                         @endif
@@ -334,9 +348,15 @@
             @endforeach
         </ul>
 
-        @if ($daftar->hasPages())
-            <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-800">
-                {{ $daftar->links() }}
+        @if (! $semua && $ringkas['jumlah'] > 50)
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800">
+                <p class="text-theme-xs text-gray-500 dark:text-gray-400">
+                    Menampilkan 50 dari {{ Format::angka($ringkas['jumlah']) }} SPK.
+                </p>
+                <button type="button" wire:click="$set('semua', true)"
+                    class="text-theme-xs font-semibold text-brand-600 hover:underline dark:text-brand-400">
+                    Tampilkan Semua
+                </button>
             </div>
         @endif
         @endif

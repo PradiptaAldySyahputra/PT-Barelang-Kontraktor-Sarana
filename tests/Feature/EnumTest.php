@@ -21,6 +21,11 @@ use Tests\TestCase;
  *
  * Memakai Tests\TestCase (bukan PHPUnit\Framework\TestCase) karena butuh
  * Validator facade untuk menguji Rule::enum().
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class EnumTest extends TestCase
 {

@@ -24,7 +24,7 @@
                         value="{{ old('nama', $mitra?->nama) }}" placeholder="PT PLN Batam"
                         class="mt-1.5 h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-500">
                     @error('nama')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -46,7 +46,7 @@
                             Mitra = pemberi kerja (termasuk PLN). Subkon = penerima pekerjaan dari kita.
                         </p>
                         @error('kategori')
-                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -72,7 +72,7 @@
                         value="{{ old('kontak', $mitra?->kontak) }}" placeholder="Nama PIC / telepon / email"
                         class="mt-1.5 h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-500">
                     @error('kontak')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -83,7 +83,7 @@
                     <textarea id="alamat" name="alamat" rows="3" maxlength="500"
                         class="mt-1.5 w-full rounded-lg border border-gray-300 bg-white p-3 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-gray-500 dark:focus:border-brand-500">{{ old('alamat', $mitra?->alamat) }}</textarea>
                     @error('alamat')
-                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400 dark:text-error-500">{{ $message }}</p>
+                        <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
                     @enderror
                 </div>
             </div>

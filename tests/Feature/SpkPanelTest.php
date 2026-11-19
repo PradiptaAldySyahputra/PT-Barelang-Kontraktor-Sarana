@@ -330,4 +330,79 @@ class SpkPanelTest extends TestCase
 
         $this->assertSame(StatusTagihan::MenungguPembayaran, $spk->fresh()?->status_tagihan);
     }
+
+    public function test_pengantaran_tersimpan_urut_kronologis_dan_status_turfun_dari_entri_terakhir(): void
+    {
+        $kemarin = now()->subDay()->toDateString();
+        $mingguLalu = now()->subDays(7)->toDateString();
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->post('/panel/spk', $this->isian([
+                'pengantaran' => [
+                    ['tanggal' => $mingguLalu, 'status' => StatusAntar::SudahDiantar->value, 'oleh' => 'Pak Ipul', 'tujuan' => 'Imperium', 'catatan' => 'Antar awal'],
+                    ['tanggal' => '', 'status' => 'belum', 'oleh' => '', 'tujuan' => '', 'catatan' => ''],
+                    ['tanggal' => $kemarin, 'status' => StatusAntar::Diterima->value, 'oleh' => 'Admin', 'tujuan' => 'Infra', 'catatan' => 'Revisi kuitansi'],
+                ],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $spk = Spk::query()->where('nomor_spk', 'like', 'SPK-%')->latest('id')->firstOrFail();
+
+        $this->assertCount(2, $spk->pengantaran);
+        $this->assertSame($mingguLalu, $spk->pengantaran[0]['tanggal']);
+        $this->assertSame($kemarin, $spk->pengantaran[1]['tanggal']);
+        $this->assertSame(StatusAntar::Diterima->value, $spk->status_antar?->value);
+        $this->assertSame($kemarin, $spk->tanggal_antar?->format('Y-m-d'));
+    }
+
+    public function test_update_pengantaran_menurunkan_ulang_status_terkini(): void
+    {
+        $spk = Spk::factory()->create(['status_antar' => StatusAntar::Belum, 'tanggal_antar' => null]);
+        $hariIni = now()->toDateString();
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->put(route('panel.spk.update', $spk), $this->isian([
+                'nomor_spk' => $spk->nomor_spk,
+                'nilai_spk' => (string) $spk->nilai_spk,
+                'pengantaran' => [
+                    ['tanggal' => $hariIni, 'status' => StatusAntar::SudahDiantar->value, 'oleh' => 'Pak Ipul', 'tujuan' => '', 'catatan' => ''],
+                ],
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $spk->refresh();
+        $this->assertSame(StatusAntar::SudahDiantar->value, $spk->status_antar?->value);
+        $this->assertSame($hariIni, $spk->tanggal_antar?->format('Y-m-d'));
+    }
+
+    public function test_halaman_detail_menampilkan_badge_antar_pada_status_belum(): void
+    {
+        $spk = Spk::factory()->create([
+            'status_antar' => StatusAntar::Belum,
+            'tanggal_antar' => null,
+        ]);
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->get(route('panel.spk.show', $spk))
+            ->assertOk()
+            ->assertSee('Belum Diantar');
+    }
+
+    public function test_halaman_detail_menampilkan_riwayat_pengantaran(): void
+    {
+        $spk = Spk::factory()->create([
+            'pengantaran' => [
+                ['tanggal' => now()->subDays(3)->toDateString(), 'status' => StatusAntar::SudahDiantar->value, 'oleh' => 'Pak Ipul', 'tujuan' => 'Imperium', 'catatan' => null],
+                ['tanggal' => now()->subDay()->toDateString(), 'status' => StatusAntar::Diterima->value, 'oleh' => 'Admin', 'tujuan' => 'Infra', 'catatan' => 'Revisi kuitansi'],
+            ],
+            'status_antar' => StatusAntar::Diterima,
+        ]);
+
+        $this->actingAs($this->pengguna(Peran::Admin))
+            ->get(route('panel.spk.show', $spk))
+            ->assertOk()
+            ->assertSee('Pengantaran Dokumen')
+            ->assertSee('Diterima')
+            ->assertSee('Pak Ipul');
+    }
 }

@@ -40,8 +40,9 @@
             @endif
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 px-5 py-3.5 bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800">
-            <div class="relative min-w-0 flex-1 sm:max-w-xs">
+        <div class="bg-gray-50/50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="relative min-w-0 flex-1 sm:max-w-xs">
                 <label for="cari-keluar" class="sr-only">Cari di tabel ini</label>
                 <svg class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" fill="none"
                     viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
@@ -88,6 +89,11 @@
                     Bersihkan
                 </button>
             @endif
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-200/70 pt-3 dark:border-gray-700/60">
+                <x-common.filter-periode :periode="$periode" />
+            </div>
         </div>
 
         @if ($daftar->isEmpty())
@@ -102,7 +108,7 @@
                 @endif
             </div>
         @else
-            <div class="hidden overflow-hidden md:block border-t border-gray-100 dark:border-gray-800">
+            <div class="hidden md:block overflow-x-auto border-t border-gray-100 dark:border-gray-800">
                 <table class="w-full text-left">
                     <thead>
                         <tr class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-400">
@@ -168,7 +174,7 @@
                                 <td class="px-3 py-2.5">
                                     @if ($trx->spk)
                                         <a href="{{ route('panel.spk.show', $trx->spk) }}"
-                                            class="block truncate text-theme-xs font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                                            class="block truncate text-theme-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
                                             title="{{ $trx->spk->nomor_spk }}">
                                             {{ $trx->spk->nomor_spk }}
                                         </a>
@@ -261,7 +267,7 @@
 
                         <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
                             @if ($trx->spk)
-                                <a href="{{ route('panel.spk.show', $trx->spk) }}" class="font-semibold text-brand-600 dark:text-brand-400">
+                                <a href="{{ route('panel.spk.show', $trx->spk) }}" class="font-semibold text-blue-600 dark:text-blue-400">
                                     {{ $trx->spk->nomor_spk }}
                                 </a>
                             @else
@@ -309,9 +315,15 @@
                 @endforeach
             </ul>
 
-            @if ($daftar->hasPages())
-                <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-800">
-                    {{ $daftar->links() }}
+            @if (! $semua && $ringkas['jumlah'] > 50)
+                <div class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800">
+                    <p class="text-theme-xs text-gray-500 dark:text-gray-400">
+                        Menampilkan 50 dari {{ Format::angka($ringkas['jumlah']) }} transaksi.
+                    </p>
+                    <button type="button" wire:click="$set('semua', true)"
+                        class="text-theme-xs font-semibold text-brand-600 hover:underline dark:text-brand-400">
+                        Tampilkan Semua
+                    </button>
                 </div>
             @endif
         @endif

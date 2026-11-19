@@ -85,6 +85,28 @@ class PenyimpanBerkas
             $ekstensi = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'bin');
         } elseif (is_string($file) && $file !== '') {
             if (is_file($file)) {
+                // Hanya izinkan path absolut yang berada di dalam akar storage atau
+                // direktori sementara sistem — mencegah pembacaan berkas sebarang.
+                $real = realpath($file);
+                $akar = array_filter([
+                    realpath(storage_path('app')),
+                    realpath(sys_get_temp_dir()),
+                ]);
+                $diizinkan = false;
+                foreach ($akar as $a) {
+                    if ($real !== false && str_starts_with($real, $a.DIRECTORY_SEPARATOR)) {
+                        $diizinkan = true;
+
+                        break;
+                    }
+                }
+
+                if (! $diizinkan) {
+                    Log::warning('PenyimpanBerkas menolak path absolut di luar storage/tmp: '.$file);
+
+                    return null;
+                }
+
                 $sumber = $file;
                 $ekstensi = strtolower(pathinfo($file, PATHINFO_EXTENSION) ?: 'bin');
             } else {
@@ -108,6 +130,23 @@ class PenyimpanBerkas
 
         if ($sumber === null || ! is_file($sumber)) {
             return null;
+        }
+
+        // Verifikasi isi (magic byte) — cegah ekstensi disamarkan. PDF harus
+        // diawali "%PDF-"; gambar harus berupa data gambar yang sah.
+        $mentah = (string) @file_get_contents($sumber, false, null, 0, 4096);
+        if ($ekstensi === 'pdf' && ! str_starts_with($mentah, '%PDF-')) {
+            Log::warning('PenyimpanBerkas menolak berkas yang diklaim PDF tanpa signature PDF.');
+
+            return null;
+        }
+        if (in_array($ekstensi, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            $infoGambar = @getimagesizefromstring($mentah);
+            if ($infoGambar === false) {
+                Log::warning('PenyimpanBerkas menolak berkas gambar tak valid: '.$ekstensi);
+
+                return null;
+            }
         }
 
         // --- 3. Ringankan (kompres) bila memungkinkan.

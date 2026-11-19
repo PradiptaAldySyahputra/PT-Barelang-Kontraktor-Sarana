@@ -28,6 +28,11 @@ use Tests\TestCase;
  * 1. Tiap enum yang tampil sebagai badge PUNYA `warnaBadge()`.
  * 2. Warnanya selalu salah satu warna resmi Filament (tidak salah ketik).
  * 3. Tabel/layar TIDAK lagi menulis peta warna kategori secara hardcode.
+ *
+ * CATATAN: File ini sengaja TANPA RefreshDatabase/DatabaseTransactions.
+ * Bersifat READ-ONLY terhadap database. Jika test di sini mulai menulis
+ * DB (factory->create / post / update), WAJIB tambah trait refresh agar
+ * data tidak bocor antar-test (order-dependency).
  */
 class PetaWarnaBadgeTest extends TestCase
 {

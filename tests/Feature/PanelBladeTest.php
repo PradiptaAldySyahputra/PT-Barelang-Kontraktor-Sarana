@@ -21,7 +21,7 @@ use Tests\TestCase;
  *   1. Pintu masuk  - tamu diarahkan ke /panel/login, akun nonaktif ditolak.
  *   2. Diferensiasi peran - Direktur melihat panel eksekutif, Admin melihat
  *      panel operasional. Bukan tampilan yang sama dengan sebagian disembunyikan.
- *   3. Menu sesuai hak akses - Manajemen Akun hanya Direktur, Backup/Impor/
+ *   3. Menu sesuai hak akses - Manajemen Akun hanya Direktur, Backup/
  *      Status Sistem hanya Admin (disalin dari aturan Filament).
  *
  * Selama transisi, otorisasi sebenarnya tetap di middleware `peran:` pada
@@ -121,8 +121,10 @@ class PanelBladeTest extends TestCase
             ->assertSee('Uang Keluar')
             ->assertSee('Saldo Kas')
             ->assertSee('Saldo Bank')
-            ->assertSee('Transaksi Terbaru')
-            ->assertSee('SPK Berjalan')
+            // Panel operasional Admin: kartu metric & aksi cepat, tanpa grafik analitik ala Direktur.
+            ->assertSee('Aksi Cepat Operasional')
+            ->assertDontSee('Arus Kas 6 Bulan')
+            ->assertDontSee('Sebaran Status SPK')
             // Panel eksekutif Direktur tidak boleh ikut tampil.
             ->assertDontSee('SPK Prioritas Pantauan')
             ->assertDontSee('Tahapan Tagihan SPK');
@@ -145,13 +147,12 @@ class PanelBladeTest extends TestCase
             ->assertSee('Arus Kas 6 Bulan')
             ->assertSee('Perbandingan uang masuk vs keluar 6 bulan terakhir')
             ->assertSee('Tahapan Tagihan SPK')
-            ->assertSee('SPK Prioritas Pantauan')
-            // SPK yang belum lunas harus muncul sebagai pantauan.
-            ->assertSee('PANEL-BLADE-999')
+            // Nilai SPK yang terkontrak harus muncul di panel eksekutif.
             ->assertSee('350.000.000')
             // Direktur read-only: tidak ada tombol input.
             ->assertDontSee('SPK Baru')
-            ->assertDontSee('Transaksi Terbaru');
+            ->assertDontSee('Transaksi Terbaru')
+            ->assertSee('Sisa Piutang');
     }
 
     public function test_angka_masuk_dan_keluar_tampil_di_dasbor_direktur(): void
@@ -203,7 +204,7 @@ class PanelBladeTest extends TestCase
                 ->get('/panel')
                 ->assertOk()
                 ->assertSee('Status Sistem')
-                ->assertSee('Impor Data');
+                ->assertSee('Backup Database');
         }
     }
 

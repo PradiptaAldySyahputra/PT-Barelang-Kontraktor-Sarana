@@ -79,12 +79,16 @@ final class StatusBackup
         $terakhir = $daftar[0]['waktu'];
         $umur = (int) $terakhir->diffInDays(now());
 
+        // Backup terbaru tidak wajar = dump gagal (0 byte) atau jam server
+        // melenceng (mtime di masa depan). Keduanya bukan backup yang sehat.
+        $terakhirValid = $daftar[0]['ukuran'] > 0 && ! $terakhir->isFuture();
+
         return [
             'jumlah' => count($daftar),
             'total_ukuran' => $total,
             'total_ukuran_teks' => self::formatUkuran($total),
-            // "Sehat" = ada backup dalam 2 hari terakhir (jadwal harian, kasih toleransi).
-            'sehat' => $umur <= 2,
+            // "Sehat" = ada backup valid dalam 2 hari terakhir (jadwal harian, kasih toleransi).
+            'sehat' => $umur <= 2 && $terakhirValid,
             'terakhir' => $terakhir,
             'umur_hari' => $umur,
         ];

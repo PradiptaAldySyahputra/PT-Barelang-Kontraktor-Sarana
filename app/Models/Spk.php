@@ -56,6 +56,7 @@ class Spk extends Model
         'tanggal_spk',
         'tanggal_akhir',
         'perpanjangan',
+        'pengantaran',
         'nama_pekerjaan',
         'lokasi',
         'keterangan',
@@ -89,6 +90,8 @@ class Spk extends Model
             'dikerjakan_oleh' => DikerjakanOleh::class,
             // Riwayat perpanjangan tenggat (adendum) - lihat §perpanjangan.
             'perpanjangan' => 'array',
+            // Riwayat pengantaran dokumen (banyak peristiwa) - lihat §pengantaran.
+            'pengantaran' => 'array',
             // Berkas SPK (BAST, scan SPK) - banyak berkas per SPK.
             'dokumen' => 'array',
         ];

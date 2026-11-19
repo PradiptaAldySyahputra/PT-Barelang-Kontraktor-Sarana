@@ -6,6 +6,7 @@ namespace App\Support;
 
 use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
+use App\Enums\StatusSpk;
 use App\Models\Mitra;
 use App\Models\Spk;
 use App\Models\UangKeluar;
@@ -13,6 +14,7 @@ use App\Models\UangMasuk;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Angka-angka halaman Laporan untuk panel Blade (/panel/reports).
@@ -63,7 +65,9 @@ final class LaporanData
         $totalMasuk = (float) self::queryMasuk($awal, $akhir)->sum('jumlah');
         $totalKeluar = (float) self::queryKeluar($awal, $akhir)->sum('jumlah');
 
-        $nilaiSpk = (float) Spk::sum('nilai_spk');
+        // Konsisten dgn KPI dashboard: SPK Dibatalkan tak menerima pembayaran → kecualikan dari nilai & piutang.
+        $aktif = fn (Builder $q) => $q->where('status_spk', '!=', StatusSpk::Dibatalkan->value)->orWhereNull('status_spk');
+        $nilaiSpk = (float) Spk::query()->where($aktif)->sum('nilai_spk');
         $belumDiterima = $nilaiSpk - (float) UangMasuk::whereNotNull('spk_id')->sum('jumlah');
 
         return [
@@ -196,9 +200,12 @@ final class LaporanData
         return Spk::query()
             ->with('mitra')
             ->withSum('uangMasuk as total_masuk', 'jumlah')
+            // Sisa piutang = nilai_spk - diterima > 0 → saring di SQL
+            // (pakai subquery berkorelasi; HAVING tanpa GROUP BY ditolak MySQL).
+            ->whereRaw('COALESCE(nilai_spk, 0) > COALESCE((SELECT SUM(jumlah) FROM uang_masuk WHERE uang_masuk.spk_id = spk.id AND uang_masuk.deleted_at IS NULL), 0)')
+            ->orderByDesc(DB::raw('(COALESCE(nilai_spk, 0) - COALESCE(total_masuk, 0))'))
             ->get()
-            ->filter(fn (Spk $s): bool => $s->piutangDari((float) ($s->total_masuk ?? 0)) > 0)
-            ->sortByDesc(fn (Spk $s): float => $s->piutangDari((float) ($s->total_masuk ?? 0)))
+            ->map(fn (Spk $s): Spk => $s)
             ->values();
     }
 

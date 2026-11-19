@@ -199,10 +199,6 @@
                     </div>
                 @endif
 
-                @if (session('berhasil'))
-                    <x-common.alert tipe="sukses">{{ session('berhasil') }}</x-common.alert>
-                @endif
-
                 @if (session('gagal'))
                     <x-common.alert tipe="gagal">{{ session('gagal') }}</x-common.alert>
                 @endif

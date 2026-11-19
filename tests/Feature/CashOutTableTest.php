@@ -91,12 +91,14 @@ class CashOutTableTest extends TestCase
             ->assertSet('urut', 'jumlah');
     }
 
-    public function test_perubahan_filter_mereset_halaman(): void
+    public function test_perubahan_filter_mereset_tampilan_terbatas(): void
     {
         $this->actingAs($this->admin());
 
         Livewire::test(CashOutTable::class)
+            ->set('semua', true)
+            ->assertSet('semua', true)
             ->set('cari', 'Pencarian Baru')
-            ->assertSet('paginators.page', 1);
+            ->assertSet('semua', false);
     }
 }

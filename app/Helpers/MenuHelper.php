@@ -95,7 +95,6 @@ class MenuHelper
             'subItems' => [
                 ['name' => 'Status Sistem', 'path' => '/panel/status'],
                 ['name' => 'Backup Database', 'path' => '/panel/backup'],
-                ['name' => 'Impor Data', 'path' => '/panel/import'],
             ],
         ];
 
