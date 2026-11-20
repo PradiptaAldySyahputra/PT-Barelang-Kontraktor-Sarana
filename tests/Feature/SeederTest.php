@@ -35,10 +35,10 @@ class SeederTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $this->assertSame(2, Pengguna::count(), 'harus ada 2 akun');
-        $this->assertSame(4, Mitra::count(), 'harus ada 4 mitra');
-        $this->assertSame(4, Spk::count(), 'harus ada 4 contoh SPK');
-        $this->assertSame(3, UangMasuk::count(), 'harus ada 3 uang masuk');
-        $this->assertSame(3, UangKeluar::count(), 'harus ada 3 uang keluar');
+        $this->assertSame(1, Mitra::count(), 'harus ada 1 mitra (PT PLN Batam)');
+        $this->assertSame(92, Spk::count(), 'harus ada 92 SPK data real');
+        $this->assertSame(20, UangMasuk::count(), 'harus ada 20 uang masuk (kas/bank real)');
+        $this->assertSame(120, UangKeluar::count(), 'harus ada 120 uang keluar (kas/bank real)');
     }
 
     public function test_seeder_membuat_akun_yang_bisa_login(): void

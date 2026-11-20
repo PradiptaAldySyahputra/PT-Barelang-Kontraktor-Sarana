@@ -7,6 +7,8 @@ namespace App\Http\Controllers\System;
 use App\Enums\AkunKas;
 use App\Enums\KategoriPengeluaran;
 use App\Enums\Peran;
+use App\Models\UangKeluar;
+use App\Models\UangMasuk;
 use App\Support\ArsipNota;
 use App\Support\RiwayatEkspor;
 use App\Support\StatusBackup;
@@ -14,6 +16,7 @@ use App\Support\StatusSistem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
@@ -53,9 +56,16 @@ final class SystemController
             'akun' => $request->string('akun')->toString() ?: null,
             'kategori' => $request->string('kategori')->toString() ?: null,
             'q' => $request->string('q')->toString() ?: null,
+            'jenis' => $request->string('jenis')->toString() ?: null,
         ];
+        if ($filter['jenis'] && ! in_array($filter['jenis'], ['Uang Masuk', 'Uang Keluar'], true)) {
+            $filter['jenis'] = null;
+        }
 
         $semuaArsip = ArsipNota::cari($filter);
+        if ($filter['jenis']) {
+            $semuaArsip = $semuaArsip->where('jenis', $filter['jenis'])->values();
+        }
         $semua = (bool) $request->boolean('semua');
         $perHalaman = 50;
         $daftar = $semua ? $semuaArsip : $semuaArsip->take($perHalaman)->values();
@@ -80,6 +90,32 @@ final class SystemController
             'judul' => 'Unggah & Ekstraksi Nota',
             'keterangan' => 'Unggah berkas nota fisik (satuan atau scan tumpuk PDF/gambar) untuk diekstrak otomatis dengan OCR',
         ]);
+    }
+
+    public function hapusBerkas(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'jenis' => ['required', 'in:Uang Masuk,Uang Keluar'],
+            'id' => ['required', 'integer'],
+            'path' => ['required', 'string'],
+        ]);
+
+        $model = $validated['jenis'] === 'Uang Masuk'
+            ? UangMasuk::findOrFail((int) $validated['id'])
+            : UangKeluar::findOrFail((int) $validated['id']);
+
+        $path = $validated['path'];
+
+        $bukti = collect((array) $model->bukti)
+            ->filter(fn (string $p): bool => $p !== $path)
+            ->values()
+            ->all();
+
+        $model->update(['bukti' => $bukti]);
+
+        Storage::disk('nota')->delete($path);
+
+        return back()->with('status', 'Berkas nota berhasil dihapus.');
     }
 
     public function exports(): View

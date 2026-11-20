@@ -244,6 +244,8 @@ final class ReceiptUploadForm extends Component
                         'keterangan' => $item['keterangan'] ?? ('Nota '.($idx + 1)),
                         'spk_id' => null,
                         'akun' => AkunKas::Kas->value,
+                        'berkas' => null,
+                        'berkas_nama' => null,
                     ];
                 }
 
@@ -272,6 +274,8 @@ final class ReceiptUploadForm extends Component
             'keterangan' => $keterangan ?? 'Nota Satuan',
             'spk_id' => null,
             'akun' => AkunKas::Kas->value,
+            'berkas' => null,
+            'berkas_nama' => null,
         ];
     }
 
@@ -287,6 +291,12 @@ final class ReceiptUploadForm extends Component
     {
         $ke = count($this->daftarNota) + 1;
         $this->tambahBarisSatu($ke, null, null, null, null, 'Nota '.$ke);
+    }
+
+    public function catatNamaBerkas(int $index): void
+    {
+        $berkas = $this->daftarNota[$index]['berkas'] ?? null;
+        $this->daftarNota[$index]['berkas_nama'] = $berkas ? $berkas->getClientOriginalName() : null;
     }
 
     public bool $sedangMenyimpan = false;
@@ -308,8 +318,15 @@ final class ReceiptUploadForm extends Component
         $this->sedangMenyimpan = true;
 
         // Angka bertitik ("1.500.000") dinormalisasi dulu supaya lolos `numeric`.
+        // Berkas bukti per kartu manual juga disimpan sebagai lampiran sekarang.
         foreach ($this->daftarNota as $i => $n) {
             $this->daftarNota[$i]['nominal'] = Format::bersihkanUang($n['nominal'] ?? '');
+
+            $berkas = $n['berkas'] ?? null;
+            if ($berkas && ! $this->daftarNota[$i]['potongan_path']) {
+                $this->daftarNota[$i]['potongan_path'] = app(PenyimpanBerkas::class)
+                    ->simpanKe($berkas, 'nota', 'nota');
+            }
         }
 
         try {
@@ -321,6 +338,7 @@ final class ReceiptUploadForm extends Component
                 'daftarNota.*.penerima' => ['nullable', 'string', 'max:200'],
                 'daftarNota.*.keterangan' => ['nullable', 'string', 'max:255'],
                 'daftarNota.*.spk_id' => ['nullable', 'integer', 'exists:spk,id'],
+                'daftarNota.*.berkas' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:'.PenyimpanBerkas::maksUkuranKb()],
             ], [
                 'daftarNota.*.tanggal.required' => 'Tanggal nota wajib diisi.',
                 'daftarNota.*.tanggal.before_or_equal' => 'Tanggal tidak boleh di masa depan.',

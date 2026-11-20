@@ -35,7 +35,7 @@ class PenyaringPeriodeTest extends TestCase
 
             $html = $respon->getContent();
 
-            $this->assertStringContainsString('Hari Ini', $html, "{$nama}: preset Hari Ini tidak tampil");
+            $this->assertStringContainsString('7 Hari', $html, "{$nama}: preset 7 Hari tidak tampil");
             $this->assertStringContainsString('Bulan Ini', $html, "{$nama}: preset Bulan Ini tidak tampil");
             $this->assertStringContainsString('Tahun Ini', $html, "{$nama}: preset Tahun Ini tidak tampil");
 

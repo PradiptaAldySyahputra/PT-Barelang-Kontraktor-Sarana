@@ -225,6 +225,7 @@ final class DashboardSummary
                     'tenggat' => $s->tanggal_akhir?->format('d/m/Y') ?? '-',
                     'label_tenggat' => $s->labelTenggat(),
                     'lewat' => $s->sudahLewatTenggat(),
+                    'sisa_hari' => $s->sisaTenggatHari(),
                     'status_tagihan' => $s->status_tagihan?->label() ?? 'Belum Ditagihkan',
                 ];
             })

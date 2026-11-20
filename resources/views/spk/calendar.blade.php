@@ -146,15 +146,20 @@
                             'status' => $item->status_spk?->label() ?? 'Draft',
                             'url' => route('panel.spk.show', ['spk' => $item, 'asal' => 'calendar']),
                             'is_selesai' => $item->sudahSelesai(),
-                            'is_lewat' => $item->tanggal_akhir < now()->startOfDay() && !$item->sudahSelesai(),
+                            'sisa_hari' => $item->sisaTenggatHari(),
                         ])->values();
                     @endphp
                     <div class="mt-1.5 space-y-1">
                         @foreach ($spkHariIni->take(2) as $spk)
                             @php
                                 $isSelesai = $spk->sudahSelesai();
-                                $isLewat = $spk->tanggal_akhir < now()->startOfDay() && !$isSelesai;
-                                $warnaBadge = $isSelesai ? 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-400 border-success-200 dark:border-success-500/30' : ($isLewat ? 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400 border-error-200 dark:border-error-500/30' : 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400 border-brand-200 dark:border-brand-500/30');
+                                $sisaC = $spk->sisaTenggatHari();
+                                $warnaBadge = $isSelesai ? 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-400 border-success-200 dark:border-success-500/30' : (match (true) {
+                                    $sisaC !== null && $sisaC < 0 => 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400 border-error-200 dark:border-error-500/30',
+                                    $sisaC !== null && $sisaC <= 7 => 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400 border-error-200 dark:border-error-500/30',
+                                    $sisaC !== null && $sisaC <= 14 => 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-400 border-warning-200 dark:border-warning-500/30',
+                                    default => 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400 border-brand-200 dark:border-brand-500/30',
+                                });
                             @endphp
                             <a href="{{ route('panel.spk.show', ['spk' => $spk, 'asal' => 'calendar']) }}"
                                 class="block truncate rounded-md border px-1 py-0.5 text-[10px] font-semibold transition hover:opacity-80 sm:px-1.5 sm:text-[11px] {{ $warnaBadge }}"
@@ -200,7 +205,13 @@
             <ul class="divide-y divide-gray-100 md:hidden dark:divide-gray-800">
                 @foreach ($spkList as $s)
                     @php
-                        $lewat = $s->tanggal_akhir < now()->startOfDay() && ! $s->sudahSelesai();
+                        $sisaM = $s->sisaTenggatHari();
+                        $warnaTenggatM = $s->sudahSelesai() ? 'text-gray-700 dark:text-gray-300' : (match (true) {
+                            $sisaM !== null && $sisaM < 0 => 'text-error-600 dark:text-error-400',
+                            $sisaM !== null && $sisaM <= 7 => 'text-error-600 dark:text-error-400',
+                            $sisaM !== null && $sisaM <= 14 => 'text-warning-600 dark:text-warning-400',
+                            default => 'text-gray-700 dark:text-gray-300',
+                        });
                     @endphp
                     <li class="py-3">
                         <div class="flex min-w-0 items-start justify-between gap-2">
@@ -215,7 +226,7 @@
                         <p class="mt-1 break-words text-theme-xs text-gray-700 dark:text-gray-300">{{ $s->nama_pekerjaan }}</p>
                         <p class="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">{{ $s->mitra?->nama ?? '-' }}</p>
                         <div class="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-theme-xs">
-                            <span class="font-semibold {{ $lewat ? 'text-error-600 dark:text-error-400' : 'text-gray-700 dark:text-gray-300' }}">
+                            <span class="font-semibold {{ $warnaTenggatM }}">
                                 Tenggat {{ $s->tanggal_akhir?->format('d/m/Y') }}
                             </span>
                             <span class="angka font-semibold text-gray-900 dark:text-white">{{ Format::rupiah($s->nilai_spk) }}</span>
@@ -239,7 +250,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @foreach ($spkList as $s)
                             <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
-                                <td class="py-2.5 px-3 whitespace-nowrap font-semibold {{ $s->tanggal_akhir < now()->startOfDay() && ! $s->sudahSelesai() ? 'text-error-600 dark:text-error-400' : 'text-gray-700 dark:text-gray-300' }}">
+                                <td class="py-2.5 px-3 whitespace-nowrap font-semibold {{ $s->sudahSelesai() ? 'text-gray-700 dark:text-gray-300' : (match (true) { $s->sisaTenggatHari() !== null && $s->sisaTenggatHari() < 0 => 'text-error-600 dark:text-error-400', $s->sisaTenggatHari() !== null && $s->sisaTenggatHari() <= 7 => 'text-error-600 dark:text-error-400', $s->sisaTenggatHari() !== null && $s->sisaTenggatHari() <= 14 => 'text-warning-600 dark:text-warning-400', default => 'text-gray-700 dark:text-gray-300' }) }}">
                                     {{ $s->tanggal_akhir?->format('d/m/Y') }}
                                 </td>
                                 <td class="py-2.5 px-3">
@@ -291,7 +302,7 @@
                                 <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5" x-text="'Mitra: ' + item.mitra"></p>
                             </div>
                             <span class="inline-flex rounded px-2 py-0.5 text-[11px] font-semibold"
-                                :class="item.is_selesai ? 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-400' : (item.is_lewat ? 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400' : 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400')"
+                                :class="item.is_selesai ? 'bg-success-50 text-success-700 dark:bg-success-500/20 dark:text-success-400' : (item.sisa_hari !== null && item.sisa_hari <= 14 ? 'bg-warning-50 text-warning-700 dark:bg-warning-500/20 dark:text-warning-400' : 'bg-error-50 text-error-700 dark:bg-error-500/20 dark:text-error-400')"
                                 x-text="item.status"></span>
                         </div>
                         <div class="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2 text-xs dark:border-gray-800">

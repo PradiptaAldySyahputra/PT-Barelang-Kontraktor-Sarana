@@ -12,8 +12,11 @@ use App\Livewire\Receipt\ReceiptUploadForm;
 use App\Models\Pengguna;
 use App\Models\Spk;
 use App\Models\UangKeluar;
+use App\Models\UangMasuk;
 use App\Support\ArsipNota;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -67,6 +70,63 @@ class ReceiptUploadTest extends TestCase
         ]);
     }
 
+    public function test_admin_bisa_lampirkan_berkas_bukti_pada_kartu_nota_manual(): void
+    {
+        Storage::fake('nota');
+
+        $admin = $this->admin();
+        $berkas = UploadedFile::fake()->image('bukti-nota.jpg');
+
+        $komponen = Livewire::actingAs($admin)
+            ->test(ReceiptUploadForm::class)
+            ->call('tambahNotaManual')
+            ->set('daftarNota.0.tanggal', now()->toDateString())
+            ->set('daftarNota.0.nominal', 125000)
+            ->set('daftarNota.0.akun', AkunKas::Kas->value)
+            ->set('daftarNota.0.kategori', KategoriPengeluaran::Material->value)
+            ->set('daftarNota.0.berkas', $berkas)
+            ->call('catatNamaBerkas', 0)
+            ->assertSet('daftarNota.0.berkas_nama', 'bukti-nota.jpg');
+
+        $komponen->call('simpanSemua')
+            ->assertHasNoErrors()
+            ->assertRedirect('/panel/receipts');
+
+        $trx = UangKeluar::query()->firstOrFail();
+        $this->assertNotEmpty($trx->bukti, 'Bukti harus tersimpan sebagai lampiran transaksi.');
+        $this->assertTrue(Storage::disk('nota')->exists($trx->bukti[0]));
+    }
+
+    public function test_admin_bisa_lampirkan_berkas_bukti_pada_kartu_nota_manual_uang_masuk(): void
+    {
+        Storage::fake('nota');
+
+        $admin = $this->admin();
+        $spk = Spk::factory()->create(['nilai_spk' => 50000000]);
+        $berkas = UploadedFile::fake()->image('bukti-masuk.jpg');
+
+        $komponen = Livewire::actingAs($admin)
+            ->test(ReceiptUploadForm::class)
+            ->set('jenisTransaksi', 'masuk')
+            ->call('tambahNotaManual')
+            ->set('daftarNota.0.tanggal', now()->toDateString())
+            ->set('daftarNota.0.nominal', 15000000)
+            ->set('daftarNota.0.akun', AkunKas::Bank->value)
+            ->set('daftarNota.0.spk_id', $spk->id)
+            ->set('daftarNota.0.keterangan', 'Penerimaan termin pembayaran')
+            ->set('daftarNota.0.berkas', $berkas)
+            ->call('catatNamaBerkas', 0)
+            ->assertSet('daftarNota.0.berkas_nama', 'bukti-masuk.jpg');
+
+        $komponen->call('simpanSemua')
+            ->assertHasNoErrors()
+            ->assertRedirect('/panel/receipts');
+
+        $trx = UangMasuk::query()->firstOrFail();
+        $this->assertNotEmpty($trx->bukti, 'Bukti harus tersimpan sebagai lampiran transaksi uang masuk.');
+        $this->assertTrue(Storage::disk('nota')->exists($trx->bukti[0]));
+    }
+
     public function test_arsip_nota_mencegah_duplikasi_saat_memiliki_potongan(): void
     {
         $admin = $this->admin();
@@ -87,8 +147,7 @@ class ReceiptUploadTest extends TestCase
     }
 
     public function test_admin_bisa_unggah_nota_sebagai_uang_masuk(): void
-    {
-        $admin = $this->admin();
+    {        $admin = $this->admin();
         $spk = Spk::factory()->create(['nilai_spk' => 50000000]);
 
         $komponen = Livewire::actingAs($admin)

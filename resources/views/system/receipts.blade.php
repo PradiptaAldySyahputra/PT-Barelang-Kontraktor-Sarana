@@ -4,6 +4,7 @@
 --}}
 @php
     use App\Support\Nota;
+    use App\Support\Format;
 
     $kelasKartu = 'rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-theme-xs';
     $kelasInput = 'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-500 focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-500';
@@ -16,11 +17,17 @@
         previewModal: false,
         previewUrl: '',
         previewNama: '',
+        previewJenis: '',
+        previewId: '',
+        previewPath: '',
         isImage: true,
-        bukaPratinjau(url, nama, gambar) {
+        bukaPratinjau(url, nama, gambar, jenis, id, path) {
             this.previewUrl = url;
             this.previewNama = nama;
             this.isImage = gambar;
+            this.previewJenis = jenis || '';
+            this.previewId = id || '';
+            this.previewPath = path || '';
             this.previewModal = true;
         }
     }">
@@ -34,7 +41,7 @@
                         class="{{ $kelasInput }}">
                 </div>
 
-                            <x-common.filter-tanggal id="tanggal-arsip" mode="get" :tanggal="(string) ($filter['tanggal_awal'] ?? '')" />
+                <x-common.filter-tanggal id="tanggal-arsip" mode="get" :tanggal="(string) ($filter['tanggal_awal'] ?? '')" />
 
                 <label class="sr-only" for="akun">Akun Kas/Bank</label>
                 <select id="akun" name="akun" class="{{ $kelasInput }} lg:w-40 lg:flex-none">
@@ -108,6 +115,22 @@
                     <p>Tidak ada berkas nota pada filter ini.</p>
                 </div>
             @else
+                @php $qArsip = request()->except(['jenis', 'periode']); @endphp
+                {{-- Pemisah jenis arsip (pola tab segmented monitoring SPK) --}}
+                <div class="my-4 mx-5 inline-flex items-center gap-1 rounded-xl bg-gray-100 p-1 shadow-theme-xs dark:bg-gray-800/80">
+                    <a href="{{ route('panel.receipts', $qArsip) }}"
+                        class="inline-flex items-center whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-all {{ ! $filter['jenis'] ? 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">
+                        Semua
+                    </a>
+                    <a href="{{ route('panel.receipts', array_merge($qArsip, ['jenis' => 'Uang Masuk'])) }}"
+                        class="inline-flex items-center whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-all {{ $filter['jenis'] === 'Uang Masuk' ? 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">
+                        Uang Masuk
+                    </a>
+                    <a href="{{ route('panel.receipts', array_merge($qArsip, ['jenis' => 'Uang Keluar'])) }}"
+                        class="inline-flex items-center whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-all {{ $filter['jenis'] === 'Uang Keluar' ? 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">
+                        Uang Keluar
+                    </a>
+                </div>
                 <div class="hidden md:block overflow-x-auto">
                     <table class="w-full text-left text-theme-sm">
                         <thead>
@@ -115,6 +138,7 @@
                                 <th class="w-24 px-4 py-3">Tanggal</th>
                                 <th class="w-28 px-3 py-3">Transaksi</th>
                                 <th class="w-24 px-3 py-3">Akun</th>
+                                <th class="min-w-[138px] px-3 py-3 text-right">Jumlah</th>
                                 <th class="px-3 py-3">Keterangan / Mitra</th>
                                 <th class="w-56 px-4 py-3">Nama Berkas</th>
                                 <th class="w-36 px-4 py-3 text-right">Aksi</th>
@@ -134,6 +158,11 @@
                                     <td class="px-3 py-3 text-theme-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                         {{ $baris['akun'] ?? '—' }}
                                     </td>
+                                    <td class="min-w-[138px] shrink-0 px-3 py-3 text-right whitespace-nowrap">
+                                        <span class="text-theme-sm font-semibold {{ $baris['jenis'] === 'Uang Masuk' ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400' }}">
+                                            {{ filled($baris['jumlah']) ? Format::rupiah((float) $baris['jumlah']) : '—' }}
+                                        </span>
+                                    </td>
                                     <td class="px-3 py-3">
                                         <p class="font-medium text-theme-sm text-gray-900 dark:text-gray-100 truncate max-w-xs">
                                             {{ $baris['penerima'] ?: ($baris['keterangan'] ?: '—') }}
@@ -152,22 +181,20 @@
                                     <td class="px-4 py-3">
                                         @if ($baris['ada'])
                                             <div class="flex items-center gap-2">
-                                                @if ($baris['gambar'])
-                                                    <button type="button" @click="bukaPratinjau(@js($baris['url']), @js($baris['nama']), true)"
-                                                        class="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700"
-                                                        title="Klik untuk pratinjau">
-                                                        <img src="{{ $baris['url'] }}" alt="{{ $baris['nama'] }}" loading="lazy" class="h-full w-full object-cover">
-                                                    </button>
-                                                @else
-                                                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-theme-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                                                        PDF
-                                                    </span>
-                                                @endif
-                                                <button type="button" @click="bukaPratinjau(@js($baris['url']), @js($baris['nama']), {{ $baris['gambar'] ? 'true' : 'false' }})"
-                                                    class="min-w-0 truncate text-left text-theme-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
-                                                    title="{{ $baris['nama'] }}">
+                                                <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                                                    @if ($baris['gambar'])
+                                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    @else
+                                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                                        </svg>
+                                                    @endif
+                                                </span>
+                                                <span class="min-w-0 truncate text-theme-xs font-medium text-gray-700 dark:text-gray-300" title="{{ $baris['nama'] }}">
                                                     {{ $baris['nama'] }}
-                                                </button>
+                                                </span>
                                             </div>
                                         @else
                                             <div class="flex items-center gap-1.5">
@@ -181,7 +208,7 @@
                                     <td class="px-4 py-3 text-right whitespace-nowrap">
                                         <div class="inline-flex items-center justify-end gap-1.5">
                                             @if ($baris['ada'])
-                                                <button type="button" @click="bukaPratinjau(@js($baris['url']), @js($baris['nama']), {{ $baris['gambar'] ? 'true' : 'false' }})"
+                                                <button type="button" @click="bukaPratinjau(@js($baris['url']), @js($baris['nama']), {{ $baris['gambar'] ? 'true' : 'false' }}, @js($baris['jenis']), @js($baris['model_id'] ?? ''), @js($baris['path'] ?? ''))"
                                                     class="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 text-theme-xs font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
                                                     title="Pratinjau in-app">
                                                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -205,6 +232,23 @@
                                                     Ubah
                                                 </a>
                                             @endif
+                                            @if ($baris['ada'] && filled($baris['model_id'] ?? null) && filled($baris['path'] ?? null))
+                                                <form method="POST" action="{{ route('panel.receipts.hapus-berkas') }}" class="inline"
+                                                    onsubmit="return confirm('Hapus berkas nota ini? File asli akan dihapus dari penyimpanan.')">
+                                                    @csrf
+                                                    <input type="hidden" name="jenis" value="{{ $baris['jenis'] }}">
+                                                    <input type="hidden" name="id" value="{{ $baris['model_id'] }}">
+                                                    <input type="hidden" name="path" value="{{ $baris['path'] }}">
+                                                    <button type="submit"
+                                                        class="inline-flex h-8 items-center gap-1 rounded-lg border border-error-300 bg-white px-2.5 text-theme-xs font-semibold text-error-700 shadow-theme-xs transition hover:bg-error-50 dark:border-error-500/30 dark:bg-gray-800 dark:text-error-400 dark:hover:bg-error-500/10"
+                                                        title="Hapus berkas nota">
+                                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Hapus
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -223,6 +267,13 @@
                                 </span>
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-theme-xs font-semibold {{ $baris['jenis'] === 'Uang Masuk' ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400' : 'bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-400' }}">
                                     {{ $baris['jenis'] }}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-theme-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Jumlah</span>
+                                <span class="text-theme-sm font-semibold {{ $baris['jenis'] === 'Uang Masuk' ? 'text-success-700 dark:text-success-400' : 'text-error-700 dark:text-error-400' }}">
+                                    {{ filled($baris['jumlah']) ? Format::rupiah((float) $baris['jumlah']) : '—' }}
                                 </span>
                             </div>
 
@@ -246,7 +297,7 @@
 
                             <div class="flex items-center justify-end gap-1.5 border-t border-gray-100 pt-2 dark:border-gray-800">
                                 @if ($baris['ada'])
-                                    <button type="button" @click="bukaPratinjau(@js($baris['url']), @js($baris['nama']), {{ $baris['gambar'] ? 'true' : 'false' }})"
+                                    <button type="button" @click="bukaPratinjau(@js($baris['url']), @js($baris['nama']), {{ $baris['gambar'] ? 'true' : 'false' }}, @js($baris['jenis']), @js($baris['model_id'] ?? ''), @js($baris['path'] ?? ''))"
                                         class="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 text-theme-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -267,6 +318,22 @@
                                         class="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 text-theme-xs font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                                         Ubah
                                     </a>
+                                @endif
+                                @if ($baris['ada'] && filled($baris['model_id'] ?? null) && filled($baris['path'] ?? null))
+                                    <form method="POST" action="{{ route('panel.receipts.hapus-berkas') }}" class="inline"
+                                        onsubmit="return confirm('Hapus berkas nota ini? File asli akan dihapus dari penyimpanan.')">
+                                        @csrf
+                                        <input type="hidden" name="jenis" value="{{ $baris['jenis'] }}">
+                                        <input type="hidden" name="id" value="{{ $baris['model_id'] }}">
+                                        <input type="hidden" name="path" value="{{ $baris['path'] }}">
+                                        <button type="submit"
+                                            class="inline-flex h-8 items-center gap-1 rounded-lg border border-error-300 bg-white px-2.5 text-theme-xs font-semibold text-error-700 dark:border-error-500/30 dark:bg-gray-800 dark:text-error-400 dark:hover:bg-error-500/10">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            Hapus
+                                        </button>
+                                    </form>
                                 @endif
                             </div>
                         </li>
@@ -335,7 +402,21 @@
                     </template>
                 </div>
 
-                <div class="flex justify-end border-t border-gray-100 pt-3 dark:border-gray-800">
+                <div class="flex items-center justify-between gap-3 border-t border-gray-100 pt-3 dark:border-gray-800">
+                    <form x-show="previewPath" method="POST" action="{{ route('panel.receipts.hapus-berkas') }}"
+                        onsubmit="return confirm('Hapus berkas ini? File asli akan dihapus dari penyimpanan.');">
+                        @csrf
+                        <input type="hidden" name="jenis" :value="previewJenis">
+                        <input type="hidden" name="id" :value="previewId">
+                        <input type="hidden" name="path" :value="previewPath">
+                        <button type="submit"
+                            class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-error-300 bg-white px-4 text-theme-xs font-semibold text-error-700 transition hover:bg-error-50 dark:border-error-500/30 dark:bg-gray-800 dark:text-error-400 dark:hover:bg-error-500/10">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Hapus Berkas
+                        </button>
+                    </form>
                     <button type="button" @click="previewModal = false"
                         class="inline-flex h-10 items-center rounded-lg border border-gray-300 bg-white px-4 text-theme-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
                         Tutup

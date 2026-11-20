@@ -40,9 +40,6 @@
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">
                             Halo, {{ auth()->user()->nama ?? 'Direktur' }}
                         </h2>
-                        <span class="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700 dark:bg-brand-500/15 dark:text-brand-400">
-                            Eksekutif
-                        </span>
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Ikhtisar posisi keuangan kas & bank, penagihan kontrak, dan pemantauan proyek.
@@ -325,7 +322,7 @@
     </div>
 
     {{-- Baris 3: Grafik Analisis Eksekutif (ApexCharts) --}}
-    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-start">
         {{-- Arus Kas 6 Bulan (ApexCharts) --}}
         <div class="rounded-2xl border border-gray-200 bg-white p-5 md:p-6 dark:border-gray-800 dark:bg-white/3 shadow-theme-xs xl:col-span-8 flex flex-col justify-between">
             <div>
@@ -379,7 +376,7 @@
     </div>
 
     {{-- Baris 5: Prioritas Piutang Eksekutif (SPK prioritas & top mitra piutang) --}}
-    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12 items-start">
         {{-- SPK Prioritas Pantauan --}}
         <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 shadow-theme-xs overflow-hidden xl:col-span-8 flex flex-col justify-between">
             <div>
@@ -422,7 +419,16 @@
                                             </span>
                                         </td>
                                         <td class="px-4 py-3.5">
-                                            <span class="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-semibold {{ $prioritas['lewat'] ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400' : 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400' }}">
+                                            @php
+                                            $sisaT = $prioritas['sisa_hari'] ?? null;
+                                            $warnaT = match (true) {
+                                                $sisaT !== null && $sisaT < 0 => 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400',
+                                                $sisaT !== null && $sisaT <= 7 => 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400',
+                                                $sisaT !== null && $sisaT <= 14 => 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400',
+                                                default => 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400',
+                                            };
+                                        @endphp
+                                        <span class="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-semibold {{ $warnaT }}">
                                                 {{ $prioritas['status_tagihan'] }} &middot; {{ $prioritas['label_tenggat'] }}
                                             </span>
                                         </td>

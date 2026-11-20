@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Enums\KategoriPengeluaran;
 use App\Models\Mitra;
 use App\Models\Pengguna;
 use App\Models\Spk;
@@ -18,10 +17,7 @@ use Illuminate\Support\Str;
  *
  * Membuat:
  *   1. Akun Admin & Direktur
- *   2. Mitra (pemberi kerja, pelanggan, subkon)
- *   3. Contoh SPK
- *   4. Contoh uang masuk (dari SPK & luar SPK)
- *   5. Contoh uang keluar (terkait SPK & umum)
+ *   2. Data real BKS dari docs/file bks/*.xlsx (SPK + kas/bank)
  */
 class DatabaseSeeder extends Seeder
 {
@@ -64,137 +60,9 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✓ Akun demo: admin@bks.test & direktur@bks.test');
         $this->command->warn('  Password demo: '.$passwordDemo.' (hanya untuk pengembangan)');
 
-        // 2. Mitra
-        $pln = Mitra::factory()->pln()->create([
-            'nama' => 'PT Contoh Pemberi Kerja',
-            'kontak' => '0778-000000',
-            'alamat' => 'Jl. Contoh No. 1, Batam',
-        ]);
-
-        $pelanggan = Mitra::factory()->mitra()->create([
-            'nama' => 'PT Contoh Pelanggan',
-            'alamat' => 'Kawasan Industri Contoh, Batam',
-        ]);
-
-        $subkon = Mitra::factory()->subkon()->create([
-            'nama' => 'CV Contoh Subkon',
-            'kontak' => '0812-0000-0000',
-            'alamat' => 'Batam',
-        ]);
-
-        $this->command->info('✓ Mitra: pemberi kerja, pelanggan, subkon');
-
-        // 3. SPK
-
-        // SPK dari PLN - pekerjaan utama
-        $spkPln = Spk::factory()->pln()->berjalan()->create([
-            'nomor_spk' => 'SPK-CONTOH-001',
-            'tanggal_spk' => '2026-06-29',
-            'tanggal_akhir' => '2026-09-30',
-            'nama_pekerjaan' => 'Contoh Pekerjaan Pembangunan Shelter',
-            'lokasi' => 'Lokasi Contoh',
-            'nilai_spk' => 200_000_000,
-            'mitra_id' => $pln->id,
-            'dibuat_oleh' => $admin->id,
-        ]);
-
-        // SPK subkon/vendor - dengan retensi 5%
-        $spkSubkon = Spk::factory()->subkon()->berjalan()->create([
-            'nomor_spk' => 'SUBKON-001',
-            'tanggal_spk' => '2026-07-01',
-            'tanggal_akhir' => '2026-08-31',
-            'nama_pekerjaan' => 'Borongan Material Shelter',
-            'lokasi' => 'Lokasi Contoh',
-            'nilai_spk' => 100_000_000,
-            'mitra_id' => $subkon->id,
-            'dibuat_oleh' => $admin->id,
-        ]);
-
-        // SPK tanpa nomor resmi (kasus "TANPA SPK" di Excel)
-        Spk::factory()->tanpaSpk()->berjalan()->create([
-            'nama_pekerjaan' => 'Bahan Bakar Genset 420 Liter',
-            'lokasi' => 'Kantor',
-            'nilai_spk' => 5_565_000,
-            'mitra_id' => $pelanggan->id,
-            'dibuat_oleh' => $admin->id,
-        ]);
-
-        // SPK yang sudah lunas
-        Spk::factory()->pln()->lunas()->create([
-            'nomor_spk' => 'SPK-CONTOH-002',
-            'tanggal_spk' => '2026-04-23',
-            'nama_pekerjaan' => 'Contoh Pekerjaan Renovasi Ruang Rapat',
-            'lokasi' => 'Lokasi Contoh 2',
-            'nilai_spk' => 371_746_922,
-            'mitra_id' => $pln->id,
-            'dibuat_oleh' => $admin->id,
-        ]);
-
-        $this->command->info('✓ SPK: 4 contoh (reguler, subkon, tanpa SPK, lunas)');
-
-        // 4. Uang masuk
-
-        // Dari SPK PLN - termin
-        UangMasuk::factory()->dariSpk()->denganBukti(2)->create([
-            'spk_id' => $spkPln->id,
-            'nomor_spk' => $spkPln->nomor_spk,
-            'nama_pekerjaan' => $spkPln->nama_pekerjaan,
-            'tanggal' => '2026-08-11',
-            'jumlah' => 120_000_000,
-            'mitra_id' => $pln->id,
-            'keterangan' => 'Termin 1 diterima',
-        ]);
-
-        // Dari SPK subkon
-        UangMasuk::factory()->dariSpk()->denganBukti(1)->create([
-            'spk_id' => $spkSubkon->id,
-            'nomor_spk' => $spkSubkon->nomor_spk,
-            'nama_pekerjaan' => $spkSubkon->nama_pekerjaan,
-            'tanggal' => '2026-08-20',
-            'jumlah' => 45_000_000,
-            'mitra_id' => $subkon->id,
-        ]);
-
-        // Dari LUAR SPK (mode manual)
-        UangMasuk::factory()->dariLuarSpk()->denganBukti(1)->create([
-            'tanggal' => '2026-08-25',
-            'jumlah' => 5_000_000,
-            'keterangan' => 'Penerimaan di luar SPK',
-        ]);
-
-        $this->command->info('✓ Uang masuk: 3 contoh (2 dari SPK, 1 luar SPK)');
-
-        // 5. Uang keluar
-
-        // Terkait SPK PLN
-        UangKeluar::factory()->terkaitSpk()->denganBukti(2)->create([
-            'spk_id' => $spkPln->id,
-            'tanggal' => '2026-07-05',
-            'jumlah' => 40_000_000,
-            'kategori' => KategoriPengeluaran::Material,
-            'penerima' => 'Toko Material Contoh',
-            'keterangan' => 'Pembelian material',
-        ]);
-
-        UangKeluar::factory()->terkaitSpk()->denganBukti(1)->create([
-            'spk_id' => $spkPln->id,
-            'tanggal' => '2026-07-20',
-            'jumlah' => 25_000_000,
-            'kategori' => KategoriPengeluaran::Upah,
-            'penerima' => 'Mandor Contoh',
-            'keterangan' => 'Upah tukang minggu ke-3',
-        ]);
-
-        // Umum (tanpa SPK) - operasional kantor
-        UangKeluar::factory()->umum()->denganBukti(1)->create([
-            'tanggal' => '2026-08-01',
-            'jumlah' => 3_000_000,
-            'kategori' => KategoriPengeluaran::Operasional,
-            'penerima' => 'Kantor',
-            'keterangan' => 'Biaya operasional',
-        ]);
-
-        $this->command->info('✓ Uang keluar: 3 contoh (2 terkait SPK, 1 umum)');
+        // 2. Data real BKS (docs/file bks/*.xlsx) untuk test & simulasi.
+        //    Seeder ini juga memastikan mitra PT PLN Batam & akun admin ada.
+        $this->call(DataRealSeeder::class);
 
         // Ringkasan
         $this->command->newLine();

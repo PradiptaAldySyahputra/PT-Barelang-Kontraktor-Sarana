@@ -233,7 +233,7 @@
         </section>
 
         {{-- 4. Detail Data SPK & Informasi Administrasi --}}
-        <div class="grid gap-6 xl:grid-cols-3">
+        <div class="grid gap-6 xl:grid-cols-3 items-start">
             <section class="{{ $kelasKartu }} p-5 xl:col-span-2">
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-100 pb-3 dark:border-gray-800">
                     Informasi Kontrak & Lokasi
@@ -294,7 +294,18 @@
                         </div>
                         <div class="flex items-center justify-between">
                             <dt class="{{ $kelasLabel }}">Batas Waktu (Tenggat)</dt>
-                            <dd class="text-theme-sm font-bold {{ $spk->tanggal_akhir < now()->startOfDay() && ! $spk->sudahSelesai() ? 'text-error-600 dark:text-error-400' : 'text-gray-800 dark:text-white' }}">
+                    @php
+                        $tglTenggat = $spk->tenggatEfektif();
+                        $sisaHari = $tglTenggat ? (int) $tglTenggat->floatDiffInDays(now(), false) : null;
+                        $belumSelesai = ! $spk->sudahSelesai();
+                        $warnaTenggat = match (true) {
+                            ($sisaHari !== null && $sisaHari < 0 && $belumSelesai) => 'text-error-600 dark:text-error-400',
+                            ($sisaHari !== null && $sisaHari <= 7 && $belumSelesai) => 'text-error-500 dark:text-error-400',
+                            ($sisaHari !== null && $sisaHari <= 14 && $belumSelesai) => 'text-warning-600 dark:text-warning-400',
+                            default => 'text-gray-800 dark:text-white',
+                        };
+                    @endphp
+                            <dd class="text-theme-sm font-bold {{ $warnaTenggat }}">
                                 {{ $spk->tenggatEfektif()?->format('d/m/Y') ?? '—' }}
                             </dd>
                         </div>

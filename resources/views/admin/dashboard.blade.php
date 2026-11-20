@@ -558,7 +558,16 @@
                                     <p class="text-xs font-bold text-gray-900 dark:text-white angka">
                                         {{ Format::rupiah($spk['nilai']) }}
                                     </p>
-                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $spk['lewat'] ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">
+                                    @php
+                                        $sisaA = $spk['sisa_hari'] ?? null;
+                                        $warnaA = match (true) {
+                                            $sisaA !== null && $sisaA < 0 => 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400',
+                                            $sisaA !== null && $sisaA <= 7 => 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400',
+                                            $sisaA !== null && $sisaA <= 14 => 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400',
+                                            default => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                                        };
+                                    @endphp
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $warnaA }}">
                                         {{ $spk['label_tenggat'] }}
                                     </span>
                                 </div>
@@ -620,7 +629,16 @@
                                                 </span>
                                             </td>
                                             <td class="px-4 py-3.5">
-                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $perhatian['lewat'] ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400' : 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400' }}">
+                                                @php
+                                                    $sisaP = $perhatian['sisa_hari'] ?? null;
+                                                    $warnaP = match (true) {
+                                                        $sisaP !== null && $sisaP < 0 => 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400',
+                                                        $sisaP !== null && $sisaP <= 7 => 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400',
+                                                        $sisaP !== null && $sisaP <= 14 => 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400',
+                                                        default => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+                                                    };
+                                                @endphp
+                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $warnaP }}">
                                                     {{ $perhatian['label_tenggat'] }}
                                                 </span>
                                             </td>

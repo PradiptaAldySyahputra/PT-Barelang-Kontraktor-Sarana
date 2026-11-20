@@ -155,6 +155,7 @@ Route::prefix('panel')->name('panel.')->group(function (): void {
             ->name('laporan.konsistensi');
         Route::get('receipts', [SystemController::class, 'receipts'])->name('receipts');
         Route::get('receipts/upload', [SystemController::class, 'receiptsUpload'])->middleware('peran:admin,direktur')->name('receipts.upload');
+        Route::post('receipts/hapus-berkas', [SystemController::class, 'hapusBerkas'])->middleware('peran:admin,direktur')->name('receipts.hapus-berkas');
         Route::redirect('exports', '/panel/reports')->name('exports');
 
         // Master Data Mitra

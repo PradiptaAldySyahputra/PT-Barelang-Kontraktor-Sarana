@@ -215,7 +215,7 @@
                                 @if (filled($spk->lokasi))
                                     <span class="mt-1 inline-flex max-w-full items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-theme-xs font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-200"
                                         title="Lokasi pekerjaan: {{ $spk->lokasi }}">
-                                        <svg class="h-3.5 w-3.5 shrink-0 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <svg class="h-3.5 w-3.5 shrink-0 text-error-500 dark:text-error-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z" />
                                             <circle cx="12" cy="10" r="2.5" stroke-width="1.8" />
                                         </svg>
@@ -306,7 +306,7 @@
 
                     @if (filled($spk->lokasi))
                         <span class="mt-1 inline-flex max-w-full items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-theme-xs font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-200">
-                            <svg class="h-3.5 w-3.5 shrink-0 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <svg class="h-3.5 w-3.5 shrink-0 text-error-500 dark:text-error-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z" />
                                 <circle cx="12" cy="10" r="2.5" stroke-width="1.8" />
                             </svg>

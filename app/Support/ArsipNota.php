@@ -82,6 +82,7 @@ final class ArsipNota
                         $r->id,
                         route('panel.cash-out.edit', ['uangKeluar' => $r, 'asal' => 'receipts']),
                         $r->spk?->nomor_spk,
+                        $r->jumlah,
                     ));
                 }
             });
@@ -126,6 +127,7 @@ final class ArsipNota
                             $r->id,
                             route('panel.cash-in.edit', ['uangMasuk' => $r, 'asal' => 'receipts']),
                             $r->spk?->nomor_spk ?? $r->nomor_spk,
+                            $r->jumlah,
                         ));
                     }
                 });
@@ -164,6 +166,7 @@ final class ArsipNota
         ?int $modelId = null,
         ?string $editUrl = null,
         ?string $spkNomor = null,
+        ?string $jumlah = null,
     ): array {
         return [
             'jenis' => $jenis,
@@ -179,6 +182,7 @@ final class ArsipNota
             'model_id' => $modelId,
             'edit_url' => $editUrl,
             'spk_nomor' => $spkNomor,
+            'jumlah' => $jumlah,
             // Thumbnail (B2-7): hanya gambar yang bisa dipratinjau langsung;
             // PDF ditandai supaya view menampilkan ikon, bukan <img> rusak.
             'gambar' => self::gambar($path),

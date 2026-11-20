@@ -18,8 +18,8 @@
 
 @theme {
   --font-*: initial;
-  --font-outfit: 'Outfit', system-ui, -apple-system, sans-serif;
-  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-outfit: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;

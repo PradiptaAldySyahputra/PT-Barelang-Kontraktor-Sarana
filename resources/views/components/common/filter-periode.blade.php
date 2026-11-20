@@ -6,7 +6,6 @@
 
 @php
     $preset = [
-        'hari-ini' => 'Hari Ini',
         '7-hari' => '7 Hari',
         'bulan' => 'Bulan Ini',
         'tahun' => 'Tahun Ini',

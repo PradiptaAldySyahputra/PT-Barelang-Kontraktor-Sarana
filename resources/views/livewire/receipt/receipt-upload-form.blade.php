@@ -208,13 +208,26 @@
                                         </button>
                                     </div>
                                 @else
-                                    <div class="px-6 py-8 text-center">
-                                        <svg class="mx-auto h-10 w-10 text-gray-500 dark:text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    <div class="w-full px-6 py-4 text-center">
+                                        <svg class="mx-auto h-9 w-9 text-gray-500 dark:text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                         </svg>
                                         <span class="mt-2 block text-theme-xs text-gray-500 dark:text-gray-400">
-                                            Potongan nota tidak tersedia — berkas utama tetap tersimpan sebagai lampiran.
+                                            Bukti / potongan nota belum terlampir.
                                         </span>
+                                        <label class="mt-3 inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 text-theme-xs font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700" x-data="{ nama: {{ isset($nota['berkas_nama']) && $nota['berkas_nama'] ? Js::from($nota['berkas_nama']) : '""' }} }">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                                            </svg>
+                                            <span x-text="nama ? 'Ganti Bukti' : 'Pilih Bukti Nota'"></span>
+                                            <input type="file" wire:model="daftarNota.{{ $idx }}.berkas"
+                                                x-on:change="nama = $event.target.files[0]?.name || ''"
+                                                accept=".pdf,image/*" class="sr-only">
+                                        </label>
+                                        <p x-show="nama" x-cloak class="mt-2 truncate px-1 text-[11px] text-gray-500 dark:text-gray-400" x-text="nama"></p>
+                                        @error('daftarNota.'.$idx.'.berkas')
+                                            <p class="mt-1 text-theme-xs text-error-600 dark:text-error-400">{{ $message }}</p>
+                                        @enderror
                                     </div>
                                 @endif
                             </div>
